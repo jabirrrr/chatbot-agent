@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 import logging
 
 from app.core.config import settings
+from app.core.middleware import SecurityHeadersMiddleware
+from app.core.rate_limit import RateLimitMiddleware
 from app.api.v1.router import api_router
 
 logging.basicConfig(
@@ -21,7 +23,13 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
-# Configure CORS
+# 1. Security Headers Middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 2. Rate Limiting Middleware
+app.add_middleware(RateLimitMiddleware)
+
+# 3. Configure CORS
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,

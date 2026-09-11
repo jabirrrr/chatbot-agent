@@ -18,6 +18,10 @@ def anyio_backend():
 @pytest.fixture(autouse=True)
 def reset_dependency_overrides():
     from app.main import app
+    from app.core.rate_limit import limiter
+    limiter.reset()
     app.dependency_overrides.clear()
     yield
+    limiter.reset()
     app.dependency_overrides.clear()
+
