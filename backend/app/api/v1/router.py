@@ -7,6 +7,8 @@ from app.api.v1.widget import router as widget_router
 from app.api.v1.conversations import router as conversations_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.analytics import router as analytics_router
+from app.api.v1.appointments import router as appointments_router
+from app.api.v1.handoff import router as handoff_router
 
 api_router = APIRouter()
 
@@ -19,3 +21,5 @@ api_router.include_router(widget_router)
 api_router.include_router(conversations_router)
 api_router.include_router(leads_router)
 api_router.include_router(analytics_router)
+api_router.include_router(appointments_router)
+api_router.include_router(handoff_router)

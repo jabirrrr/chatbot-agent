@@ -42,7 +42,7 @@ No requirement may be modified, deprecated, or removed without an approved entry
 | **REQ-AI-02** | Retrieval-Augmented Generation (RAG) | P0 | M3 | `app.services.rag_service`, Vector Search | `TEST-AI-002` | **PASSED** |
 | **REQ-AI-03** | Conversational Lead Qualification & Capture | P0 | M3 | `app.services.rag_service`, `create_lead` Tool | `TEST-AI-003` | **PASSED** |
 | **REQ-AI-04** | Function / Tool Calling Infrastructure | P0 | M3 | `app.adapters.llm`, Tool Call Dispatcher | `TEST-AI-004` | **PASSED** |
-| **REQ-AI-05** | Human Agent Handoff Protocol | P0 | M5 | `app.services.handoff_service`, WebSockets | `TEST-AI-005` | NOT RUN |
+| **REQ-AI-05** | Human Agent Handoff Protocol | P0 | M5 | `app.services.handoff_service`, `app.api.v1.handoff` | `TEST-AI-005` | **PASSED** |
 | **REQ-AI-06** | Honest Fallback Behavior (No Hallucination)| P0 | M3 | `app.services.rag_service`, System Prompt Guard | `TEST-AI-006` | **PASSED** |
 | **REQ-AI-07** | LLM Abstraction (OpenRouter / OpenAI / Anthropic)| P0 | M3 | `app.adapters.llm.provider`, `MockLLMProvider` | `TEST-AI-007` | **PASSED** |
 | **REQ-AI-08** | Conversation Session Memory | P0 | M3 | `app.models.conversation`, `app.models.message` | `TEST-AI-008` | **PASSED** |
@@ -54,14 +54,14 @@ No requirement may be modified, deprecated, or removed without an approved entry
 | **REQ-WIDGET-06**| Error Handling & Auto-Reconnect | P0 | M3 | `public/widget.js` Error State & Retry Handler | `TEST-WGT-006` | **PASSED** |
 | **REQ-CONV-01** | Conversation List with Filters & Search | P0 | M4 | `app.api.v1.conversations`, `ConversationsInbox.tsx` | `TEST-CONV-001` | **PASSED** |
 | **REQ-CONV-02** | Conversation Detail Thread & Context View | P0 | M4 | `app.api.v1.conversations`, `ConversationsInbox.tsx` | `TEST-CONV-002` | **PASSED** |
-| **REQ-CONV-03** | Real-Time Conversation Updates | P1 | M5 | WebSocket Hook, Redis Pub/Sub | `TEST-CONV-003` | NOT RUN |
+| **REQ-CONV-03** | Real-Time Conversation Updates | P1 | M5 | `app.services.handoff_service`, `app.api.v1.handoff` | `TEST-CONV-003` | **PASSED** |
 | **REQ-LEAD-01** | Lead Profile & Detail Sidebar | P0 | M4 | `app.api.v1.leads`, `LeadsPage.tsx` | `TEST-LEAD-001` | **PASSED** |
 | **REQ-LEAD-02** | Lead Pipeline Table & Search | P0 | M4 | `app.api.v1.leads`, `LeadsPage.tsx` | `TEST-LEAD-002` | **PASSED** |
 | **REQ-LEAD-03** | Lead Export to CSV | P0 | M4 | `app.api.v1.leads.export`, `LeadsPage.tsx` | `TEST-LEAD-003` | **PASSED** |
-| **REQ-APPT-01** | Calendar Provider Abstraction & Google OAuth | P0 | M5 | `app.adapters.calendar.google` | `TEST-APPT-001` | NOT RUN |
-| **REQ-APPT-02** | In-Widget Slot Selection & Booking | P0 | M5 | `widget/src/ui/calendar-picker.ts` | `TEST-APPT-002` | NOT RUN |
-| **REQ-APPT-03** | Appointment List in Dashboard | P0 | M5 | `frontend/src/app/dashboard/appointments` | `TEST-APPT-003` | NOT RUN |
-| **REQ-APPT-04** | Calendar Failure Graceful Degradation | P0 | M5 | `app.services.appointment_service` | `TEST-APPT-004` | NOT RUN |
+| **REQ-APPT-01** | Calendar Provider Abstraction & Google OAuth | P0 | M5 | `app.adapters.calendar.provider`, `app.api.v1.appointments` | `TEST-APPT-001` | **PASSED** |
+| **REQ-APPT-02** | In-Widget Slot Selection & Booking | P0 | M5 | `app.services.appointment_service`, `AppointmentsPage.tsx` | `TEST-APPT-002` | **PASSED** |
+| **REQ-APPT-03** | Appointment List in Dashboard | P0 | M5 | `app.api.v1.appointments`, `AppointmentsPage.tsx` | `TEST-APPT-003` | **PASSED** |
+| **REQ-APPT-04** | Calendar Failure Graceful Degradation | P0 | M5 | `app.adapters.calendar.provider`, `AppointmentService` | `TEST-APPT-004` | **PASSED** |
 | **REQ-ANALYTICS-01**| Executive Overview Dashboard | P0 | M4 | `app.api.v1.analytics.overview`, `AnalyticsCommandCenter.tsx` | `TEST-ANA-001` | **PASSED** |
 | **REQ-ANALYTICS-02**| Conversation Volume & Heatmaps | P1 | M6 | `frontend/src/components/charts/heatmap` | `TEST-ANA-002` | NOT RUN |
 | **REQ-ANALYTICS-03**| Lead Conversion Funnels | P1 | M6 | `frontend/src/components/charts/funnel` | `TEST-ANA-003` | NOT RUN |
@@ -71,6 +71,6 @@ No requirement may be modified, deprecated, or removed without an approved entry
 | **REQ-BILLING-02**| Stripe Payment Gateway Abstraction | P0 | M6 | `app.adapters.billing.stripe` | `TEST-BIL-002` | NOT RUN |
 | **REQ-BILLING-03**| Subscription Webhook Lifecycle Sync | P0 | M6 | `app.api.v1.billing.webhook` | `TEST-BIL-003` | NOT RUN |
 | **REQ-BILLING-04**| Billing Portal & Invoicing | P0 | M6 | `frontend/src/app/dashboard/billing` | `TEST-BIL-004` | NOT RUN |
-| **REQ-INT-01** | Integration Framework & Encrypted Vault | P0 | M5 | `app.core.security.vault` (AES-256-GCM) | `TEST-INT-001` | NOT RUN |
+| **REQ-INT-01** | Integration Framework & Encrypted Vault | P0 | M5 | `app.core.vault` (AES-256-GCM), `app.models.integration` | `TEST-INT-001` | **PASSED** |
 | **REQ-INT-02** | Outbound Webhooks with HMAC Verification | P1 | M6 | `app.workers.webhook_tasks` | `TEST-INT-002` | NOT RUN |
 | **REQ-INT-03** | Public REST API with Scoped API Keys | P1 | M6 | `app.api.v1.public`, API Key Middleware | `TEST-INT-003` | NOT RUN |

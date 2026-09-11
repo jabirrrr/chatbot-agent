@@ -8,6 +8,8 @@ from app.models.knowledge import KnowledgeSource, DocumentChunk, BusinessInfo
 from app.models.conversation import Conversation, Message
 from app.models.lead import Lead
 from app.models.ai_usage import AIUsageRecord
+from app.models.appointment import Appointment
+from app.models.integration import TenantIntegration
 
 __all__ = [
     "Base",
@@ -27,4 +29,6 @@ __all__ = [
     "Message",
     "Lead",
     "AIUsageRecord",
+    "Appointment",
+    "TenantIntegration",
 ]
