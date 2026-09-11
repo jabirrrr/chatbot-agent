@@ -5,6 +5,8 @@ from app.models.organization_member import OrganizationMember, MemberRole
 from app.models.invitation import Invitation
 from app.models.chatbot import Chatbot
 from app.models.knowledge import KnowledgeSource, DocumentChunk, BusinessInfo
+from app.models.conversation import Conversation, Message
+from app.models.lead import Lead
 
 __all__ = [
     "Base",
@@ -20,4 +22,7 @@ __all__ = [
     "KnowledgeSource",
     "DocumentChunk",
     "BusinessInfo",
+    "Conversation",
+    "Message",
+    "Lead",
 ]
