@@ -76,6 +76,7 @@ def test_unauthorized_access_to_knowledge_sources():
 
 def test_public_widget_config_not_found():
     """Ensures non-existent widget tokens return 404 Not Found."""
+    app.dependency_overrides[get_db] = override_get_db
     response = client.get("/api/v1/chatbots/public/widget/wgt_non_existent_token_123")
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()

@@ -13,3 +13,11 @@ os.environ["SECRET_KEY"] = "test-secret-key-min-32-chars-long-for-jwt-signing"
 @pytest.fixture(scope="session")
 def anyio_backend():
     return "asyncio"
+
+
+@pytest.fixture(autouse=True)
+def reset_dependency_overrides():
+    from app.main import app
+    app.dependency_overrides.clear()
+    yield
+    app.dependency_overrides.clear()

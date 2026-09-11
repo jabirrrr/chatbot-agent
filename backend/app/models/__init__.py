@@ -7,6 +7,7 @@ from app.models.chatbot import Chatbot
 from app.models.knowledge import KnowledgeSource, DocumentChunk, BusinessInfo
 from app.models.conversation import Conversation, Message
 from app.models.lead import Lead
+from app.models.ai_usage import AIUsageRecord
 
 __all__ = [
     "Base",
@@ -25,4 +26,5 @@ __all__ = [
     "Conversation",
     "Message",
     "Lead",
+    "AIUsageRecord",
 ]

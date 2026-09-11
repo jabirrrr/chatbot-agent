@@ -52,21 +52,21 @@ No requirement may be modified, deprecated, or removed without an approved entry
 | **REQ-WIDGET-04**| Inline Lead Capture Confirmation UI | P0 | M3 | `public/widget.js` Tool Call Badge Renderer | `TEST-WGT-004` | **PASSED** |
 | **REQ-WIDGET-05**| Accessibility Standards (WCAG 2.1 AA) | P0 | M3 | Shadow DOM ARIA attributes & keyboard nav | `TEST-WGT-005` | **PASSED** |
 | **REQ-WIDGET-06**| Error Handling & Auto-Reconnect | P0 | M3 | `public/widget.js` Error State & Retry Handler | `TEST-WGT-006` | **PASSED** |
-| **REQ-CONV-01** | Conversation List with Filters & Search | P0 | M4 | `frontend/src/app/dashboard/conversations` | `TEST-CONV-001` | NOT RUN |
-| **REQ-CONV-02** | Conversation Detail Thread & Context View | P0 | M4 | `frontend/src/components/chat-thread.tsx` | `TEST-CONV-002` | NOT RUN |
+| **REQ-CONV-01** | Conversation List with Filters & Search | P0 | M4 | `app.api.v1.conversations`, `ConversationsInbox.tsx` | `TEST-CONV-001` | **PASSED** |
+| **REQ-CONV-02** | Conversation Detail Thread & Context View | P0 | M4 | `app.api.v1.conversations`, `ConversationsInbox.tsx` | `TEST-CONV-002` | **PASSED** |
 | **REQ-CONV-03** | Real-Time Conversation Updates | P1 | M5 | WebSocket Hook, Redis Pub/Sub | `TEST-CONV-003` | NOT RUN |
-| **REQ-LEAD-01** | Lead Profile & Detail Sidebar | P0 | M4 | `frontend/src/components/lead-sidebar.tsx` | `TEST-LEAD-001` | NOT RUN |
-| **REQ-LEAD-02** | Lead Pipeline Table & Search | P0 | M4 | `frontend/src/app/dashboard/leads` | `TEST-LEAD-002` | NOT RUN |
-| **REQ-LEAD-03** | Lead Export to CSV | P0 | M4 | `app.api.v1.leads.export` | `TEST-LEAD-003` | NOT RUN |
+| **REQ-LEAD-01** | Lead Profile & Detail Sidebar | P0 | M4 | `app.api.v1.leads`, `LeadsPage.tsx` | `TEST-LEAD-001` | **PASSED** |
+| **REQ-LEAD-02** | Lead Pipeline Table & Search | P0 | M4 | `app.api.v1.leads`, `LeadsPage.tsx` | `TEST-LEAD-002` | **PASSED** |
+| **REQ-LEAD-03** | Lead Export to CSV | P0 | M4 | `app.api.v1.leads.export`, `LeadsPage.tsx` | `TEST-LEAD-003` | **PASSED** |
 | **REQ-APPT-01** | Calendar Provider Abstraction & Google OAuth | P0 | M5 | `app.adapters.calendar.google` | `TEST-APPT-001` | NOT RUN |
 | **REQ-APPT-02** | In-Widget Slot Selection & Booking | P0 | M5 | `widget/src/ui/calendar-picker.ts` | `TEST-APPT-002` | NOT RUN |
 | **REQ-APPT-03** | Appointment List in Dashboard | P0 | M5 | `frontend/src/app/dashboard/appointments` | `TEST-APPT-003` | NOT RUN |
 | **REQ-APPT-04** | Calendar Failure Graceful Degradation | P0 | M5 | `app.services.appointment_service` | `TEST-APPT-004` | NOT RUN |
-| **REQ-ANALYTICS-01**| Executive Overview Dashboard | P0 | M4 | `frontend/src/app/dashboard/overview` | `TEST-ANA-001` | NOT RUN |
+| **REQ-ANALYTICS-01**| Executive Overview Dashboard | P0 | M4 | `app.api.v1.analytics.overview`, `AnalyticsCommandCenter.tsx` | `TEST-ANA-001` | **PASSED** |
 | **REQ-ANALYTICS-02**| Conversation Volume & Heatmaps | P1 | M6 | `frontend/src/components/charts/heatmap` | `TEST-ANA-002` | NOT RUN |
 | **REQ-ANALYTICS-03**| Lead Conversion Funnels | P1 | M6 | `frontend/src/components/charts/funnel` | `TEST-ANA-003` | NOT RUN |
 | **REQ-ANALYTICS-04**| Unanswered Question Logs & Gaps | P2 | M6 | `app.api.v1.analytics.gaps` | `TEST-ANA-004` | NOT RUN |
-| **REQ-ANALYTICS-05**| AI Usage & Per-Tenant Token Accounting | P0 | M4 | `app.models.ai_usage`, Redis counters | `TEST-ANA-005` | NOT RUN |
+| **REQ-ANALYTICS-05**| AI Usage & Per-Tenant Token Accounting | P0 | M4 | `app.models.ai_usage`, `app.api.v1.analytics.usage` | `TEST-ANA-005` | **PASSED** |
 | **REQ-BILLING-01**| Tiered Subscription Plans | P0 | M6 | `app.models.subscription`, Stripe Products | `TEST-BIL-001` | NOT RUN |
 | **REQ-BILLING-02**| Stripe Payment Gateway Abstraction | P0 | M6 | `app.adapters.billing.stripe` | `TEST-BIL-002` | NOT RUN |
 | **REQ-BILLING-03**| Subscription Webhook Lifecycle Sync | P0 | M6 | `app.api.v1.billing.webhook` | `TEST-BIL-003` | NOT RUN |
