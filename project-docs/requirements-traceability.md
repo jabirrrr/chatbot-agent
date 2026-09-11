@@ -74,3 +74,20 @@ No requirement may be modified, deprecated, or removed without an approved entry
 | **REQ-INT-01** | Integration Framework & Encrypted Vault | P0 | M5 | `app.core.vault` (AES-256-GCM), `app.models.integration` | `TEST-INT-001` | **PASSED** |
 | **REQ-INT-02** | Outbound Webhooks with HMAC Verification | P1 | M6 | `app.services.webhook_dispatcher`, `WebhookEndpoint` | `TEST-INT-002` | **PASSED** |
 | **REQ-INT-03** | Public REST API with Scoped API Keys | P1 | M6 | `app.api.v1.public`, `app.services.api_key_service` | `TEST-INT-003` | **PASSED** |
+| **REQ-M7-01** | Enterprise Security Headers (CSP, HSTS, XFO) | P0 | M7 | `app.core.middleware` | `TEST-SEC-001` | **PASSED** |
+| **REQ-M7-02** | Widget Embedding Framing Rules (frame-ancestors) | P0 | M7 | `app.core.middleware` | `TEST-SEC-002` | **PASSED** |
+| **REQ-M7-03** | Sliding Window Rate Limiting & Throttling | P0 | M7 | `app.core.rate_limit` | `TEST-SEC-003` | **PASSED** |
+| **REQ-M7-04** | Header Spoofing & RBAC Isolation Guard | P0 | M7 | `app.api.deps` | `TEST-SEC-004` | **PASSED** |
+| **REQ-M7-05** | Cross-Tenant Chatbot IDOR Prevention | P0 | M7 | `app.api.v1.chatbots` | `TEST-SEC-005` | **PASSED** |
+| **REQ-M7-06** | Cross-Tenant Lead IDOR Prevention | P0 | M7 | `app.api.v1.leads` | `TEST-SEC-006` | **PASSED** |
+| **REQ-M7-07** | Public REST API Scoped Tenant Isolation | P0 | M7 | `app.api.v1.public` | `TEST-SEC-007` | **PASSED** |
+| **REQ-M7-08** | Parameterized SQL Injection Defense | P0 | M7 | SQLAlchemy 2.0 Parameterization | `TEST-SEC-008` | **PASSED** |
+| **REQ-M7-09** | Cryptographic JWT Integrity Verification | P0 | M7 | `app.core.security` | `TEST-SEC-009` | **PASSED** |
+| **REQ-M7-10** | 50 Concurrent Sessions Load SLA (P95 < 2,000ms) | P0 | M7 | Async FastAPI Runtime | `TEST-LOAD-001` | **PASSED** |
+| **REQ-M7-11** | Parallel SSE Session Concurrency Integrity | P0 | M7 | Widget Session Generator | `TEST-LOAD-002` | **PASSED** |
+| **REQ-M8-01** | 10–20 SMB Pilot Onboarding (3 Verticals) | P0 | M8 | `app.services.beta_service` | `TEST-BETA-001` | **PASSED** |
+| **REQ-M8-02** | >70% Widget Deployment Rate Metric | P0 | M8 | `app.services.beta_service` | `TEST-BETA-002` | **PASSED** |
+| **REQ-M8-03** | Real-Time Telemetry & Health Monitoring API | P0 | M8 | `app.api.v1.beta` | `TEST-BETA-003` | **PASSED** |
+| **REQ-M8-04** | Qualitative Feedback & NPS Ingestion Channel | P0 | M8 | `app.models.beta`, `app.api.v1.beta` | `TEST-BETA-004` | **PASSED** |
+| **REQ-M8-05** | Zero Cross-Tenant Data Leaks Verification | P0 | M8 | `app.api.deps`, PostgreSQL RLS | `TEST-SEC-004..007`| **PASSED** |
+| **REQ-M8-06** | System Availability SLA (>99.5% Uptime) | P0 | M8 | Async FastAPI Runtime | `TEST-LOAD-001` | **PASSED** |
