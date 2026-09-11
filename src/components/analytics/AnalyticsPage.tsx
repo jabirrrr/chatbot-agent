@@ -40,6 +40,34 @@ const topQuestions = [
   { id: 5, question: 'Where are you located?', count: 51 },
 ];
 
+function CountUpNumber({ end, decimals = 0, suffix = '', prefix = '', duration = 800 }: { end: number; decimals?: number; suffix?: string; prefix?: string; duration?: number }) {
+  const [val, setVal] = useState(0);
+
+  React.useEffect(() => {
+    let startTimestamp: number | null = null;
+    let animFrame: number;
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      setVal(easeProgress * end);
+      if (progress < 1) {
+        animFrame = requestAnimationFrame(step);
+      }
+    };
+
+    animFrame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animFrame);
+  }, [end, duration]);
+
+  const formatted = decimals > 0 
+    ? val.toFixed(decimals) 
+    : Math.round(val).toLocaleString();
+
+  return <span>{prefix}{formatted}{suffix}</span>;
+}
+
 export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('Sep 1, 2025 - Sep 8, 2025');
 
@@ -69,7 +97,9 @@ export default function AnalyticsPage() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all">
           <p className="text-xs font-medium text-slate-500">Conversations</p>
           <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">1,248</span>
+            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+              <CountUpNumber end={1248} />
+            </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 12%</span>
             </div>
@@ -79,7 +109,9 @@ export default function AnalyticsPage() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all">
           <p className="text-xs font-medium text-slate-500">Unique Visitors</p>
           <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">320</span>
+            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+              <CountUpNumber end={320} />
+            </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 18%</span>
             </div>
@@ -89,7 +121,9 @@ export default function AnalyticsPage() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all">
           <p className="text-xs font-medium text-slate-500">Leads Captured</p>
           <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">76</span>
+            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+              <CountUpNumber end={76} />
+            </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 29%</span>
             </div>
@@ -99,7 +133,9 @@ export default function AnalyticsPage() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all">
           <p className="text-xs font-medium text-slate-500">Appointments</p>
           <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">48</span>
+            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+              <CountUpNumber end={48} />
+            </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 33%</span>
             </div>

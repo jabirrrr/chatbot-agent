@@ -67,6 +67,35 @@ const recentConvs = [
   }
 ];
 
+function CountUpNumber({ end, decimals = 0, suffix = '', prefix = '', duration = 800 }: { end: number; decimals?: number; suffix?: string; prefix?: string; duration?: number }) {
+  const [val, setVal] = useState(0);
+
+  React.useEffect(() => {
+    let startTimestamp: number | null = null;
+    let animFrame: number;
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      // Ease out cubic
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      setVal(easeProgress * end);
+      if (progress < 1) {
+        animFrame = requestAnimationFrame(step);
+      }
+    };
+
+    animFrame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animFrame);
+  }, [end, duration]);
+
+  const formatted = decimals > 0 
+    ? val.toFixed(decimals) 
+    : Math.round(val).toLocaleString();
+
+  return <span>{prefix}{formatted}{suffix}</span>;
+}
+
 export default function AnalyticsCommandCenter() {
   const { setCurrentScreen, setIsWidgetOpen, isEmptyStateDemo, setIsEmptyStateDemo } = useApp();
   const [selectedDateRange, setSelectedDateRange] = useState('Sep 1, 2025 - Sep 8, 2025');
@@ -134,14 +163,16 @@ export default function AnalyticsCommandCenter() {
         </div>
       </div>
 
-      {/* 4 KPI Cards (Total Conversations, Leads Captured, Appointments, User Rating) */}
+      {/* 4 KPI Cards (Total Conversations, Leads Captured, Appointments, AI Resolution Rate) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Card 1: Conversations */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all">
           <p className="text-xs font-medium text-slate-500">Total Conversations</p>
           <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">1,248</span>
+            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+              <CountUpNumber end={1248} />
+            </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 12%</span>
             </div>
@@ -152,7 +183,9 @@ export default function AnalyticsCommandCenter() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all">
           <p className="text-xs font-medium text-slate-500">Leads Captured</p>
           <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">320</span>
+            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+              <CountUpNumber end={320} />
+            </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 28%</span>
             </div>
@@ -163,18 +196,25 @@ export default function AnalyticsCommandCenter() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all">
           <p className="text-xs font-medium text-slate-500">Appointments</p>
           <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">48</span>
+            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+              <CountUpNumber end={48} />
+            </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 33%</span>
             </div>
           </div>
         </div>
 
-        {/* Card 4: User Rating / Resolution */}
+        {/* Card 4: AI Resolution Rate / User Rating */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all">
-          <p className="text-xs font-medium text-slate-500">User Rating</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-500">AI Resolution Rate</p>
+            <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">4.8/5 Rating</span>
+          </div>
           <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">4.8/5</span>
+            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+              <CountUpNumber end={92.4} decimals={1} suffix="%" />
+            </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 6%</span>
             </div>
@@ -263,7 +303,8 @@ export default function AnalyticsCommandCenter() {
               <div 
                 key={idx} 
                 onClick={() => setCurrentScreen('conversations')}
-                className="py-3 flex items-center justify-between hover:bg-slate-50/80 -mx-3 px-3 rounded-xl transition-colors cursor-pointer"
+                style={{ animationDelay: `${idx * 75}ms` }}
+                className="py-3 flex items-center justify-between hover:bg-slate-50/80 -mx-3 px-3 rounded-xl transition-all cursor-pointer animate-fade-in"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <img

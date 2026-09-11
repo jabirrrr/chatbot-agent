@@ -115,6 +115,32 @@ export default function IntegrationsPage() {
           <path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round"/>
         </svg>
       )
+    },
+    {
+      id: 'openrouter',
+      name: 'OpenRouter',
+      desc: 'Connect AI models and providers',
+      category: 'AI Gateway',
+      iconBg: 'bg-indigo-50 text-indigo-600',
+      status: 'connected',
+      logoSvg: (
+        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )
+    },
+    {
+      id: 'webhooks',
+      name: 'Webhooks',
+      desc: 'Real-time HTTP events dispatch',
+      category: 'Developer',
+      iconBg: 'bg-slate-100 text-slate-800',
+      status: 'connected',
+      logoSvg: (
+        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+          <path d="M18 8h1a4 4 0 0 1 0 8h-1M6 8H5a4 4 0 0 0 0 8h1M8 12h8" stroke="#334155" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      )
     }
   ]);
 

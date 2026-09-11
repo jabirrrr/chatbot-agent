@@ -44,6 +44,8 @@ export default function TopBar() {
       case 'leads': return 'Leads CRM / Pipeline';
       case 'appointments': return 'Appointments / Calendar';
       case 'analytics': return 'Analytics / Performance & ROI';
+      case 'integrations': return 'Integrations / Connected Services';
+      case 'deployment': return 'Deployment / Platform Installation';
       case 'ai-models': return 'AI Engine / Model Routing & Costs';
       case 'developer': return 'Developer / Embed Snippet & Webhooks';
       case 'billing': return 'Billing / Subscription & Invoices';

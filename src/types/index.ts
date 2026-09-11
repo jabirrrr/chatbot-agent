@@ -8,6 +8,7 @@ export type NavigationScreen =
   | 'appointments'
   | 'analytics'
   | 'integrations'
+  | 'deployment'
   | 'ai-models'
   | 'developer'
   | 'billing'

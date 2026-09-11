@@ -19,6 +19,7 @@ import AnalyticsPage from '@/components/analytics/AnalyticsPage';
 import AiModelsPage from '@/components/ai-models/AiModelsPage';
 import DeveloperPage from '@/components/developer/DeveloperPage';
 import IntegrationsPage from '@/components/integrations/IntegrationsPage';
+import DeploymentPage from '@/components/deployment/DeploymentPage';
 import BillingPage from '@/components/billing/BillingPage';
 import SettingsPage from '@/components/settings/SettingsPage';
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
@@ -103,6 +104,7 @@ export default function AppShell() {
           {currentScreen === 'appointments' && <AppointmentsPage />}
           {currentScreen === 'analytics' && <AnalyticsPage />}
           {currentScreen === 'integrations' && <IntegrationsPage />}
+          {currentScreen === 'deployment' && <DeploymentPage />}
           {currentScreen === 'ai-models' && <AiModelsPage />}
           {currentScreen === 'developer' && <DeveloperPage />}
           {currentScreen === 'billing' && <BillingPage />}

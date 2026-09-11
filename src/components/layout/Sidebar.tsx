@@ -36,7 +36,7 @@ export default function Sidebar() {
   const newLeadsCount = leads.filter(l => l.status === 'new').length;
 
   const primaryNavItems: NavItem[] = [
-    { id: 'home', label: 'Home', icon: Home },
+    { id: 'home', label: 'Overview', icon: Home },
     { id: 'conversations', label: 'Conversations', icon: MessageSquare, badge: unreadCount > 0 ? `${unreadCount}` : undefined },
     { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount > 0 ? `${newLeadsCount}` : undefined },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
@@ -44,14 +44,15 @@ export default function Sidebar() {
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'integrations', label: 'Integrations', icon: Layers },
     { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'deployment', label: 'Deployment', icon: Globe },
+    { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   const secondaryNavItems: NavItem[] = [
-    { id: 'chatbots', label: 'AI Builder', icon: Bot },
-    { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
+    { id: 'chatbots', label: 'Chatbot Builder', icon: Bot },
     { id: 'onboarding', label: 'Onboarding Flow', icon: Sparkles },
-    { id: 'landing', label: 'Live Landing Page', icon: Globe },
+    { id: 'landing', label: 'Live Landing Page', icon: ExternalLink },
   ];
 
   return (
