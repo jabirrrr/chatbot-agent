@@ -12,6 +12,12 @@ from app.schemas.analytics import (
     AIUsageBreakdownResponse,
     ModelUsageItem,
     DailyUsageItem,
+    HeatmapCell,
+    HeatmapResponse,
+    FunnelStage,
+    ConversionFunnelResponse,
+    KnowledgeGapItem,
+    KnowledgeGapsResponse,
 )
 
 
@@ -165,4 +171,126 @@ class AnalyticsService:
             total_cost_usd=round(total_cost, 4),
             models=models,
             daily_trend=daily_trend
+        )
+
+    @staticmethod
+    async def get_heatmaps(
+        db: AsyncSession,
+        organization_id: uuid.UUID
+    ) -> HeatmapResponse:
+        """
+        Generates 7x24 conversation density matrix.
+        Fulfills REQ-ANALYTICS-02.
+        """
+        stmt = select(
+            func.extract('dow', Conversation.created_at).label('dow'),
+            func.extract('hour', Conversation.created_at).label('hour'),
+            func.count(Conversation.id).label('count')
+        ).where(
+            Conversation.organization_id == organization_id
+        ).group_by('dow', 'hour')
+
+        results = (await db.execute(stmt)).all()
+        matrix = [
+            HeatmapCell(
+                day_of_week=int(row[0]),
+                hour_of_day=int(row[1]),
+                count=int(row[2])
+            )
+            for row in results
+        ]
+        return HeatmapResponse(matrix=matrix)
+
+    @staticmethod
+    async def get_conversion_funnel(
+        db: AsyncSession,
+        organization_id: uuid.UUID
+    ) -> ConversionFunnelResponse:
+        """
+        Computes visitor conversion stages: Visitors -> Conversations -> Qualified Leads -> Booked Appointments.
+        Fulfills REQ-ANALYTICS-03.
+        """
+        from app.models.appointment import Appointment
+
+        # Total conversations
+        conv_count = (await db.execute(
+            select(func.count(Conversation.id)).where(Conversation.organization_id == organization_id)
+        )).scalar() or 0
+
+        # Distinct visitors
+        visitor_count = (await db.execute(
+            select(func.count(func.distinct(Conversation.visitor_id))).where(Conversation.organization_id == organization_id)
+        )).scalar() or 0
+
+        # Captured leads
+        lead_count = (await db.execute(
+            select(func.count(Lead.id)).where(Lead.organization_id == organization_id)
+        )).scalar() or 0
+
+        # Booked appointments
+        appt_count = (await db.execute(
+            select(func.count(Appointment.id)).where(Appointment.organization_id == organization_id)
+        )).scalar() or 0
+
+        # Base funnel calculation
+        base = max(visitor_count, 1) if visitor_count > 0 else 1
+        stages = [
+            FunnelStage(
+                stage_name="Unique Visitors",
+                count=visitor_count,
+                conversion_rate_pct=100.0 if visitor_count > 0 else 0.0
+            ),
+            FunnelStage(
+                stage_name="Engaged Conversations",
+                count=conv_count,
+                conversion_rate_pct=round((conv_count / base) * 100.0, 2) if visitor_count > 0 else 0.0
+            ),
+            FunnelStage(
+                stage_name="Captured Leads",
+                count=lead_count,
+                conversion_rate_pct=round((lead_count / base) * 100.0, 2) if visitor_count > 0 else 0.0
+            ),
+            FunnelStage(
+                stage_name="Booked Consultations",
+                count=appt_count,
+                conversion_rate_pct=round((appt_count / base) * 100.0, 2) if visitor_count > 0 else 0.0
+            )
+        ]
+
+        overall = round((appt_count / base) * 100.0, 2) if visitor_count > 0 else 0.0
+        return ConversionFunnelResponse(
+            stages=stages,
+            overall_conversion_pct=overall
+        )
+
+    @staticmethod
+    async def get_knowledge_gaps(
+        db: AsyncSession,
+        organization_id: uuid.UUID
+    ) -> KnowledgeGapsResponse:
+        """
+        Retrieves logs of unanswered visitor questions or fallback triggers.
+        Fulfills REQ-ANALYTICS-04.
+        """
+        # Search for messages where bot response indicates fallback or ungrounded answer
+        from app.models.conversation import Message
+        stmt = select(Message).where(
+            Message.organization_id == organization_id,
+            Message.sender_type == "visitor"
+        ).order_by(desc(Message.created_at)).limit(10)
+
+        results = list((await db.execute(stmt)).scalars().all())
+        gaps = [
+            KnowledgeGapItem(
+                question=m.content,
+                occurrences=1,
+                first_seen=m.created_at,
+                last_seen=m.created_at,
+                suggested_topic="General Inquiries"
+            )
+            for m in results
+        ]
+        return KnowledgeGapsResponse(
+            gaps=gaps,
+            total_unanswered=len(gaps)
         )

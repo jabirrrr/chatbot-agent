@@ -9,6 +9,8 @@ from app.api.v1.leads import router as leads_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.appointments import router as appointments_router
 from app.api.v1.handoff import router as handoff_router
+from app.api.v1.billing import router as billing_router
+from app.api.v1.public import router as public_router
 
 api_router = APIRouter()
 
@@ -23,3 +25,5 @@ api_router.include_router(leads_router)
 api_router.include_router(analytics_router)
 api_router.include_router(appointments_router)
 api_router.include_router(handoff_router)
+api_router.include_router(billing_router)
+api_router.include_router(public_router)

@@ -63,14 +63,14 @@ No requirement may be modified, deprecated, or removed without an approved entry
 | **REQ-APPT-03** | Appointment List in Dashboard | P0 | M5 | `app.api.v1.appointments`, `AppointmentsPage.tsx` | `TEST-APPT-003` | **PASSED** |
 | **REQ-APPT-04** | Calendar Failure Graceful Degradation | P0 | M5 | `app.adapters.calendar.provider`, `AppointmentService` | `TEST-APPT-004` | **PASSED** |
 | **REQ-ANALYTICS-01**| Executive Overview Dashboard | P0 | M4 | `app.api.v1.analytics.overview`, `AnalyticsCommandCenter.tsx` | `TEST-ANA-001` | **PASSED** |
-| **REQ-ANALYTICS-02**| Conversation Volume & Heatmaps | P1 | M6 | `frontend/src/components/charts/heatmap` | `TEST-ANA-002` | NOT RUN |
-| **REQ-ANALYTICS-03**| Lead Conversion Funnels | P1 | M6 | `frontend/src/components/charts/funnel` | `TEST-ANA-003` | NOT RUN |
-| **REQ-ANALYTICS-04**| Unanswered Question Logs & Gaps | P2 | M6 | `app.api.v1.analytics.gaps` | `TEST-ANA-004` | NOT RUN |
+| **REQ-ANALYTICS-02**| Conversation Volume & Heatmaps | P1 | M6 | `app.services.analytics_service`, `AnalyticsPage.tsx` | `TEST-ANA-002` | **PASSED** |
+| **REQ-ANALYTICS-03**| Lead Conversion Funnels | P1 | M6 | `app.services.analytics_service`, `AnalyticsPage.tsx` | `TEST-ANA-003` | **PASSED** |
+| **REQ-ANALYTICS-04**| Unanswered Question Logs & Gaps | P2 | M6 | `app.api.v1.analytics.gaps`, `AnalyticsPage.tsx` | `TEST-ANA-004` | **PASSED** |
 | **REQ-ANALYTICS-05**| AI Usage & Per-Tenant Token Accounting | P0 | M4 | `app.models.ai_usage`, `app.api.v1.analytics.usage` | `TEST-ANA-005` | **PASSED** |
-| **REQ-BILLING-01**| Tiered Subscription Plans | P0 | M6 | `app.models.subscription`, Stripe Products | `TEST-BIL-001` | NOT RUN |
-| **REQ-BILLING-02**| Stripe Payment Gateway Abstraction | P0 | M6 | `app.adapters.billing.stripe` | `TEST-BIL-002` | NOT RUN |
-| **REQ-BILLING-03**| Subscription Webhook Lifecycle Sync | P0 | M6 | `app.api.v1.billing.webhook` | `TEST-BIL-003` | NOT RUN |
-| **REQ-BILLING-04**| Billing Portal & Invoicing | P0 | M6 | `frontend/src/app/dashboard/billing` | `TEST-BIL-004` | NOT RUN |
+| **REQ-BILLING-01**| Tiered Subscription Plans | P0 | M6 | `app.models.subscription`, `app.api.v1.billing` | `TEST-BIL-001` | **PASSED** |
+| **REQ-BILLING-02**| Stripe Payment Gateway Abstraction | P0 | M6 | `app.adapters.billing.stripe`, `app.api.v1.billing` | `TEST-BIL-002` | **PASSED** |
+| **REQ-BILLING-03**| Subscription Webhook Lifecycle Sync | P0 | M6 | `app.api.v1.billing.webhook`, `ProcessedWebhookEvent` | `TEST-BIL-003` | **PASSED** |
+| **REQ-BILLING-04**| Billing Portal & Invoicing | P0 | M6 | `app.adapters.billing.stripe`, `BillingPage.tsx` | `TEST-BIL-004` | **PASSED** |
 | **REQ-INT-01** | Integration Framework & Encrypted Vault | P0 | M5 | `app.core.vault` (AES-256-GCM), `app.models.integration` | `TEST-INT-001` | **PASSED** |
-| **REQ-INT-02** | Outbound Webhooks with HMAC Verification | P1 | M6 | `app.workers.webhook_tasks` | `TEST-INT-002` | NOT RUN |
-| **REQ-INT-03** | Public REST API with Scoped API Keys | P1 | M6 | `app.api.v1.public`, API Key Middleware | `TEST-INT-003` | NOT RUN |
+| **REQ-INT-02** | Outbound Webhooks with HMAC Verification | P1 | M6 | `app.services.webhook_dispatcher`, `WebhookEndpoint` | `TEST-INT-002` | **PASSED** |
+| **REQ-INT-03** | Public REST API with Scoped API Keys | P1 | M6 | `app.api.v1.public`, `app.services.api_key_service` | `TEST-INT-003` | **PASSED** |

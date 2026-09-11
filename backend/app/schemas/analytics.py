@@ -43,3 +43,37 @@ class AIUsageBreakdownResponse(BaseModel):
     daily_trend: List[DailyUsageItem]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class HeatmapCell(BaseModel):
+    day_of_week: int  # 0 = Sunday, 6 = Saturday
+    hour_of_day: int  # 0 to 23
+    count: int
+
+
+class HeatmapResponse(BaseModel):
+    matrix: List[HeatmapCell]
+
+
+class FunnelStage(BaseModel):
+    stage_name: str
+    count: int
+    conversion_rate_pct: float
+
+
+class ConversionFunnelResponse(BaseModel):
+    stages: List[FunnelStage]
+    overall_conversion_pct: float
+
+
+class KnowledgeGapItem(BaseModel):
+    question: str
+    occurrences: int
+    first_seen: datetime
+    last_seen: datetime
+    suggested_topic: str
+
+
+class KnowledgeGapsResponse(BaseModel):
+    gaps: List[KnowledgeGapItem]
+    total_unanswered: int
