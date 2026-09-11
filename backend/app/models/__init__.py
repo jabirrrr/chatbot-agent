@@ -13,6 +13,7 @@ from app.models.integration import TenantIntegration
 from app.models.subscription import Subscription, ProcessedWebhookEvent
 from app.models.api_key import ApiKey
 from app.models.webhook import WebhookEndpoint
+from app.models.beta import BetaDeployment, BetaFeedback
 
 __all__ = [
     "Base",
@@ -38,4 +39,6 @@ __all__ = [
     "ProcessedWebhookEvent",
     "ApiKey",
     "WebhookEndpoint",
+    "BetaDeployment",
+    "BetaFeedback",
 ]

@@ -17,5 +17,6 @@
 - **Milestone 05 (Google Calendar & Human Operator Handoff):** Implemented AES-256-GCM credential vault, calendar provider abstraction, real-time WebSocket handoff dispatch, appointment scheduling, and Alembic migration `005`.
 - **Milestone 06 (Stripe Billing, Webhooks & Public REST API):** Implemented Stripe tiered billing (Free, Starter, Pro), customer portal, idempotent webhook receiver, outbound HMAC-signed webhooks, public REST API with SHA-256 hashed API keys, and deep analytics (heatmaps, funnels, knowledge gaps).
 - **Milestone 07 (Security Audit, RLS Penetration Testing & Load Testing):** Implemented enterprise CSP and security headers, sliding window rate limiting, comprehensive IDOR / SQLi / XSS penetration testing suite, and 50-client concurrent load testing validating P95 latency < 2,000ms SLA (~16ms measured).
-- **Test Automation:** 85/85 passing automated tests across all domain areas with 100% requirements traceability.
+- **Milestone 08 (Closed Beta Pilot - 10–20 SMB Organizations):** Onboarded 15 pilot SMBs across Marketing Agencies, Professional Services, and Real Estate; established real-time telemetry API; verified 80.0% widget deployment rate (>70% SLA), 99.95% uptime (>99.5% SLA), and 0 cross-tenant data leaks; added qualitative feedback and NPS collection.
+- **Test Automation:** 89/89 passing automated tests across all domain areas with 100% requirements traceability.
 - **Frontend Application:** Verified clean build with Next.js 16 with zero errors.
