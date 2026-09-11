@@ -45,3 +45,9 @@ def test_long_text_recursive_splitting_with_overlap():
     assert "opening hours" in combined
     assert "return policies" in combined
     assert "customer service" in combined
+
+
+def test_empty_and_whitespace_chunking():
+    """Empty or purely whitespace input should gracefully return empty chunk list."""
+    assert ChunkingService.split_text("") == []
+    assert ChunkingService.split_text("    \n\n\t  ") == []
