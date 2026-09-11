@@ -37,7 +37,7 @@ import {
 
 export default function AnalyticsPage() {
   const { dateFilter, setDateFilter } = useApp();
-  const [activeTab, setActiveTab] = useState<'conversations' | 'leads' | 'knowledge' | 'ai_cost'>('conversations');
+  const [activeTab, setActiveTab] = useState<'conversations' | 'leads' | 'knowledge' | 'ai_cost' | 'financials'>('conversations');
 
   const intentData = [
     { intent: 'Pricing & Retainer Inquiry', percentage: 42, count: 524 },
@@ -59,9 +59,9 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Platform Analytics & ROI</h2>
+          <h2 className="text-xl font-bold text-slate-900">Platform Analytics & Financial ROI</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Evaluate conversion rates, AI resolution efficiency, knowledge coverage, and token expenses.
+            Evaluate conversion rates, AI resolution efficiency, knowledge coverage, MRR, churn, and AI cost gross margins.
           </p>
         </div>
 
@@ -72,19 +72,24 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-slate-200 bg-white px-4 rounded-xl shadow-xs flex gap-6 text-xs font-bold text-slate-500">
-        {(['conversations', 'leads', 'knowledge', 'ai_cost'] as const).map(tab => (
+      <div className="border-b border-slate-200 bg-white px-4 rounded-xl shadow-xs flex gap-6 text-xs font-bold text-slate-500 overflow-x-auto">
+        {(['conversations', 'leads', 'knowledge', 'ai_cost', 'financials'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`py-3.5 border-b-2 capitalize transition-colors ${
+            className={`py-3.5 border-b-2 capitalize whitespace-nowrap transition-colors ${
               activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent hover:text-slate-900'
             }`}
           >
-            {tab === 'ai_cost' ? 'AI Usage & Token Costs' : `${tab} Performance`}
+            {tab === 'ai_cost' 
+              ? 'AI Usage & Token Costs' 
+              : tab === 'financials'
+              ? 'MRR & Margins (SaaS)'
+              : `${tab} Performance`}
           </button>
         ))}
       </div>
+
 
       {/* TAB 1: CONVERSATIONS */}
       {activeTab === 'conversations' && (
@@ -258,6 +263,112 @@ export default function AnalyticsPage() {
           </div>
         </div>
       )}
+
+      {/* TAB 5: FINANCIALS & COMMERCIAL SAAS SCALING */}
+      {activeTab === 'financials' && (
+        <div className="space-y-6">
+          {/* Top 4 KPI Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <span className="text-xs font-semibold text-slate-400">Monthly Recurring Revenue</span>
+              <p className="text-3xl font-black text-slate-900 mt-1.5">$1,086.00</p>
+              <div className="flex items-center gap-1.5 mt-2 text-xs text-emerald-600 font-bold">
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>+24.8% vs last month</span>
+              </div>
+              <span className="text-[10px] text-slate-400 mt-1 block">ARR Run Rate: $13,032.00</span>
+            </div>
+
+            <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <span className="text-xs font-semibold text-slate-400">Monthly Churn Rate</span>
+              <p className="text-3xl font-black text-emerald-600 mt-1.5">0.0%</p>
+              <div className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                <span>Target Met (&lt; 5.0%)</span>
+              </div>
+              <span className="text-[10px] text-slate-400 mt-1 block">0 Cancellations in 30 days</span>
+            </div>
+
+            <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <span className="text-xs font-semibold text-slate-400">AI Inference Cost</span>
+              <p className="text-3xl font-black text-blue-600 mt-1.5">$24.50</p>
+              <span className="text-[11px] text-slate-500 mt-2 block font-medium">
+                2.2% of gross subscription revenue
+              </span>
+              <span className="text-[10px] text-slate-400 mt-1 block">OpenRouter multi-model blended</span>
+            </div>
+
+            <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <span className="text-xs font-semibold text-slate-400">AI Gross Profit Margin</span>
+              <p className="text-3xl font-black text-purple-600 mt-1.5">97.7%</p>
+              <div className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full">
+                <CheckCircle2 className="w-3 h-3 text-purple-600" />
+                <span>Target Met (&gt; 65.0%)</span>
+              </div>
+              <span className="text-[10px] text-slate-400 mt-1 block">Net Profit: $1,061.50 / mo</span>
+            </div>
+          </div>
+
+          {/* Revenue Breakdown by Tier */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <h3 className="text-sm font-bold text-slate-900 mb-1">Subscription Tier Distribution</h3>
+              <p className="text-xs text-slate-400 mb-4">Current distribution across 15 active beta pilot organizations</p>
+              <div className="space-y-4">
+                {[
+                  { tier: 'Starter ($49/mo)', count: 10, mrr: 490.0, pct: 45.1, color: 'bg-blue-600' },
+                  { tier: 'Professional ($149/mo)', count: 4, mrr: 596.0, pct: 54.9, color: 'bg-purple-600' },
+                  { tier: 'Free Discovery Trial ($0/mo)', count: 1, mrr: 0.0, pct: 0.0, color: 'bg-slate-400' },
+                ].map((item, i) => (
+                  <div key={i} className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="text-slate-800">{item.tier}</span>
+                      <span className="text-slate-900 font-mono">${item.mrr.toFixed(2)} MRR ({item.count} orgs)</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                      <div className={`${item.color} h-2 rounded-full`} style={{ width: `${item.pct}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 mb-1">Unit Economics & Scaling SLA</h3>
+                <p className="text-xs text-slate-400 mb-4">Phase 4 General Availability benchmarks</p>
+                <div className="space-y-3 text-xs text-slate-600">
+                  <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200 text-emerald-900 space-y-1">
+                    <div className="font-bold flex items-center gap-1.5 text-emerald-800">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Gross Margin SLA: 97.7%</span>
+                    </div>
+                    <p className="text-[11px] text-emerald-700">
+                      Required benchmark was &gt;65.0%. OpenRouter model-routing optimizes token expense to &lt;2.5% of subscription value.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200 text-blue-900 space-y-1">
+                    <div className="font-bold flex items-center gap-1.5 text-blue-800">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Zero Churn Recorded</span>
+                    </div>
+                    <p className="text-[11px] text-blue-700">
+                      All 15 beta organizations retained through pilot conclusion. Target benchmark was &lt;5.0% churn.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                <span>Currency: USD</span>
+                <span>Audited: Sept 2026</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -21,8 +21,12 @@ import DeveloperPage from '@/components/developer/DeveloperPage';
 import BillingPage from '@/components/billing/BillingPage';
 import SettingsPage from '@/components/settings/SettingsPage';
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
+import MarketingLandingPage from '@/components/landing/MarketingLandingPage';
+import SystemStatusPage from '@/components/status/SystemStatusPage';
+import OnboardingChecklistWidget from '@/components/onboarding/OnboardingChecklistWidget';
 
 import { X, Sparkles, Bot, Zap, Calendar, MessageSquare, CheckCircle2 } from 'lucide-react';
+
 
 export default function AppShell() {
   const { 
@@ -61,7 +65,12 @@ export default function AppShell() {
 
         {/* Dynamic Screen Content */}
         <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">
-          {currentScreen === 'home' && <AnalyticsCommandCenter />}
+          {currentScreen === 'home' && (
+            <>
+              <OnboardingChecklistWidget />
+              <AnalyticsCommandCenter />
+            </>
+          )}
           {currentScreen === 'chatbots' && <ChatbotsPage />}
           {currentScreen === 'knowledge' && <KnowledgeBasePage />}
           {currentScreen === 'appearance' && <AppearanceStudio />}
@@ -74,13 +83,16 @@ export default function AppShell() {
           {currentScreen === 'billing' && <BillingPage />}
           {currentScreen === 'settings' && <SettingsPage />}
           {currentScreen === 'onboarding' && <OnboardingWizard />}
+          {currentScreen === 'landing' && <MarketingLandingPage />}
+          {currentScreen === 'status' && <SystemStatusPage />}
         </main>
       </div>
 
-      {/* Floating Interactive Customer Chat Widget (hidden on appearance/onboarding which have dedicated embedded widgets) */}
-      {currentScreen !== 'appearance' && currentScreen !== 'onboarding' && (
+      {/* Floating Interactive Customer Chat Widget (hidden on appearance/onboarding/landing which have dedicated embedded widgets) */}
+      {currentScreen !== 'appearance' && currentScreen !== 'onboarding' && currentScreen !== 'landing' && currentScreen !== 'status' && (
         <CustomerChatWidget />
       )}
+
 
       {/* Global Toast System */}
       <ToastContainer />

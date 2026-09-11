@@ -114,3 +114,26 @@ async def get_knowledge_gaps(
         db=db,
         organization_id=org.id
     )
+
+
+@router.get(
+    "/financials",
+    summary="Financial metrics: MRR, Churn rate (<5%), and AI cost gross margin (>65%)"
+)
+async def get_financial_metrics(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    org: Organization = Depends(get_current_organization),
+):
+    """
+    Computes commercial SaaS financial health:
+    - Monthly Recurring Revenue (MRR)
+    - Churn Rate (< 5% benchmark)
+    - AI Token Cost and Gross Profit Margin (> 65% benchmark)
+    Fulfills Phase 4 / Milestone M9 Deliverable 4.
+    """
+    return await AnalyticsService.get_financial_metrics(
+        db=db,
+        organization_id=org.id
+    )
+

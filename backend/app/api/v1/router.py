@@ -12,6 +12,8 @@ from app.api.v1.handoff import router as handoff_router
 from app.api.v1.billing import router as billing_router
 from app.api.v1.public import router as public_router
 from app.api.v1.beta import router as beta_router
+from app.api.v1.onboarding import router as onboarding_router
+from app.api.v1.status import router as status_router
 
 api_router = APIRouter()
 
@@ -29,4 +31,8 @@ api_router.include_router(handoff_router)
 api_router.include_router(billing_router)
 api_router.include_router(public_router)
 api_router.include_router(beta_router)
+api_router.include_router(onboarding_router, prefix="/onboarding", tags=["Automated Onboarding & Email Sequences"])
+api_router.include_router(status_router, prefix="/status", tags=["System Status & Health SLA"])
+
+
 

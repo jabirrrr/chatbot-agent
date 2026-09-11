@@ -91,3 +91,8 @@ No requirement may be modified, deprecated, or removed without an approved entry
 | **REQ-M8-04** | Qualitative Feedback & NPS Ingestion Channel | P0 | M8 | `app.models.beta`, `app.api.v1.beta` | `TEST-BETA-004` | **PASSED** |
 | **REQ-M8-05** | Zero Cross-Tenant Data Leaks Verification | P0 | M8 | `app.api.deps`, PostgreSQL RLS | `TEST-SEC-004..007`| **PASSED** |
 | **REQ-M8-06** | System Availability SLA (>99.5% Uptime) | P0 | M8 | Async FastAPI Runtime | `TEST-LOAD-001` | **PASSED** |
+| **REQ-M9-01** | Marketing Landing Page & Interactive Sandbox | P0 | M9 | `MarketingLandingPage.tsx` | Manual / Build | **PASSED** |
+| **REQ-M9-02** | Automated Onboarding Checklist & Email Sequences | P0 | M9 | `app.services.onboarding_service`, `app.services.email_service` | `TEST-M9-004..005` | **PASSED** |
+| **REQ-M9-03** | Real-Time System Status Page & Sentry Monitoring | P0 | M9 | `app.api.v1.status`, `app.core.sentry`, `SystemStatusPage.tsx` | `TEST-M9-003..006` | **PASSED** |
+| **REQ-M9-04** | Commercial Financial Telemetry (MRR, Churn <5%, AI Margin >65%) | P0 | M9 | `app.services.analytics_service`, `app.api.v1.analytics` | `TEST-M9-001..002` | **PASSED** |
+

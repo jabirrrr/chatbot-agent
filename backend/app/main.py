@@ -6,6 +6,7 @@ import logging
 from app.core.config import settings
 from app.core.middleware import SecurityHeadersMiddleware
 from app.core.rate_limit import RateLimitMiddleware
+from app.core.sentry import init_sentry, capture_exception
 from app.api.v1.router import api_router
 
 logging.basicConfig(
@@ -13,6 +14,9 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("helio-api")
+
+# Initialize Sentry error monitoring
+init_sentry()
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -71,11 +75,13 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    capture_exception(exc, tags={"method": request.method, "path": str(request.url.path)})
     logger.error(f"Unhandled exception on {request.method} {request.url}: {exc}", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "An unexpected internal server error occurred."}
     )
+
 
 
 if __name__ == "__main__":

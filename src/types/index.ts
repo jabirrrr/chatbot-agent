@@ -11,7 +11,10 @@ export type NavigationScreen =
   | 'developer'
   | 'billing'
   | 'settings'
-  | 'onboarding';
+  | 'onboarding'
+  | 'landing'
+  | 'status';
+
 
 export type LeadStatus = 'new' | 'qualified' | 'contacted' | 'booked' | 'won' | 'lost';
 

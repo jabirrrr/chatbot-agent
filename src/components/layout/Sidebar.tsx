@@ -21,8 +21,11 @@ import {
   ChevronRight,
   Sparkles,
   Building2,
-  ChevronDown
+  ChevronDown,
+  Globe,
+  Activity
 } from 'lucide-react';
+
 
 interface NavItem {
   id: NavigationScreen;
@@ -50,7 +53,10 @@ export default function Sidebar() {
     { id: 'developer', label: 'Developer', icon: Code2 },
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'landing', label: 'Landing Page (Live)', icon: Globe },
+    { id: 'status', label: 'System Status SLA', icon: Activity },
   ];
+
 
   return (
     <aside

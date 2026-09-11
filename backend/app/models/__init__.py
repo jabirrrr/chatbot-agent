@@ -14,6 +14,7 @@ from app.models.subscription import Subscription, ProcessedWebhookEvent
 from app.models.api_key import ApiKey
 from app.models.webhook import WebhookEndpoint
 from app.models.beta import BetaDeployment, BetaFeedback
+from app.models.onboarding import OnboardingChecklist
 
 __all__ = [
     "Base",
@@ -41,4 +42,6 @@ __all__ = [
     "WebhookEndpoint",
     "BetaDeployment",
     "BetaFeedback",
+    "OnboardingChecklist",
 ]
+
