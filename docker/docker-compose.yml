@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # Primary Relational & Vector Database
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: helio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-helio_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-helio_secure_password}
+      POSTGRES_DB: ${POSTGRES_DB:-helio_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-pgvector.sql:/docker-entrypoint-initdb.d/init-pgvector.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helio_user} -d ${POSTGRES_DB:-helio_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - helio-network
+
+  # In-Memory Cache, Rate Limiter & Message Broker
+  redis:
+    image: redis:7.2-alpine
+    container_name: helio-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - helio-network
+
+  # Local S3-Compatible Object Storage for Documents
+  minio:
+    image: minio/minio:RELEASE.2024-05-10T01-41-38Z
+    container_name: helio-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio_secure_password}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - helio-network
+
+  # Local SMTP Testing Server & Web UI
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: helio-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP port
+      - "8025:8025" # Web UI
+    networks:
+      - helio-network
+
+  # FastAPI Backend Service
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: helio-backend
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: development
+      DEBUG: "True"
+      DATABASE_ASYNC_URL: postgresql+asyncpg://helio_user:helio_secure_password@postgres:5432/helio_db
+      DATABASE_URL: postgresql://helio_user:helio_secure_password@postgres:5432/helio_db
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: http://minio:9000
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - helio-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  helio-network:
+    driver: bridge
