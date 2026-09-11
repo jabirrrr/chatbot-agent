@@ -2,314 +2,374 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import Badge from '@/components/common/Badge';
-import { ChatbotConfig } from '@/types';
 import { 
   Bot, 
-  Plus, 
-  Search, 
-  Globe, 
-  MessageSquare, 
-  ExternalLink, 
-  Copy, 
-  Power, 
-  Settings, 
+  Send, 
+  Sparkles, 
   Check, 
+  Save, 
+  UploadCloud, 
+  Palette, 
+  Code, 
+  Copy, 
   Eye, 
-  MoreVertical,
-  X,
-  Sparkles
+  CheckCircle2, 
+  HelpCircle 
 } from 'lucide-react';
 
 export default function ChatbotsPage() {
-  const { 
-    chatbotsList, 
-    chatbot, 
-    updateChatbot, 
-    setCurrentScreen, 
-    setIsWidgetOpen, 
-    addToast 
-  } = useApp();
+  const { chatbot, updateChatbot, addToast, setCurrentScreen } = useApp();
 
-  const [searchFilter, setSearchFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft' | 'disabled'>('all');
-  const [selectedBotForDetail, setSelectedBotForDetail] = useState<ChatbotConfig | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'appearance' | 'behavior' | 'installation' | 'advanced'>('overview');
+  const [activeTab, setActiveTab] = useState<'behavior' | 'knowledge' | 'appearance' | 'deployment'>('behavior');
+  
+  // Assistant identity state
+  const [assistantName, setAssistantName] = useState(chatbot.name || 'Your Assistant');
+  const [tone, setTone] = useState(chatbot.tone || 'Friendly');
+  const [businessDescription, setBusinessDescription] = useState(
+    'We are an online store offering high-quality products with fast delivery across India.'
+  );
 
-  const filteredBots = chatbotsList.filter(bot => {
-    const matchesSearch = bot.name.toLowerCase().includes(searchFilter.toLowerCase()) || 
-                          bot.domain.toLowerCase().includes(searchFilter.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || bot.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  // Goals
+  const [goals, setGoals] = useState({
+    answerQuestions: true,
+    captureLeads: true,
+    scheduleAppointments: true,
+    transferToHuman: true
   });
 
-  const handleDuplicate = (bot: ChatbotConfig) => {
+  // Preview interactive state
+  const [previewMessages, setPreviewMessages] = useState<Array<{ sender: 'bot' | 'visitor'; text: string }>>([
+    {
+      sender: 'bot',
+      text: 'Hi! 👋 How can I help you today?'
+    }
+  ]);
+  const [previewInput, setPreviewInput] = useState('');
+  const [copiedSnippet, setCopiedSnippet] = useState(false);
+
+  const handlePreviewSend = (msgText?: string) => {
+    const text = msgText || previewInput;
+    if (!text.trim()) return;
+
+    setPreviewMessages(prev => [...prev, { sender: 'visitor', text }]);
+    setPreviewInput('');
+
+    setTimeout(() => {
+      let reply = "I'd be happy to assist! Let me know if you need specific product details, shipping estimates, or pricing plans.";
+      const lower = text.toLowerCase();
+      if (lower.includes('product')) {
+        reply = "We offer a wide collection of verified home goods and artisanal crafts with express shipping across India!";
+      } else if (lower.includes('price')) {
+        reply = "Our products start from ₹499 with free shipping on all orders above ₹999. Would you like a discount voucher?";
+      } else if (lower.includes('appointment') || lower.includes('schedule')) {
+        reply = "You can book a personal consultation with our styling team. What day works best for you?";
+      } else if (lower.includes('human')) {
+        reply = "Transferring to a specialist now. One moment while I alert the team!";
+      }
+      setPreviewMessages(prev => [...prev, { sender: 'bot', text: reply }]);
+    }, 600);
+  };
+
+  const handleSaveDraft = () => {
+    updateChatbot({ name: assistantName, tone: tone as any });
     addToast({
-      type: 'success',
-      title: 'Chatbot Duplicated',
-      description: `Created copy of "${bot.name}" with matching configuration.`
+      type: 'info',
+      title: 'Draft Saved',
+      description: 'Your chatbot changes have been saved to local draft.'
     });
   };
 
-  const handleToggleStatus = (botId: string, currentStatus: string) => {
-    const nextStatus = currentStatus === 'active' ? 'disabled' : 'active';
-    updateChatbot({ status: nextStatus });
+  const handlePublish = () => {
+    updateChatbot({ name: assistantName, tone: tone as any, status: 'active' });
     addToast({
-      type: 'info',
-      title: 'Status Updated',
-      description: `Chatbot switched to ${nextStatus}.`
+      type: 'success',
+      title: 'Assistant Published',
+      description: `"${assistantName}" is now active and ready to handle visitors.`
     });
   };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
-      {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+    <div className="space-y-6 page-transition pb-12">
+      {/* Top Header (Matches Panel 3: Build Your AI Assistant) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Chatbot Management</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Create, customize, and govern autonomous conversational agents across your domains.
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Build Your AI Assistant
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Configure your chatbot's behavior, knowledge and appearance.
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setCurrentScreen('onboarding');
-            addToast({
-              type: 'info',
-              title: 'Create Chatbot',
-              description: 'Opened guided onboarding setup wizard.'
-            });
-          }}
-          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm shadow-blue-600/20 transition-colors w-fit"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Chatbot</span>
-        </button>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by name or domain..."
-            value={searchFilter}
-            onChange={e => setSearchFilter(e.target.value)}
-            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-          />
-        </div>
-
-        <div className="flex items-center gap-1.5 bg-white border border-slate-200 p-1 rounded-xl text-xs font-semibold text-slate-600">
-          {(['all', 'active', 'draft', 'disabled'] as const).map(s => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1 rounded-lg capitalize transition-colors ${
-                statusFilter === s ? 'bg-slate-900 text-white' : 'hover:bg-slate-100 text-slate-600'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Chatbots Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredBots.map(bot => (
-          <div
-            key={bot.id}
-            className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={handleSaveDraft}
+            className="px-4 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all shadow-2xs btn-press"
           >
-            <div>
-              {/* Header with Avatar & Status */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shrink-0 shadow-sm"
-                    style={{ backgroundColor: bot.themeColor }}
-                  >
-                    <Bot className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-bold text-slate-900 truncate">{bot.name}</h3>
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
-                      <Globe className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{bot.domain}</span>
-                    </div>
-                  </div>
-                </div>
+            Save Draft
+          </button>
+          <button
+            onClick={handlePublish}
+            className="px-4 py-2 text-xs font-medium text-white bg-slate-900 hover:bg-black rounded-xl transition-all shadow-xs btn-press"
+          >
+            Publish
+          </button>
+        </div>
+      </div>
 
-                <Badge variant={bot.status === 'active' ? 'emerald' : bot.status === 'draft' ? 'amber' : 'gray'}>
-                  {bot.status.toUpperCase()}
-                </Badge>
-              </div>
-
-              {/* Bot Key Stats */}
-              <div className="grid grid-cols-2 gap-2 mt-5 py-3 border-y border-slate-100 text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-400 font-medium">Monthly Chats</span>
-                  <p className="font-bold text-slate-800 text-sm">{bot.conversationsCount}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-medium">Tone Profile</span>
-                  <p className="font-bold text-slate-800 text-sm">{bot.tone}</p>
-                </div>
-              </div>
-
-              {/* Welcome Message Preview */}
-              <p className="text-xs text-slate-500 line-clamp-2 mt-3 italic bg-slate-50 p-2 rounded-lg border border-slate-100">
-                "{bot.welcomeMessage}"
-              </p>
-            </div>
-
-            {/* Actions Strip */}
-            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    updateChatbot(bot);
-                    setCurrentScreen('appearance');
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-1 transition-colors"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  <span>Customize</span>
-                </button>
-                <button
-                  onClick={() => {
-                    updateChatbot(bot);
-                    setIsWidgetOpen(true);
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-1 transition-colors"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Preview</span>
-                </button>
-              </div>
-
-              <button
-                onClick={() => setSelectedBotForDetail(bot)}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-800"
-              >
-                Inspect Details
-              </button>
-            </div>
-          </div>
+      {/* Tabs Row (Behavior, Knowledge, Appearance, Deployment) */}
+      <div className="flex items-center gap-1 border-b border-slate-200/80 pb-px">
+        {[
+          { id: 'behavior', label: 'Behavior' },
+          { id: 'knowledge', label: 'Knowledge' },
+          { id: 'appearance', label: 'Appearance' },
+          { id: 'deployment', label: 'Deployment' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-4 py-2 text-xs font-medium transition-all relative ${
+              activeTab === tab.id
+                ? 'text-indigo-600 font-semibold border-b-2 border-indigo-600 -mb-px'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            {tab.label}
+          </button>
         ))}
       </div>
 
-      {/* Empty State if filter yields 0 */}
-      {filteredBots.length === 0 && (
-        <div className="bg-white p-12 rounded-2xl border border-dashed border-slate-300 text-center max-w-md mx-auto my-8">
-          <Bot className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-          <p className="text-xs font-bold text-slate-700">No chatbots found</p>
-          <p className="text-[11px] text-slate-400 mt-1">Try adjusting your search terms or status filter.</p>
-        </div>
-      )}
-
-      {/* Chatbot Detail Drawer Modal */}
-      {selectedBotForDetail && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex justify-end animate-fade-in">
-          <div className="bg-white w-full max-w-xl h-full shadow-2xl flex flex-col justify-between animate-slide-up">
-            <div>
-              {/* Header */}
-              <div className="p-5 border-b border-slate-200 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold"
-                    style={{ backgroundColor: selectedBotForDetail.themeColor }}
-                  >
-                    <Bot className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">{selectedBotForDetail.name}</h3>
-                    <p className="text-xs text-slate-400">{selectedBotForDetail.domain}</p>
-                  </div>
+      {/* Main Workspace Split: Left Form + Right Live Preview */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        {/* Left Form: Configuration Area (7 cols) */}
+        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-6">
+          
+          {activeTab === 'behavior' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900 mb-4">Assistant Identity</h2>
+                
+                {/* Assistant Name */}
+                <div className="space-y-1.5 mb-4">
+                  <label className="text-xs font-medium text-slate-700">Name</label>
+                  <input
+                    type="text"
+                    value={assistantName}
+                    onChange={e => setAssistantName(e.target.value)}
+                    placeholder="Your Assistant"
+                    className="w-full text-xs bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  />
                 </div>
-                <button
-                  onClick={() => setSelectedBotForDetail(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+
+                {/* Tone Select */}
+                <div className="space-y-1.5 mb-4">
+                  <label className="text-xs font-medium text-slate-700">Tone</label>
+                  <select
+                    value={tone}
+                    onChange={e => setTone(e.target.value as 'Professional' | 'Friendly' | 'Concise' | 'Warm')}
+                    className="w-full text-xs bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer"
+                  >
+                    <option value="Friendly">Friendly</option>
+                    <option value="Professional">Professional</option>
+                    <option value="Concise">Concise</option>
+                    <option value="Warm">Warm</option>
+                  </select>
+                </div>
+
+                {/* Business Description */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-slate-700">Business Description</label>
+                    <span className="text-[11px] text-slate-400">{businessDescription.length}/500</span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    maxLength={500}
+                    value={businessDescription}
+                    onChange={e => setBusinessDescription(e.target.value)}
+                    className="w-full text-xs bg-white border border-slate-200 rounded-xl p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all leading-relaxed"
+                  />
+                </div>
               </div>
 
-              {/* Tabs */}
-              <div className="px-5 border-b border-slate-200 flex gap-4 text-xs font-semibold text-slate-500">
-                {(['overview', 'appearance', 'behavior', 'installation', 'advanced'] as const).map(t => (
-                  <button
-                    key={t}
-                    onClick={() => setActiveTab(t)}
-                    className={`py-3 border-b-2 capitalize transition-colors ${
-                      activeTab === t ? 'border-blue-600 text-blue-600' : 'border-transparent hover:text-slate-800'
+              {/* Primary Goals Checkboxes */}
+              <div className="pt-2 border-t border-slate-100">
+                <h3 className="text-xs font-semibold text-slate-900 mb-3">Primary Goals</h3>
+                <div className="space-y-2.5">
+                  {[
+                    { key: 'answerQuestions', label: 'Answer customer questions' },
+                    { key: 'captureLeads', label: 'Capture leads' },
+                    { key: 'scheduleAppointments', label: 'Schedule appointments' },
+                    { key: 'transferToHuman', label: 'Transfer to human' },
+                  ].map(item => (
+                    <label key={item.key} className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-700 select-none">
+                      <input
+                        type="checkbox"
+                        checked={goals[item.key as keyof typeof goals]}
+                        onChange={e => setGoals(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded-md"
+                      />
+                      <span>{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'knowledge' && (
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold text-slate-900">Knowledge Integration</h2>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Connect documents, web URLs, and FAQs so your assistant has up-to-date answers.
+              </p>
+              <div className="p-4 rounded-xl border border-dashed border-slate-200 text-center space-y-2">
+                <UploadCloud className="w-8 h-8 text-indigo-500 mx-auto" />
+                <p className="text-xs font-medium text-slate-800">5 sources currently indexed</p>
+                <button
+                  onClick={() => setCurrentScreen('knowledge')}
+                  className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                >
+                  Manage Knowledge Base →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'appearance' && (
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold text-slate-900">Widget Appearance</h2>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Customize colors, bubble shapes, and welcome greetings.
+              </p>
+              <button
+                onClick={() => setCurrentScreen('appearance')}
+                className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-medium hover:bg-indigo-100 transition-colors"
+              >
+                Open Full Appearance Studio →
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'deployment' && (
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold text-slate-900">Deploy Snippet</h2>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Paste this script inside the &lt;head&gt; tag of your website to activate Chatly.
+              </p>
+              <div className="bg-slate-950 p-3.5 rounded-xl font-mono text-[11px] text-slate-200 overflow-x-auto relative">
+                <code>{`<script src="https://cdn.chatly.ai/widget.js" data-chatly-id="bot_01" async></script>`}</code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard?.writeText(`<script src="https://cdn.chatly.ai/widget.js" data-chatly-id="bot_01" async></script>`);
+                    setCopiedSnippet(true);
+                    setTimeout(() => setCopiedSnippet(false), 2000);
+                  }}
+                  className="absolute right-2 top-2 p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs"
+                >
+                  {copiedSnippet ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* Right Frame: Live Chatbot Preview (5 cols) (Matching Panel 3) */}
+        <div className="lg:col-span-5 flex flex-col">
+          <div className="flex items-center justify-between pb-2 mb-2">
+            <span className="text-xs font-medium text-slate-400">Preview</span>
+            <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Live Test</span>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden flex flex-col">
+            
+            {/* Chatbot Header */}
+            <div className="px-4 py-3 bg-white border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-medium shrink-0">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-semibold text-slate-900">{assistantName}</h3>
+                  <span className="text-[10px] text-slate-400">Online</span>
+                </div>
+              </div>
+              <div className="w-2 h-2 rounded-full bg-slate-200"></div>
+            </div>
+
+            {/* Chatbot Message Body */}
+            <div className="p-4 space-y-3 min-h-[300px] max-h-[360px] overflow-y-auto bg-slate-50/50">
+              {previewMessages.map((m, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${m.sender === 'visitor' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                >
+                  <div
+                    className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed ${
+                      m.sender === 'visitor'
+                        ? 'bg-indigo-600 text-white rounded-br-xs'
+                        : 'bg-white border border-slate-200/90 text-slate-800 shadow-2xs rounded-bl-xs'
                     }`}
                   >
-                    {t}
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+
+              {/* Quick Reply Chips (Matching Panel 3) */}
+              <div className="pt-2 flex flex-col gap-1.5">
+                {[
+                  'Tell me about your products',
+                  'What are your prices?',
+                  'I want to schedule an appointment',
+                  'Talk to a human'
+                ].map((chip, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handlePreviewSend(chip)}
+                    className="text-left text-[11px] font-medium bg-white hover:bg-indigo-50/60 text-indigo-600 border border-indigo-200/80 px-3 py-1.5 rounded-full shadow-2xs transition-colors w-fit"
+                  >
+                    {chip}
                   </button>
                 ))}
               </div>
-
-              {/* Tab Content */}
-              <div className="p-6 overflow-y-auto space-y-4 text-xs">
-                {activeTab === 'overview' && (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Widget Token:</span>
-                        <span className="font-mono text-slate-800 font-bold">wgt_live_9a8b7c6d...</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Monthly Conversations:</span>
-                        <span className="font-bold text-slate-900">{selectedBotForDetail.conversationsCount}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Monthly Budget:</span>
-                        <span className="font-bold text-slate-900">${selectedBotForDetail.monthlyBudgetUsd}.00</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'behavior' && (
-                  <div className="space-y-3">
-                    <p className="font-bold text-slate-800">Tone: {selectedBotForDetail.tone}</p>
-                    <p className="font-bold text-slate-800">Lead Fields: {selectedBotForDetail.leadFields.join(', ')}</p>
-                    <p className="font-bold text-slate-800">Fallback Strategy: {selectedBotForDetail.fallbackBehavior}</p>
-                  </div>
-                )}
-
-                {activeTab === 'installation' && (
-                  <div className="p-4 bg-slate-950 text-blue-300 rounded-xl font-mono text-[11px] whitespace-pre-wrap">
-                    {`<script src="https://cdn.helio.ai/v1/widget.js" data-token="wgt_live_..." async></script>`}
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* Drawer Footer */}
-            <div className="p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-              <button
-                onClick={() => setSelectedBotForDetail(null)}
-                className="px-4 py-2 border border-slate-300 rounded-xl font-semibold text-xs text-slate-700 hover:bg-slate-100"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedBotForDetail(null);
-                  setCurrentScreen('appearance');
+            {/* Chatbot Input Bar */}
+            <div className="p-3 bg-white border-t border-slate-100">
+              <form
+                onSubmit={e => {
+                  e.preventDefault();
+                  handlePreviewSend();
                 }}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-xs shadow-sm"
+                className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5"
               >
-                Open in Studio
-              </button>
+                <input
+                  type="text"
+                  placeholder="Type a message..."
+                  value={previewInput}
+                  onChange={e => setPreviewInput(e.target.value)}
+                  className="flex-1 bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={!previewInput.trim()}
+                  className="w-6 h-6 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white flex items-center justify-center transition-colors shrink-0"
+                >
+                  <Send className="w-3 h-3" />
+                </button>
+              </form>
             </div>
+
           </div>
         </div>
-      )}
+
+      </div>
     </div>
   );
 }

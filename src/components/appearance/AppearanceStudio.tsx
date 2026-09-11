@@ -2,273 +2,368 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import CustomerChatWidget from '@/components/widget/CustomerChatWidget';
 import { 
   Palette, 
+  Send, 
   RotateCcw, 
+  Bot, 
   Check, 
-  Smartphone, 
-  Monitor, 
   Sparkles, 
-  Plus, 
-  Trash2, 
-  Layers,
-  Bot
+  Smile, 
+  Sliders 
 } from 'lucide-react';
 
 export default function AppearanceStudio() {
   const { chatbot, updateChatbot, addToast } = useApp();
 
-  const [newQuestion, setNewQuestion] = useState('');
-  const [devicePreview, setDevicePreview] = useState<'mobile' | 'desktop'>('mobile');
+  const [appearanceTab, setAppearanceTab] = useState<'Style' | 'Colors' | 'Position' | 'Messages'>('Style');
+  const [bubbleStyle, setBubbleStyle] = useState<'Modern' | 'Minimal' | 'Rounded' | 'Classic'>('Modern');
+  const [primaryColor, setPrimaryColor] = useState(chatbot.themeColor || '#6366f1');
+  const [welcomeMsg, setWelcomeMsg] = useState(
+    chatbot.welcomeMessage || 'Hi! 👋 How can I help you today?'
+  );
+  const [widgetPosition, setWidgetPosition] = useState<'bottom-right' | 'bottom-left'>(
+    chatbot.position || 'bottom-right'
+  );
 
-  const themePresets = [
-    { name: 'Cobalt Standard', color: '#2563eb' },
-    { name: 'Emerald Growth', color: '#10b981' },
-    { name: 'Obsidian Modern', color: '#0f172a' },
-    { name: 'Royal Indigo', color: '#4f46e5' },
-    { name: 'Amber Glow', color: '#d97706' },
+  // Preview interactive messages
+  const [previewMsg, setPreviewMsg] = useState('');
+  const [interactiveMessages, setInteractiveMessages] = useState<Array<{ sender: 'bot' | 'visitor'; text: string }>>([
+    {
+      sender: 'bot',
+      text: welcomeMsg
+    }
+  ]);
+
+  const handleColorChange = (newColor: string) => {
+    setPrimaryColor(newColor);
+    updateChatbot({ themeColor: newColor });
+  };
+
+  const handleWelcomeMsgChange = (text: string) => {
+    setWelcomeMsg(text);
+    updateChatbot({ welcomeMessage: text });
+    setInteractiveMessages(prev => [
+      { sender: 'bot', text },
+      ...prev.slice(1)
+    ]);
+  };
+
+  const handlePreviewSend = (customText?: string) => {
+    const text = customText || previewMsg;
+    if (!text.trim()) return;
+
+    setInteractiveMessages(prev => [...prev, { sender: 'visitor', text }]);
+    setPreviewMsg('');
+
+    setTimeout(() => {
+      setInteractiveMessages(prev => [
+        ...prev,
+        { sender: 'bot', text: 'Thanks for reaching out! A specialist will answer shortly.' }
+      ]);
+    }, 600);
+  };
+
+  const paletteSwatches = [
+    { name: 'Indigo', hex: '#6366f1' },
+    { name: 'Royal Blue', hex: '#2563eb' },
+    { name: 'Slate Charcoal', hex: '#0f172a' },
+    { name: 'Emerald', hex: '#10b981' },
+    { name: 'Violet', hex: '#8b5cf6' },
+    { name: 'Rose', hex: '#f43f5e' },
   ];
 
-  const handleAddQuestion = () => {
-    if (!newQuestion.trim()) return;
-    updateChatbot({
-      suggestedQuestions: [...chatbot.suggestedQuestions, newQuestion.trim()]
-    });
-    setNewQuestion('');
-  };
-
-  const handleRemoveQuestion = (idx: number) => {
-    updateChatbot({
-      suggestedQuestions: chatbot.suggestedQuestions.filter((_, i) => i !== idx)
-    });
-  };
-
-  const handleResetDefaults = () => {
-    updateChatbot({
-      name: 'Helio LeadBot',
-      themeColor: '#2563eb',
-      welcomeMessage: "👋 Hi there! I'm Helio, the AI assistant for Northstar Studio. How can we help grow your brand or project today?",
-      position: 'bottom-right',
-      launcherStyle: 'pill',
-      tone: 'Friendly'
-    });
-    addToast({
-      type: 'info',
-      title: 'Defaults Restored',
-      description: 'Reset chatbot theme and appearance settings to default values.'
-    });
-  };
-
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
-      {/* Header */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 page-transition pb-12">
+      {/* Header (Matches Panel 8: Customize Your Widget) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Chatbot Appearance Studio</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Visually customize widget branding, colors, position, and starter prompts. Changes preview live in real time.
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Customize Your Widget
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Make the chatbot match your brand's look and feel.
           </p>
         </div>
 
         <button
-          onClick={handleResetDefaults}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold transition-colors w-fit"
+          onClick={() => {
+            handleColorChange('#6366f1');
+            setBubbleStyle('Modern');
+            handleWelcomeMsgChange('Hi! 👋 How can I help you today?');
+            setWidgetPosition('bottom-right');
+            addToast({
+              type: 'info',
+              title: 'Reset to Defaults',
+              description: 'Restored default Chatly appearance settings.'
+            });
+          }}
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors w-fit shadow-2xs"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Reset to Defaults</span>
+          <span>Reset Defaults</span>
         </button>
       </div>
 
-      {/* 2-Column Studio Grid */}
+      {/* Sub-tabs (Style, Colors, Position, Messages) */}
+      <div className="flex items-center gap-1 border-b border-slate-200/80 pb-px">
+        {(['Style', 'Colors', 'Position', 'Messages'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setAppearanceTab(tab)}
+            className={`px-4 py-2 text-xs font-medium transition-all relative ${
+              appearanceTab === tab
+                ? 'text-indigo-600 font-semibold border-b-2 border-indigo-600 -mb-px'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* 2-Column Split: Controls on Left, Live Preview on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Configuration Controls (7 cols) */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6 text-xs">
-          {/* Section 1: Presets */}
-          <div>
-            <label className="block font-bold text-slate-800 mb-2">Curated Theme Presets</label>
-            <div className="flex flex-wrap gap-2">
-              {themePresets.map(preset => (
+        
+        {/* Left Controls (7 cols) */}
+        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-6">
+          
+          {/* Section: Chat Bubble Style */}
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-slate-900 block">
+              Chat Bubble Style
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {(['Modern', 'Minimal', 'Rounded', 'Classic'] as const).map(style => (
                 <button
-                  key={preset.name}
+                  key={style}
                   type="button"
-                  onClick={() => updateChatbot({ themeColor: preset.color })}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
-                    chatbot.themeColor === preset.color
-                      ? 'border-slate-900 bg-slate-50 font-bold text-slate-900 shadow-xs'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  onClick={() => setBubbleStyle(style)}
+                  className={`py-2 px-3 rounded-xl text-xs font-medium border transition-all text-center ${
+                    bubbleStyle === style
+                      ? 'border-indigo-600 bg-indigo-50/80 text-indigo-700 font-semibold ring-1 ring-indigo-600'
+                      : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
                   }`}
                 >
-                  <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: preset.color }} />
-                  <span>{preset.name}</span>
+                  {style}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Section 2: General Branding */}
-          <div className="space-y-4 pt-2 border-t border-slate-100">
-            <h3 className="font-bold text-slate-900 text-sm">Identity & Tone</h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Chatbot Display Name</label>
+          {/* Section: Primary Color */}
+          <div className="space-y-3 pt-2 border-t border-slate-100">
+            <label className="text-xs font-semibold text-slate-900 block">
+              Primary Color
+            </label>
+            
+            <div className="flex items-center gap-3">
+              <div className="relative flex items-center">
                 <input
-                  type="text"
-                  value={chatbot.name}
-                  onChange={e => updateChatbot({ name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
+                  type="color"
+                  value={primaryColor}
+                  onChange={e => handleColorChange(e.target.value)}
+                  className="w-9 h-9 rounded-xl border border-slate-200 cursor-pointer p-0.5"
                 />
               </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Custom Brand Color (HEX)</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={chatbot.themeColor}
-                    onChange={e => updateChatbot({ themeColor: e.target.value })}
-                    className="w-9 h-9 p-0.5 rounded-lg border border-slate-300 cursor-pointer bg-transparent"
-                  />
-                  <input
-                    type="text"
-                    value={chatbot.themeColor}
-                    onChange={e => updateChatbot({ themeColor: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-mono text-xs uppercase font-medium"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Welcome Message</label>
-              <textarea
-                rows={2}
-                value={chatbot.welcomeMessage}
-                onChange={e => updateChatbot({ welcomeMessage: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
-              />
-            </div>
-          </div>
-
-          {/* Section 3: Widget Placement & Style */}
-          <div className="space-y-4 pt-2 border-t border-slate-100">
-            <h3 className="font-bold text-slate-900 text-sm">Placement & Launcher</h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1.5">Position on Host Page</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => updateChatbot({ position: 'bottom-right' })}
-                    className={`py-2 px-2 rounded-xl border text-xs font-semibold text-center transition-all ${
-                      chatbot.position === 'bottom-right' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    Bottom Right
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateChatbot({ position: 'bottom-left' })}
-                    className={`py-2 px-2 rounded-xl border text-xs font-semibold text-center transition-all ${
-                      chatbot.position === 'bottom-left' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    Bottom Left
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1.5">Launcher Button Appearance</label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(['pill', 'text-icon', 'icon'] as const).map(style => (
-                    <button
-                      key={style}
-                      type="button"
-                      onClick={() => updateChatbot({ launcherStyle: style })}
-                      className={`py-2 px-1 rounded-xl border text-[11px] font-semibold text-center capitalize transition-all ${
-                        chatbot.launcherStyle === style ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      {style === 'pill' ? 'Pill' : style === 'text-icon' ? 'Text' : 'Icon'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 4: Suggested Prompts */}
-          <div className="space-y-3 pt-2 border-t border-slate-100">
-            <h3 className="font-bold text-slate-900 text-sm">Suggested Question Chips</h3>
-            <p className="text-slate-500 text-[11px]">These tappable chips appear in the widget to initiate high-converting conversations.</p>
-
-            <div className="space-y-2">
-              {chatbot.suggestedQuestions.map((q, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <span className="text-slate-800 font-medium">"{q}"</span>
-                  <button
-                    onClick={() => handleRemoveQuestion(idx)}
-                    className="text-slate-400 hover:text-rose-600 p-1"
-                    title="Remove question"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 pt-1">
               <input
                 type="text"
-                placeholder="Add custom starter prompt..."
-                value={newQuestion}
-                onChange={e => setNewQuestion(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAddQuestion()}
-                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs"
+                value={primaryColor}
+                onChange={e => handleColorChange(e.target.value)}
+                className="w-32 text-xs font-mono uppercase bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
               />
+            </div>
+
+            {/* Quick Palette Swatches */}
+            <div className="flex items-center gap-2 pt-1">
+              {paletteSwatches.map(swatch => (
+                <button
+                  key={swatch.hex}
+                  type="button"
+                  onClick={() => handleColorChange(swatch.hex)}
+                  style={{ backgroundColor: swatch.hex }}
+                  className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                    primaryColor.toLowerCase() === swatch.hex.toLowerCase()
+                      ? 'border-white ring-2 ring-slate-900 scale-105'
+                      : 'border-transparent'
+                  }`}
+                  title={swatch.name}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Section: Welcome Message */}
+          <div className="space-y-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-900">
+                Welcome Message
+              </label>
+              <span className="text-[11px] text-slate-400">
+                {welcomeMsg.length}/100
+              </span>
+            </div>
+            <textarea
+              rows={2}
+              maxLength={100}
+              value={welcomeMsg}
+              onChange={e => handleWelcomeMsgChange(e.target.value)}
+              className="w-full text-xs bg-white border border-slate-200 rounded-xl p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 leading-relaxed"
+            />
+          </div>
+
+          {/* Section: Widget Position */}
+          <div className="space-y-3 pt-2 border-t border-slate-100">
+            <label className="text-xs font-semibold text-slate-900 block">
+              Widget Screen Position
+            </label>
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={handleAddQuestion}
-                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors shrink-0"
+                onClick={() => {
+                  setWidgetPosition('bottom-right');
+                  updateChatbot({ position: 'bottom-right' });
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-medium border text-center transition-all ${
+                  widgetPosition === 'bottom-right'
+                    ? 'border-indigo-600 bg-indigo-50/80 text-indigo-700 font-semibold ring-1 ring-indigo-600'
+                    : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
+                }`}
               >
-                Add Chip
+                Bottom Right
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setWidgetPosition('bottom-left');
+                  updateChatbot({ position: 'bottom-left' });
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-medium border text-center transition-all ${
+                  widgetPosition === 'bottom-left'
+                    ? 'border-indigo-600 bg-indigo-50/80 text-indigo-700 font-semibold ring-1 ring-indigo-600'
+                    : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
+                }`}
+              >
+                Bottom Left
               </button>
             </div>
           </div>
+
         </div>
 
-        {/* Right Column: Sticky Live Mobile Preview (5 cols) */}
-        <div className="lg:col-span-5 sticky top-24 space-y-3">
-          <div className="bg-slate-900 text-white p-3 rounded-2xl flex items-center justify-between text-xs">
-            <span className="font-bold flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-blue-400" />
-              Live Interactive Preview
+        {/* Right Live Preview Frame (5 cols) (Matching Panel 8) */}
+        <div className="lg:col-span-5 flex flex-col">
+          <div className="flex items-center justify-between pb-2 mb-2">
+            <span className="text-xs font-medium text-slate-400">Live Preview</span>
+            <span className="text-[11px] text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded-full">
+              Updates in Real Time
             </span>
-            <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-lg">
-              <button
-                onClick={() => setDevicePreview('mobile')}
-                className={`p-1 rounded ${devicePreview === 'mobile' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
-                title="Mobile preview"
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setDevicePreview('desktop')}
-                className={`p-1 rounded ${devicePreview === 'desktop' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
-                title="Desktop preview"
-              >
-                <Monitor className="w-3.5 h-3.5" />
-              </button>
-            </div>
           </div>
 
-          <div className="bg-slate-100 p-4 rounded-3xl border border-slate-200/80 shadow-inner flex justify-center">
-            <CustomerChatWidget embedded={true} />
+          {/* Chat Container */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden flex flex-col transition-all">
+            
+            {/* Header with Dynamic Primary Color */}
+            <div 
+              style={{ backgroundColor: primaryColor }}
+              className="px-4 py-3 text-white flex items-center justify-between transition-colors duration-200"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center text-xs font-medium shrink-0">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-semibold text-white">Your Assistant</h3>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
+                    <span className="text-[10px] text-white/80">Online</span>
+                  </div>
+                </div>
+              </div>
+              <div className="w-2 h-2 rounded-full bg-white/40"></div>
+            </div>
+
+            {/* Chat Body */}
+            <div className="p-4 space-y-3 min-h-[300px] max-h-[360px] overflow-y-auto bg-slate-50/50">
+              {interactiveMessages.map((m, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${m.sender === 'visitor' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                >
+                  <div
+                    style={
+                      m.sender === 'visitor' 
+                        ? { backgroundColor: primaryColor, color: '#ffffff' } 
+                        : undefined
+                    }
+                    className={`max-w-[85%] px-3.5 py-2.5 text-xs leading-relaxed transition-all ${
+                      bubbleStyle === 'Modern'
+                        ? 'rounded-2xl'
+                        : bubbleStyle === 'Minimal'
+                        ? 'rounded-md'
+                        : bubbleStyle === 'Rounded'
+                        ? 'rounded-3xl'
+                        : 'rounded-xl'
+                    } ${
+                      m.sender === 'visitor'
+                        ? 'rounded-br-xs'
+                        : 'bg-white border border-slate-200/90 text-slate-800 shadow-2xs rounded-bl-xs'
+                    }`}
+                  >
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+
+              {/* Sample Suggested Quick-Replies */}
+              <div className="pt-2 flex flex-col gap-1.5">
+                {[
+                  'Tell me about your services',
+                  'I want a free quote',
+                  'Talk to a human'
+                ].map((chip, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handlePreviewSend(chip)}
+                    style={{ borderColor: `${primaryColor}40`, color: primaryColor }}
+                    className="text-left text-[11px] font-medium bg-white hover:bg-slate-50 px-3 py-1.5 rounded-full shadow-2xs transition-colors w-fit border"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Input Footer */}
+            <div className="p-3 bg-white border-t border-slate-100">
+              <form
+                onSubmit={e => {
+                  e.preventDefault();
+                  handlePreviewSend();
+                }}
+                className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5"
+              >
+                <input
+                  type="text"
+                  placeholder="Type a message..."
+                  value={previewMsg}
+                  onChange={e => setPreviewMsg(e.target.value)}
+                  className="flex-1 bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={!previewMsg.trim()}
+                  style={{ backgroundColor: primaryColor }}
+                  className="w-6 h-6 rounded-lg text-white flex items-center justify-center transition-opacity disabled:opacity-40 shrink-0"
+                >
+                  <Send className="w-3 h-3" />
+                </button>
+              </form>
+            </div>
+
           </div>
         </div>
+
       </div>
     </div>
   );

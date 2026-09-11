@@ -3,32 +3,46 @@
 @layer base {
   :root {
     --bg-main: #f8fafc;
-    --bg-card: #ffffff;
+    --bg-surface: #ffffff;
+    --bg-sidebar: #ffffff;
     --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #64748b;
-    --border-color: #e2e8f0;
-    --primary-blue: #2563eb;
-    --primary-blue-hover: #1d4ed8;
-    --success-emerald: #10b981;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --border-subtle: #e2e8f0;
+    --border-light: #f1f5f9;
+    --accent-indigo: #4f46e5;
+    --accent-indigo-hover: #4338ca;
+    --accent-indigo-light: #eef2ff;
+    --accent-purple: #6366f1;
+    --success-green: #10b981;
+    --success-light: #ecfdf5;
     --warning-amber: #f59e0b;
-    --danger-rose: #ef4444;
+    --warning-light: #fffbeb;
+    --error-red: #ef4444;
+    --error-light: #fef2f2;
+    --card-radius: 12px;
+    --button-radius: 9px;
   }
 
   body {
     background-color: var(--bg-main);
     color: var(--text-primary);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Geist", "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
+    letter-spacing: -0.011em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.02em;
   }
 }
 
-/* Custom Scrollbars */
+/* Custom Minimal Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -44,15 +58,15 @@
   background: #94a3b8;
 }
 
-/* Transitions */
-.animate-fade-in {
-  animation: fadeIn 0.2s ease-in-out;
+/* Animations and Transitions */
+.page-transition {
+  animation: pageEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes fadeIn {
+@keyframes pageEnter {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -60,8 +74,32 @@
   }
 }
 
-/* Shadow DOM and widget animations */
-@keyframes slideUp {
+/* Button micro-interaction */
+.btn-press {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-press:active {
+  transform: scale(0.98);
+}
+
+/* Subtle Pulse */
+@keyframes softPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.05);
+  }
+}
+
+.animate-soft-pulse {
+  animation: softPulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Widget slide animation */
+@keyframes slideUpFade {
   from {
     opacity: 0;
     transform: translateY(12px) scale(0.98);
@@ -72,6 +110,52 @@
   }
 }
 
-.animate-slide-up {
-  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+.animate-slide-up-fade {
+  animation: slideUpFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Fade in simple */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* Typing Indicator Dots */
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+}
+
+.typing-dot-1 {
+  animation: typingBounce 1.2s infinite ease-in-out;
+}
+.typing-dot-2 {
+  animation: typingBounce 1.2s infinite ease-in-out 0.2s;
+}
+.typing-dot-3 {
+  animation: typingBounce 1.2s infinite ease-in-out 0.4s;
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -2,514 +2,361 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import Badge from '@/components/common/Badge';
-import { KnowledgeSource } from '@/types';
 import { 
-  BookOpen, 
   UploadCloud, 
   FileText, 
   Globe, 
   HelpCircle, 
-  Building, 
   Plus, 
-  Trash2, 
-  AlertCircle, 
+  MoreVertical, 
   CheckCircle2, 
+  AlertCircle, 
   Clock, 
   RotateCw, 
-  Sparkles,
-  Search,
+  X,
   Check,
-  ChevronRight
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 
+interface SourceItem {
+  id: string;
+  name: string;
+  type: 'pdf' | 'website' | 'docx' | 'txt' | 'faq';
+  url?: string;
+  timeAgo: string;
+  status: 'Ready' | 'Processing' | 'Uploading' | 'Failed';
+}
+
 export default function KnowledgeBasePage() {
-  const { 
-    knowledgeSources, 
-    addKnowledgeSource, 
-    removeKnowledgeSource, 
-    faqs, 
-    addFaq, 
-    deleteFaq, 
-    businessInfo, 
-    updateBusinessInfo,
-    addToast
-  } = useApp();
+  const { addToast } = useApp();
+  const [activeTab, setActiveTab] = useState<'Documents' | 'Websites' | 'FAQs' | 'Text' | 'Notion'>('Documents');
+  
+  const [sources, setSources] = useState<SourceItem[]>([
+    {
+      id: 'src_1',
+      name: 'Company_Overview.pdf',
+      type: 'pdf',
+      timeAgo: 'Uploaded 2 days ago',
+      status: 'Ready'
+    },
+    {
+      id: 'src_2',
+      name: 'Services_2025.pdf',
+      type: 'pdf',
+      timeAgo: 'Uploaded 5 days ago',
+      status: 'Ready'
+    },
+    {
+      id: 'src_3',
+      name: 'Pricing_FAQ.pdf',
+      type: 'pdf',
+      timeAgo: 'Uploaded 1 week ago',
+      status: 'Ready'
+    },
+    {
+      id: 'src_4',
+      name: 'Website',
+      type: 'website',
+      url: 'https://yourbusiness.com',
+      timeAgo: 'Uploaded 1 week ago',
+      status: 'Ready'
+    },
+    {
+      id: 'src_5',
+      name: 'Product_Guide.pdf',
+      type: 'pdf',
+      timeAgo: 'Uploaded 1 week ago',
+      status: 'Ready'
+    }
+  ]);
 
-  const [activeTab, setActiveTab] = useState<'documents' | 'website' | 'faqs' | 'business_info'>('documents');
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [newFaqQuestion, setNewFaqQuestion] = useState('');
-  const [newFaqAnswer, setNewFaqAnswer] = useState('');
-  const [newFaqCategory, setNewFaqCategory] = useState('General');
-  const [showAddFaqModal, setShowAddFaqModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newSourceTitle, setNewSourceTitle] = useState('');
 
-  // New source form state
-  const [newSourceName, setNewSourceName] = useState('');
-  const [newSourceType, setNewSourceType] = useState<'document' | 'website' | 'faq'>('document');
+  const handleSimulateUpload = (fileName: string) => {
+    setIsUploading(true);
+    setUploadProgress(15);
 
-  const filteredSources = knowledgeSources.filter(s => {
-    if (activeTab === 'documents') return s.type === 'document';
-    if (activeTab === 'website') return s.type === 'website';
-    if (activeTab === 'faqs') return s.type === 'faq';
-    return true;
-  });
+    const newId = `src_${Date.now()}`;
+    const newDoc: SourceItem = {
+      id: newId,
+      name: fileName,
+      type: fileName.endsWith('.pdf') ? 'pdf' : fileName.startsWith('http') ? 'website' : 'txt',
+      timeAgo: 'Just now',
+      status: 'Uploading'
+    };
 
-  const totalChunks = knowledgeSources.reduce((acc, curr) => acc + curr.chunksIndexed, 0);
+    setSources(prev => [newDoc, ...prev]);
 
-  const handleCreateSource = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSourceName.trim()) return;
+    setTimeout(() => {
+      setUploadProgress(65);
+      setSources(prev => prev.map(s => s.id === newId ? { ...s, status: 'Processing' } : s));
+    }, 700);
 
-    addKnowledgeSource({
-      name: newSourceName.trim(),
-      type: newSourceType,
-      status: 'ready',
-      chunksIndexed: 32,
-      fileSize: newSourceType === 'website' ? 'Web Page' : '1.4 MB',
-      lastUpdated: 'Just now',
-      contentSnippet: 'Newly indexed knowledge source for business inquiry grounding.'
-    });
-
-    setNewSourceName('');
-    setShowUploadModal(false);
+    setTimeout(() => {
+      setUploadProgress(100);
+      setSources(prev => prev.map(s => s.id === newId ? { ...s, status: 'Ready' } : s));
+      setIsUploading(false);
+      addToast({
+        type: 'success',
+        title: 'Knowledge Indexed',
+        description: `Successfully indexed content from ${fileName}.`
+      });
+    }, 1500);
   };
 
-  const handleCreateFaq = (e: React.FormEvent) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!newFaqQuestion.trim() || !newFaqAnswer.trim()) return;
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      handleSimulateUpload(file.name);
+    }
+  };
 
-    addFaq({
-      question: newFaqQuestion.trim(),
-      answer: newFaqAnswer.trim(),
-      category: newFaqCategory
+  const handleDeleteSource = (id: string, name: string) => {
+    setSources(prev => prev.filter(s => s.id !== id));
+    addToast({
+      type: 'info',
+      title: 'Source Removed',
+      description: `Removed "${name}" from chatbot training data.`
     });
-
-    setNewFaqQuestion('');
-    setNewFaqAnswer('');
-    setShowAddFaqModal(false);
   };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
-      {/* Header Metrics */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 page-transition pb-12">
+      {/* Header (Matches Panel 4) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Knowledge Base & Training Data</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Transparently monitor what Helio knows. All sources are vectorized and stored in PostgreSQL pgvector.
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Knowledge Base
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Add and manage your business knowledge so your chatbot can give accurate answers.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowAddFaqModal(true)}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors flex items-center gap-1.5"
-          >
-            <HelpCircle className="w-3.5 h-3.5 text-purple-600" />
-            <span>Add FAQ</span>
-          </button>
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm shadow-blue-600/20 transition-colors"
-          >
-            <UploadCloud className="w-4 h-4" />
-            <span>Add Knowledge Source</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-medium shadow-xs transition-all btn-press w-fit"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Add Source</span>
+        </button>
       </div>
 
-      {/* KPI Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-400">Total Sources</span>
-          <p className="text-xl font-black text-slate-900 mt-1">{knowledgeSources.length + faqs.length}</p>
-        </div>
-        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-400">Indexed Chunks</span>
-          <p className="text-xl font-black text-slate-900 mt-1">{totalChunks} chunks</p>
-        </div>
-        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-400">Quality Score</span>
-          <p className="text-xl font-black text-emerald-600 mt-1">94 / 100</p>
-        </div>
-        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-400">Last Indexed</span>
-          <p className="text-xs font-bold text-slate-800 mt-2">Today at 9:00 AM</p>
-        </div>
+      {/* Tabs Row (Documents, Websites, FAQs, Text, Notion) */}
+      <div className="flex items-center gap-1 border-b border-slate-200/80 pb-px">
+        {(['Documents', 'Websites', 'FAQs', 'Text', 'Notion'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-xs font-medium transition-all relative ${
+              activeTab === tab
+                ? 'text-indigo-600 font-semibold border-b-2 border-indigo-600 -mb-px'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 rounded-xl shadow-xs">
-        <div className="flex gap-6 text-xs font-bold text-slate-500">
-          <button
-            onClick={() => setActiveTab('documents')}
-            className={`py-3.5 border-b-2 flex items-center gap-2 transition-colors ${
-              activeTab === 'documents' ? 'border-blue-600 text-blue-600' : 'border-transparent hover:text-slate-900'
-            }`}
+      {/* Main Grid: Left Upload Drag-Drop + Right Recent Sources */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        {/* Left Column (7 cols): Large Drag & Drop Upload Zone */}
+        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
+          
+          <div
+            onDragOver={e => e.preventDefault()}
+            onDrop={handleDrop}
+            className="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-2xl p-10 sm:p-14 text-center cursor-pointer transition-colors bg-slate-50/50 hover:bg-indigo-50/30 group"
+            onClick={() => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.pdf,.docx,.txt';
+              input.onchange = (e: any) => {
+                if (e.target.files && e.target.files[0]) {
+                  handleSimulateUpload(e.target.files[0].name);
+                }
+              };
+              input.click();
+            }}
           >
-            <FileText className="w-4 h-4" />
-            <span>Documents ({knowledgeSources.filter(s => s.type === 'document').length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('website')}
-            className={`py-3.5 border-b-2 flex items-center gap-2 transition-colors ${
-              activeTab === 'website' ? 'border-blue-600 text-blue-600' : 'border-transparent hover:text-slate-900'
-            }`}
-          >
-            <Globe className="w-4 h-4" />
-            <span>Website Pages ({knowledgeSources.filter(s => s.type === 'website').length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('faqs')}
-            className={`py-3.5 border-b-2 flex items-center gap-2 transition-colors ${
-              activeTab === 'faqs' ? 'border-blue-600 text-blue-600' : 'border-transparent hover:text-slate-900'
-            }`}
-          >
-            <HelpCircle className="w-4 h-4" />
-            <span>FAQs ({faqs.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('business_info')}
-            className={`py-3.5 border-b-2 flex items-center gap-2 transition-colors ${
-              activeTab === 'business_info' ? 'border-blue-600 text-blue-600' : 'border-transparent hover:text-slate-900'
-            }`}
-          >
-            <Building className="w-4 h-4" />
-            <span>Business Information</span>
-          </button>
-        </div>
-      </div>
+            {/* Cloud upload icon */}
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform">
+              <UploadCloud className="w-6 h-6" />
+            </div>
 
-      {/* Tab: Documents or Website Pages */}
-      {(activeTab === 'documents' || activeTab === 'website') && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
-                <tr>
-                  <th className="py-3 px-4">Source Name</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Chunks</th>
-                  <th className="py-3 px-4">Last Updated</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredSources.map(source => (
-                  <tr key={source.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                          {source.type === 'website' ? <Globe className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-slate-900 truncate">{source.name}</p>
-                          <p className="text-[10px] text-slate-400">{source.fileSize}</p>
-                        </div>
-                      </div>
-
-                      {/* Error Banner for failed source */}
-                      {source.status === 'failed' && (
-                        <div className="mt-2 p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-[11px] flex items-start gap-1.5">
-                          <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
-                          <span>{source.errorReason}</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-600">{source.category || 'General'}</td>
-                    <td className="py-3.5 px-4">
-                      <Badge variant={source.status === 'ready' ? 'emerald' : source.status === 'processing' ? 'amber' : 'rose'}>
-                        {source.status.toUpperCase()}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono font-semibold text-slate-800">{source.chunksIndexed}</td>
-                    <td className="py-3.5 px-4 text-slate-500">{source.lastUpdated}</td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            addToast({
-                              type: 'info',
-                              title: 'Re-indexing Started',
-                              description: `Re-generating embeddings for "${source.name}".`
-                            });
-                          }}
-                          className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
-                          title="Re-index source"
-                        >
-                          <RotateCw className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => removeKnowledgeSource(source.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
-                          title="Delete source"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <h3 className="text-sm font-semibold text-slate-900">Upload documents</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Drag and drop files here, or click to upload
+            </p>
+            <p className="text-[11px] text-slate-400 mt-2">
+              Supports PDF, DOCX, TXT (Max 10MB)
+            </p>
           </div>
-        </div>
-      )}
 
-      {/* Tab: FAQs */}
-      {activeTab === 'faqs' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {faqs.map(faq => (
-              <div key={faq.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-3">
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-[10px] uppercase font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                      {faq.category}
-                    </span>
+          {/* Upload Progress Bar if active */}
+          {isUploading && (
+            <div className="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-100 text-xs text-indigo-900 space-y-1.5 animate-fade-in">
+              <div className="flex items-center justify-between font-medium">
+                <span className="flex items-center gap-1.5">
+                  <RotateCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                  Processing documents into vector chunks...
+                </span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-indigo-200/60 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-indigo-600 transition-all duration-300 rounded-full"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+
+          {/* Quick FAQ / Text Add Options */}
+          <div className="pt-2 flex items-center justify-between text-xs text-slate-500">
+            <span>Need to crawl your live website?</span>
+            <button
+              onClick={() => {
+                const url = prompt('Enter your website URL to index:');
+                if (url) {
+                  handleSimulateUpload(url.startsWith('http') ? url : `https://${url}`);
+                }
+              }}
+              className="text-indigo-600 font-medium hover:text-indigo-700"
+            >
+              Add Website URL →
+            </button>
+          </div>
+
+        </div>
+
+        {/* Right Column (5 cols): Recent Sources Table / List */}
+        <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-2">
+            <h2 className="text-sm font-semibold text-slate-900">Recent Sources</h2>
+            <span className="text-[11px] text-slate-400 font-medium">{sources.length} total</span>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {sources.map(src => {
+              const isPdf = src.type === 'pdf';
+              const isWeb = src.type === 'website';
+
+              return (
+                <div key={src.id} className="py-3 flex items-center justify-between group">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {/* Icon matching panel 4 */}
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                      isPdf ? 'bg-red-50 text-red-600' : isWeb ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {isWeb ? <Globe className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-slate-900 truncate">
+                        {src.name}
+                      </p>
+                      {src.url && (
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {src.url}
+                        </p>
+                      )}
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                        {src.timeAgo}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Status Pill */}
+                    {src.status === 'Ready' && (
+                      <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        Ready
+                      </span>
+                    )}
+                    {src.status === 'Processing' && (
+                      <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <RotateCw className="w-2.5 h-2.5 animate-spin" />
+                        Processing
+                      </span>
+                    )}
+                    {src.status === 'Uploading' && (
+                      <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                        Uploading
+                      </span>
+                    )}
+
                     <button
-                      onClick={() => deleteFaq(faq.id)}
-                      className="text-slate-400 hover:text-rose-600 transition-colors p-1"
-                      title="Delete FAQ"
+                      onClick={() => handleDeleteSource(src.id, src.name)}
+                      className="p-1 text-slate-300 hover:text-red-500 rounded-md transition-colors"
+                      title="Delete source"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <h4 className="text-xs font-bold text-slate-900 mt-2">Q: {faq.question}</h4>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">A: {faq.answer}</p>
                 </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] text-slate-400">
-                  <span>Referenced {faq.timesReferenced} times by Helio</span>
-                  <span>Updated {faq.lastUpdated}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tab: Business Info */}
-      {activeTab === 'business_info' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-3xl space-y-4 text-xs">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Structured Business Information</h3>
-            <p className="text-slate-500 mt-0.5">
-              Standard company operating facts used for instant fallback grounding.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Company Name</label>
-              <input
-                type="text"
-                value={businessInfo.companyName}
-                onChange={e => updateBusinessInfo({ companyName: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Operating Hours</label>
-              <input
-                type="text"
-                value={businessInfo.hours}
-                onChange={e => updateBusinessInfo({ hours: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Office Address</label>
-              <input
-                type="text"
-                value={businessInfo.address}
-                onChange={e => updateBusinessInfo({ address: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Support Email</label>
-              <input
-                type="email"
-                value={businessInfo.email}
-                onChange={e => updateBusinessInfo({ email: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Pricing Guidance</label>
-            <input
-              type="text"
-              value={businessInfo.pricingGuidance}
-              onChange={e => updateBusinessInfo({ pricingGuidance: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs"
-            />
-          </div>
-
-          <div className="pt-3">
-            <button
-              onClick={() => {
-                addToast({
-                  type: 'success',
-                  title: 'Saved',
-                  description: 'Business information successfully updated in vector memory.'
-                });
-              }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors"
-            >
-              Save Business Details
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Insights Panel */}
-      <div className="p-5 bg-gradient-to-r from-blue-50 to-indigo-50/50 rounded-2xl border border-blue-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-blue-950">AI Knowledge Coverage Insight</h4>
-            <p className="text-xs text-blue-800/80 mt-0.5 leading-relaxed">
-              Your AI answers <strong>Next.js development</strong> and <strong>retainer pricing</strong> with 98% grounding accuracy. Consider adding a dedicated FAQ covering <strong>emergency support SLAs</strong>.
-            </p>
+              );
+            })}
           </div>
         </div>
 
-        <button
-          onClick={() => setShowAddFaqModal(true)}
-          className="px-4 py-2 bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 font-semibold text-xs rounded-xl transition-colors shrink-0 shadow-xs"
-        >
-          Add Suggested FAQ
-        </button>
       </div>
 
-      {/* Modal: Add Knowledge Source */}
-      {showUploadModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4">
+      {/* Modal: Add Source */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 animate-fade-in space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900">Add New Knowledge Source</h3>
-              <button onClick={() => setShowUploadModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <h3 className="text-sm font-semibold text-slate-900">Add Knowledge Source</h3>
+              <button 
+                onClick={() => setShowAddModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <form onSubmit={handleCreateSource} className="space-y-3 text-xs">
+            <div className="space-y-3">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Source Type</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['document', 'website', 'faq'] as const).map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setNewSourceType(t)}
-                      className={`py-2 rounded-xl border text-center capitalize transition-colors ${
-                        newSourceType === t ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold' : 'border-slate-200 bg-slate-50 text-slate-600'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  {newSourceType === 'website' ? 'Web Page URL *' : 'Document Name / Filename *'}
-                </label>
+                <label className="text-xs font-medium text-slate-700">Source Name / URL</label>
                 <input
                   type="text"
-                  required
-                  placeholder={newSourceType === 'website' ? 'https://example.com/about' : 'e.g. 2026 Price Sheet.pdf'}
-                  value={newSourceName}
-                  onChange={e => setNewSourceName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs"
+                  placeholder="e.g. Refund_Policy_2025.pdf or https://mysite.com/faq"
+                  value={newSourceTitle}
+                  onChange={e => setNewSourceTitle(e.target.value)}
+                  className="mt-1 w-full text-xs bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
-
-              <div className="pt-2 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowUploadModal(false)}
-                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold"
-                >
-                  Upload & Index
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Add FAQ Item */}
-      {showAddFaqModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900">Add New FAQ Pair</h3>
-              <button onClick={() => setShowAddFaqModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
 
-            <form onSubmit={handleCreateFaq} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Question *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. What is your refund or cancellation policy?"
-                  value={newFaqQuestion}
-                  onChange={e => setNewFaqQuestion(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Answer *</label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Provide a clear, direct answer that Helio will use to answer visitors."
-                  value={newFaqAnswer}
-                  onChange={e => setNewFaqAnswer(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Category</label>
-                <input
-                  type="text"
-                  value={newFaqCategory}
-                  onChange={e => setNewFaqCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddFaqModal(false)}
-                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold"
-                >
-                  Save & Index FAQ
-                </button>
-              </div>
-            </form>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (newSourceTitle.trim()) {
+                    handleSimulateUpload(newSourceTitle.trim());
+                    setShowAddModal(false);
+                    setNewSourceTitle('');
+                  }
+                }}
+                disabled={!newSourceTitle.trim()}
+                className="px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 rounded-xl shadow-xs transition-all"
+              >
+                Upload & Train
+              </button>
+            </div>
           </div>
         </div>
       )}

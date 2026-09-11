@@ -2,10 +2,9 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import Badge from '@/components/common/Badge';
 import { 
-  CreditCard, 
   Check, 
+  CreditCard, 
   Download, 
   ExternalLink, 
   Sparkles, 
@@ -16,227 +15,244 @@ import {
 
 export default function BillingPage() {
   const { addToast } = useApp();
-  const [selectedPlan, setSelectedPlan] = useState<'free' | 'starter' | 'pro'>('pro');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [currentPlan, setCurrentPlan] = useState<'Starter' | 'Growth' | 'Business'>('Growth');
 
   const plans = [
     {
-      id: 'free',
-      name: 'Free Forever',
-      price: '$0',
-      period: 'no credit card required',
-      features: [
-        '1 Chatbot instance',
-        '100 conversations / month',
-        '5 Document sources (max 10MB)',
-        'Standard Email lead capture',
-        'Helio brand badge on widget'
-      ],
-      current: false
-    },
-    {
       id: 'starter',
-      name: 'Growth Starter',
-      price: '$49',
-      period: 'per month, billed annually',
+      name: 'Starter',
+      target: 'For small businesses',
+      monthlyPrice: '₹999',
+      yearlyPrice: '₹799',
       features: [
-        '3 Chatbot instances',
-        '1,500 conversations / month',
-        '25 Document sources + Web crawler',
-        'Google Calendar OAuth booking',
-        'White-label widget (remove brand)',
-        'Standard webhooks'
+        '1,000 conversations',
+        'Basic features',
+        'Email support'
       ],
-      current: false
+      ctaText: 'Get Started',
+      isPopular: false
     },
     {
-      id: 'pro',
-      name: 'Professional Agency',
-      price: '$149',
-      period: 'per month, billed annually',
+      id: 'growth',
+      name: 'Growth',
+      target: 'For growing businesses',
+      monthlyPrice: '₹2,499',
+      yearlyPrice: '₹1,999',
       features: [
-        'Unlimited Chatbot instances',
-        '10,000 conversations / month',
-        'Unlimited Knowledge sources',
-        'Real-time human agent handoff',
-        'OpenRouter multi-model tiering',
-        'HMAC outbound webhooks & REST API',
-        'Dedicated Slack support channel'
+        '5,000 conversations',
+        'Integrations (CRM, Calendar)',
+        'Advanced analytics',
+        'Priority support'
       ],
-      current: true
+      ctaText: 'Start Free Trial',
+      isPopular: true
+    },
+    {
+      id: 'business',
+      name: 'Business',
+      target: 'For high volume',
+      monthlyPrice: '₹4,999',
+      yearlyPrice: '₹3,999',
+      features: [
+        '20,000 conversations',
+        'Custom integrations',
+        'Dedicated support',
+        'SLA'
+      ],
+      ctaText: 'Contact Sales',
+      isPopular: false
     }
   ];
 
   const invoices = [
-    { id: 'INV-2026-09', date: 'Sep 01, 2026', amount: '$149.00', status: 'Paid', plan: 'Professional Agency' },
-    { id: 'INV-2026-08', date: 'Aug 01, 2026', amount: '$149.00', status: 'Paid', plan: 'Professional Agency' },
-    { id: 'INV-2026-07', date: 'Jul 01, 2026', amount: '$149.00', status: 'Paid', plan: 'Professional Agency' },
+    { id: 'INV-2025-001', date: 'Sep 01, 2025', amount: '₹2,499.00', status: 'Paid', plan: 'Growth' },
+    { id: 'INV-2025-002', date: 'Aug 01, 2025', amount: '₹2,499.00', status: 'Paid', plan: 'Growth' },
+    { id: 'INV-2025-003', date: 'Jul 01, 2025', amount: '₹2,499.00', status: 'Paid', plan: 'Growth' },
   ];
 
-  const handleUpgrade = (planName: string) => {
+  const handleSelectPlan = (planName: 'Starter' | 'Growth' | 'Business') => {
+    setCurrentPlan(planName);
     addToast({
       type: 'success',
-      title: 'Stripe Portal Connected',
-      description: `Simulated subscription checkout for ${planName}. Plan updated.`
+      title: 'Plan Updated',
+      description: `Your account has been switched to ${planName}.`
     });
   };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
-      {/* Header */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Subscription & Billing Management</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Manage organization plan tiers, review Stripe usage meters, and download past invoices.
-          </p>
-        </div>
+    <div className="space-y-10 page-transition pb-16 max-w-6xl mx-auto">
+      
+      {/* Header & Billing Toggle (Matches Panel 9) */}
+      <div className="text-center space-y-4 pt-2">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+          Upgrade Your Plan
+        </h1>
+        <p className="text-sm text-slate-500 max-w-md mx-auto">
+          Choose the plan that fits your business.
+        </p>
 
-        <button
-          onClick={() => {
-            addToast({
-              type: 'info',
-              title: 'Stripe Customer Portal',
-              description: 'Redirecting to secure Stripe billing management portal...'
-            });
-          }}
-          className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors w-fit"
-        >
-          <span>Stripe Billing Portal</span>
-          <ExternalLink className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Usage Progress Meters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-xs space-y-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase">Monthly Conversations</span>
-          <p className="text-2xl font-black text-slate-900">1,248 <span className="text-xs font-normal text-slate-400">/ 10,000</span></p>
-          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-            <div className="bg-blue-600 h-full rounded-full" style={{ width: '12.48%' }} />
-          </div>
-          <p className="text-[10px] text-slate-400">Resets in 19 days</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-xs space-y-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase">AI Token Budget</span>
-          <p className="text-2xl font-black text-slate-900">$42.18 <span className="text-xs font-normal text-slate-400">/ $150.00</span></p>
-          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-            <div className="bg-emerald-500 h-full rounded-full" style={{ width: '28.1%' }} />
-          </div>
-          <p className="text-[10px] text-slate-400">28.1% of budget consumed</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-xs space-y-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase">Active Chatbot Instances</span>
-          <p className="text-2xl font-black text-slate-900">2 <span className="text-xs font-normal text-slate-400">/ Unlimited</span></p>
-          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-            <div className="bg-purple-600 h-full rounded-full" style={{ width: '10%' }} />
-          </div>
-          <p className="text-[10px] text-slate-400">Pro tier includes unlimited bots</p>
-        </div>
-      </div>
-
-      {/* Subscription Plans Matrix */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {plans.map(plan => (
-          <div
-            key={plan.id}
-            className={`p-6 rounded-2xl border flex flex-col justify-between transition-all ${
-              plan.current
-                ? 'bg-white border-blue-600 ring-2 ring-blue-600/10 shadow-lg'
-                : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
+        {/* Monthly / Yearly Toggle with Save 20% pill */}
+        <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-full border border-slate-200/80">
+          <button
+            onClick={() => setBillingCycle('monthly')}
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
+              billingCycle === 'monthly'
+                ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <div>
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-slate-900">{plan.name}</h3>
-                {plan.current && (
-                  <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200">
-                    CURRENT PLAN
+            Monthly
+          </button>
+
+          <button
+            onClick={() => setBillingCycle('yearly')}
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+              billingCycle === 'yearly'
+                ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span>Yearly</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full">
+              Save 20%
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* 3 Pricing Cards Grid (Matching Panel 9) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+        {plans.map(p => {
+          const isSelected = currentPlan === p.name;
+          const displayPrice = billingCycle === 'monthly' ? p.monthlyPrice : p.yearlyPrice;
+
+          return (
+            <div
+              key={p.id}
+              className={`bg-white p-7 rounded-2xl border transition-all flex flex-col justify-between relative ${
+                p.isPopular
+                  ? 'border-indigo-600 shadow-md ring-1 ring-indigo-600'
+                  : 'border-slate-200/90 shadow-2xs hover:border-slate-300'
+              }`}
+            >
+              {/* Most Popular Badge */}
+              {p.isPopular && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[11px] font-semibold px-3 py-0.5 rounded-full shadow-xs">
+                  Most Popular
+                </div>
+              )}
+
+              <div className="space-y-5">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">{p.name}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">{p.target}</p>
+                </div>
+
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-slate-900 tracking-tight">
+                    {displayPrice}
                   </span>
-                )}
+                  <span className="text-xs text-slate-400 font-medium">/month</span>
+                </div>
+
+                {/* Features list with checkmarks */}
+                <div className="space-y-2.5 pt-3 border-t border-slate-100">
+                  {p.features.map((feat, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs text-slate-600">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>{feat}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-3xl font-black text-slate-900">{plan.price}</span>
-                <span className="text-xs text-slate-400">/mo</span>
+              {/* Action Button */}
+              <div className="pt-8">
+                <button
+                  onClick={() => handleSelectPlan(p.name as any)}
+                  className={`w-full py-2.5 px-4 rounded-xl text-xs font-semibold transition-all btn-press shadow-2xs ${
+                    p.isPopular
+                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'
+                      : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-200'
+                  }`}
+                >
+                  {isSelected ? 'Current Plan' : p.ctaText}
+                </button>
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">{plan.period}</p>
+            </div>
+          );
+        })}
+      </div>
 
-              <div className="space-y-2.5 mt-6 pt-6 border-t border-slate-100 text-xs">
-                {plan.features.map((feat, i) => (
-                  <div key={i} className="flex items-start gap-2.5 text-slate-700">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>{feat}</span>
-                  </div>
-                ))}
+      {/* Account Usage & Invoices Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+        
+        {/* Usage Card */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
+          <h3 className="text-sm font-semibold text-slate-900">Current Usage ({currentPlan})</h3>
+          
+          <div className="space-y-3 text-xs">
+            <div>
+              <div className="flex justify-between text-slate-600 mb-1">
+                <span>Conversations This Month</span>
+                <span className="font-semibold text-slate-900">1,248 / 5,000</span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="w-[25%] h-full bg-indigo-600 rounded-full"></div>
               </div>
             </div>
 
-            <button
-              onClick={() => handleUpgrade(plan.name)}
-              className={`mt-8 w-full py-2.5 rounded-xl font-bold text-xs transition-colors ${
-                plan.current
-                  ? 'bg-slate-100 text-slate-800 hover:bg-slate-200'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-              }`}
-            >
-              {plan.current ? 'Manage Plan' : 'Upgrade to ' + plan.name}
-            </button>
+            <div>
+              <div className="flex justify-between text-slate-600 mb-1">
+                <span>Knowledge Base Sources</span>
+                <span className="font-semibold text-slate-900">5 / Unlimited</span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="w-[10%] h-full bg-emerald-500 rounded-full"></div>
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
 
-      {/* Invoices Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-900">Billing History & Invoices</h3>
-          <span className="text-[11px] text-slate-400">Payment method: Visa ending in 4242</span>
+          <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100">
+            Next renewal date: <strong className="text-slate-700">October 1, 2025</strong>. Card ending in •••• 4242.
+          </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
-              <tr>
-                <th className="py-3 px-4">Invoice ID</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Plan Tier</th>
-                <th className="py-3 px-4">Amount</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">PDF</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {invoices.map(inv => (
-                <tr key={inv.id} className="hover:bg-slate-50/60">
-                  <td className="py-3 px-4 font-mono font-bold text-slate-900">{inv.id}</td>
-                  <td className="py-3 px-4">{inv.date}</td>
-                  <td className="py-3 px-4">{inv.plan}</td>
-                  <td className="py-3 px-4 font-mono font-bold">{inv.amount}</td>
-                  <td className="py-3 px-4">
-                    <Badge variant="emerald">PAID</Badge>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <button
-                      onClick={() => {
-                        addToast({
-                          type: 'info',
-                          title: 'Downloading Invoice',
-                          description: `Saved ${inv.id}.pdf to downloads.`
-                        });
-                      }}
-                      className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 ml-auto"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Receipt</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Invoice History */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-900">Invoice History</h3>
+            <span className="text-xs text-slate-400">Past 3 months</span>
+          </div>
+
+          <div className="divide-y divide-slate-100 text-xs">
+            {invoices.map(inv => (
+              <div key={inv.id} className="py-2.5 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-slate-800">{inv.id}</p>
+                  <p className="text-[11px] text-slate-400">{inv.date} · {inv.plan}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-slate-900">{inv.amount}</span>
+                  <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    {inv.status}
+                  </span>
+                  <button 
+                    onClick={() => addToast({ type: 'info', title: 'Downloading', description: `Downloading receipt for ${inv.id}` })}
+                    className="p-1 text-slate-400 hover:text-slate-600 rounded"
+                    title="Download Receipt"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+
       </div>
+
     </div>
   );
 }

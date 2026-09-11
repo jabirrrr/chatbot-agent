@@ -4,28 +4,23 @@ import React from 'react';
 import { useApp } from '@/context/AppContext';
 import { NavigationScreen } from '@/types';
 import { 
-  LayoutDashboard, 
-  Bot, 
-  BookOpen, 
-  Palette,
+  Home, 
   MessageSquare, 
   Users, 
   Calendar, 
-  BarChart3, 
-  Cpu, 
-  Code2, 
-  CreditCard, 
+  BookOpen, 
+  BarChart2, 
+  Layers, 
+  Palette, 
   Settings, 
-  HelpCircle, 
-  ChevronLeft, 
-  ChevronRight,
+  Bot,
+  CreditCard,
   Sparkles,
-  Building2,
-  ChevronDown,
   Globe,
-  Activity
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
-
 
 interface NavItem {
   id: NavigationScreen;
@@ -35,50 +30,55 @@ interface NavItem {
 }
 
 export default function Sidebar() {
-  const { currentScreen, setCurrentScreen, isSidebarCollapsed, toggleSidebar, leads, conversations } = useApp();
+  const { currentScreen, setCurrentScreen, isSidebarCollapsed, toggleSidebar, conversations, leads } = useApp();
 
-  const unreadConvs = conversations.filter(c => c.isUnread).length;
-  const newLeads = leads.filter(l => l.status === 'new').length;
+  const unreadCount = conversations.filter(c => c.isUnread).length;
+  const newLeadsCount = leads.filter(l => l.status === 'new').length;
 
-  const navItems: NavItem[] = [
-    { id: 'home', label: 'Home', icon: LayoutDashboard },
-    { id: 'chatbots', label: 'Chatbots', icon: Bot },
-    { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen },
-    { id: 'appearance', label: 'Appearance Studio', icon: Palette },
-    { id: 'conversations', label: 'Conversations', icon: MessageSquare, badge: unreadConvs > 0 ? `${unreadConvs}` : undefined },
-    { id: 'leads', label: 'Leads', icon: Users, badge: newLeads > 0 ? `${newLeads}` : undefined },
+  const primaryNavItems: NavItem[] = [
+    { id: 'home', label: 'Home', icon: Home },
+    { id: 'conversations', label: 'Conversations', icon: MessageSquare, badge: unreadCount > 0 ? `${unreadCount}` : undefined },
+    { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount > 0 ? `${newLeadsCount}` : undefined },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'ai-models', label: 'AI & Routing', icon: Cpu },
-    { id: 'developer', label: 'Developer', icon: Code2 },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
+    { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
+    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
+    { id: 'integrations', label: 'Integrations', icon: Layers },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'landing', label: 'Landing Page (Live)', icon: Globe },
-    { id: 'status', label: 'System Status SLA', icon: Activity },
   ];
 
+  const secondaryNavItems: NavItem[] = [
+    { id: 'chatbots', label: 'AI Builder', icon: Bot },
+    { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
+    { id: 'onboarding', label: 'Onboarding Flow', icon: Sparkles },
+    { id: 'landing', label: 'Live Landing Page', icon: Globe },
+  ];
 
   return (
     <aside
-      className={`h-screen sticky top-0 flex flex-col bg-slate-900 text-slate-300 border-r border-slate-800 z-40 transition-all duration-200 select-none ${
-        isSidebarCollapsed ? 'w-20' : 'w-64'
+      className={`h-screen sticky top-0 flex flex-col bg-white border-r border-slate-200/80 z-40 transition-all duration-200 select-none ${
+        isSidebarCollapsed ? 'w-[72px]' : 'w-[240px]'
       }`}
     >
       {/* Brand Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-sm shadow-blue-500/30 shrink-0">
-            H
+      <div className="h-16 px-4 flex items-center justify-between border-b border-slate-100">
+        <div 
+          onClick={() => setCurrentScreen('home')}
+          className="flex items-center gap-2.5 cursor-pointer overflow-hidden group"
+        >
+          {/* Chatly Logo Icon */}
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-xs shrink-0 group-hover:scale-105 transition-transform">
+            <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" fill="currentColor" fillOpacity="0.2"/>
+              <path d="M8 12h.01M12 12h.01M16 12h.01"/>
+            </svg>
           </div>
+
           {!isSidebarCollapsed && (
             <div className="min-w-0">
-              <span className="text-base font-bold text-white tracking-tight flex items-center gap-1.5">
-                Helio
-                <span className="text-[10px] uppercase font-bold bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-400/30">
-                  AI SaaS
-                </span>
+              <span className="text-base font-semibold text-slate-900 tracking-tight flex items-center gap-1.5">
+                Chatly
               </span>
-              <p className="text-xs text-slate-400 truncate">Autonomous Website Agent</p>
             </div>
           )}
         </div>
@@ -86,116 +86,114 @@ export default function Sidebar() {
         <button
           onClick={toggleSidebar}
           aria-label="Toggle Sidebar"
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
+          className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors shrink-0"
         >
           {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Organization Switcher */}
-      <div className="px-3 py-2 border-b border-slate-800/80">
-        <button
-          onClick={() => setCurrentScreen('settings')}
-          className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left bg-slate-800/50 hover:bg-slate-800 text-slate-200 border border-slate-700/60 transition-colors ${
-            isSidebarCollapsed ? 'justify-center' : 'justify-between'
-          }`}
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-              <Building2 className="w-3.5 h-3.5" />
-            </div>
-            {!isSidebarCollapsed && (
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-white truncate">Northstar Studio</p>
-                <p className="text-[10px] text-slate-400">Pro Plan · Chicago</p>
-              </div>
-            )}
+      {/* Main Navigation Links */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
+        <div className="space-y-0.5">
+          {primaryNavItems.map(item => {
+            const Icon = item.icon;
+            const isActive = currentScreen === item.id;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentScreen(item.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150 relative group ${
+                  isActive
+                    ? 'bg-indigo-50/90 text-indigo-600 font-semibold'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                } ${isSidebarCollapsed ? 'justify-center px-2' : ''}`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 transition-colors ${
+                  isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'
+                }`} />
+
+                {!isSidebarCollapsed && (
+                  <span className="truncate flex-1 text-left">{item.label}</span>
+                )}
+
+                {!isSidebarCollapsed && item.badge && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none ${
+                    isActive ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+
+                {/* Collapsed tooltip */}
+                {isSidebarCollapsed && (
+                  <div className="absolute left-full ml-2 px-2.5 py-1 bg-slate-900 text-white text-xs font-medium rounded-md shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                    {item.label}
+                    {item.badge && <span className="ml-1 text-indigo-300">({item.badge})</span>}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Secondary Divider / Quick Access */}
+        <div className="pt-4 mt-3 border-t border-slate-100">
+          {!isSidebarCollapsed && (
+            <p className="px-3 pb-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+              Studio & Modules
+            </p>
+          )}
+          <div className="space-y-0.5">
+            {secondaryNavItems.map(item => {
+              const Icon = item.icon;
+              const isActive = currentScreen === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentScreen(item.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150 relative group ${
+                    isActive
+                      ? 'bg-indigo-50/90 text-indigo-600 font-semibold'
+                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                  } ${isSidebarCollapsed ? 'justify-center px-2' : ''}`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${
+                    isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'
+                  }`} />
+
+                  {!isSidebarCollapsed && (
+                    <span className="truncate flex-1 text-left">{item.label}</span>
+                  )}
+
+                  {isSidebarCollapsed && (
+                    <div className="absolute left-full ml-2 px-2.5 py-1 bg-slate-900 text-white text-xs font-medium rounded-md shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                      {item.label}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
-          {!isSidebarCollapsed && <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
-        </button>
-      </div>
-
-      {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
-        {navItems.map(item => {
-          const Icon = item.icon;
-          const isActive = currentScreen === item.id;
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => setCurrentScreen(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors relative group ${
-                isActive
-                  ? 'bg-blue-600 text-white font-semibold shadow-sm shadow-blue-600/30'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              } ${isSidebarCollapsed ? 'justify-center px-2' : ''}`}
-            >
-              <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`} />
-              
-              {!isSidebarCollapsed && (
-                <span className="truncate flex-1 text-left">{item.label}</span>
-              )}
-
-              {!isSidebarCollapsed && item.badge && (
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-blue-500/20 text-blue-400 border border-blue-400/30'
-                }`}>
-                  {item.badge}
-                </span>
-              )}
-
-              {/* Tooltip for collapsed mode */}
-              {isSidebarCollapsed && (
-                <div className="absolute left-full ml-2 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md border border-slate-700 shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
-                  {item.label}
-                  {item.badge && <span className="ml-1.5 text-blue-400">({item.badge})</span>}
-                </div>
-              )}
-            </button>
-          );
-        })}
-
-        {/* Quick link to Onboarding Wizard */}
-        <div className="pt-2">
-          <button
-            onClick={() => setCurrentScreen('onboarding')}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20 transition-colors ${
-              isSidebarCollapsed ? 'justify-center px-2' : ''
-            }`}
-          >
-            <Sparkles className="w-4 h-4 shrink-0 text-emerald-400" />
-            {!isSidebarCollapsed && (
-              <span className="truncate flex-1 text-left">Setup Wizard</span>
-            )}
-          </button>
         </div>
       </div>
 
-      {/* Bottom User / Help Footer */}
-      <div className="p-3 border-t border-slate-800 space-y-2 bg-slate-950/40">
-        <button
-          onClick={() => setCurrentScreen('developer')}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ${
-            isSidebarCollapsed ? 'justify-center' : ''
+      {/* Bottom Profile Account Info (Matches Reference: Acme Store Free Plan) */}
+      <div className="p-3 border-t border-slate-100">
+        <div 
+          onClick={() => setCurrentScreen('billing')}
+          className={`flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-colors cursor-pointer ${
+            isSidebarCollapsed ? 'justify-center p-1.5' : ''
           }`}
         >
-          <HelpCircle className="w-4 h-4 shrink-0" />
-          {!isSidebarCollapsed && <span>Help & Documentation</span>}
-        </button>
-
-        <div className={`flex items-center gap-3 p-2 rounded-xl bg-slate-800/40 border border-slate-800 ${
-          isSidebarCollapsed ? 'justify-center p-1.5' : ''
-        }`}>
-          <img
-            src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face"
-            alt="Sarah Jenkins"
-            className="w-8 h-8 rounded-full object-cover border border-slate-700 shrink-0"
-          />
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-700 to-slate-900 text-white flex items-center justify-center font-medium text-xs shrink-0 shadow-xs">
+            A
+          </div>
           {!isSidebarCollapsed && (
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-white truncate">Sarah Jenkins</p>
-              <p className="text-[10px] text-slate-400">Account Owner</p>
+              <p className="text-xs font-semibold text-slate-800 truncate">Acme Store</p>
+              <p className="text-[11px] text-slate-400">Free Plan</p>
             </div>
           )}
         </div>

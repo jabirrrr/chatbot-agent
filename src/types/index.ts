@@ -7,6 +7,7 @@ export type NavigationScreen =
   | 'leads'
   | 'appointments'
   | 'analytics'
+  | 'integrations'
   | 'ai-models'
   | 'developer'
   | 'billing'

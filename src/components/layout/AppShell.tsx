@@ -18,6 +18,7 @@ import AppointmentsPage from '@/components/appointments/AppointmentsPage';
 import AnalyticsPage from '@/components/analytics/AnalyticsPage';
 import AiModelsPage from '@/components/ai-models/AiModelsPage';
 import DeveloperPage from '@/components/developer/DeveloperPage';
+import IntegrationsPage from '@/components/integrations/IntegrationsPage';
 import BillingPage from '@/components/billing/BillingPage';
 import SettingsPage from '@/components/settings/SettingsPage';
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
@@ -53,8 +54,34 @@ export default function AppShell() {
     setCurrentScreen('onboarding');
   };
 
+  // Full-bleed standalone mode for Landing Page (Panel 1)
+  if (currentScreen === 'landing') {
+    return (
+      <div className="min-h-screen bg-[#fafbfc] font-sans antialiased text-slate-900">
+        <MarketingLandingPage />
+        <ToastContainer />
+      </div>
+    );
+  }
+
+  // Centered standalone mode for Onboarding Flow (Panel 10)
+  if (currentScreen === 'onboarding') {
+    return (
+      <div className="min-h-screen bg-[#fafbfc] font-sans antialiased text-slate-900 flex flex-col justify-center relative">
+        <button
+          onClick={() => setCurrentScreen('home')}
+          className="absolute top-6 right-6 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors shadow-2xs"
+        >
+          Exit to Dashboard
+        </button>
+        <OnboardingWizard />
+        <ToastContainer />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans antialiased text-slate-900">
+    <div className="min-h-screen bg-[#f8fafc] flex font-sans antialiased text-slate-900">
       {/* Collapsible Left Navigation Sidebar */}
       <Sidebar />
 
@@ -66,10 +93,7 @@ export default function AppShell() {
         {/* Dynamic Screen Content */}
         <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">
           {currentScreen === 'home' && (
-            <>
-              <OnboardingChecklistWidget />
-              <AnalyticsCommandCenter />
-            </>
+            <AnalyticsCommandCenter />
           )}
           {currentScreen === 'chatbots' && <ChatbotsPage />}
           {currentScreen === 'knowledge' && <KnowledgeBasePage />}
@@ -78,18 +102,17 @@ export default function AppShell() {
           {currentScreen === 'leads' && <LeadsPage />}
           {currentScreen === 'appointments' && <AppointmentsPage />}
           {currentScreen === 'analytics' && <AnalyticsPage />}
+          {currentScreen === 'integrations' && <IntegrationsPage />}
           {currentScreen === 'ai-models' && <AiModelsPage />}
           {currentScreen === 'developer' && <DeveloperPage />}
           {currentScreen === 'billing' && <BillingPage />}
           {currentScreen === 'settings' && <SettingsPage />}
-          {currentScreen === 'onboarding' && <OnboardingWizard />}
-          {currentScreen === 'landing' && <MarketingLandingPage />}
           {currentScreen === 'status' && <SystemStatusPage />}
         </main>
       </div>
 
-      {/* Floating Interactive Customer Chat Widget (hidden on appearance/onboarding/landing which have dedicated embedded widgets) */}
-      {currentScreen !== 'appearance' && currentScreen !== 'onboarding' && currentScreen !== 'landing' && currentScreen !== 'status' && (
+      {/* Floating Interactive Customer Chat Widget (hidden on appearance/status) */}
+      {currentScreen !== 'appearance' && currentScreen !== 'status' && (
         <CustomerChatWidget />
       )}
 
