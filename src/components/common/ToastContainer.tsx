@@ -14,7 +14,7 @@ export default function ToastContainer() {
       {toasts.map(toast => {
         let Icon = Info;
         let borderColor = 'border-blue-200';
-        let bgColor = 'bg-white';
+        const bgColor = 'bg-white';
         let iconColor = 'text-blue-600';
 
         if (toast.type === 'success') {

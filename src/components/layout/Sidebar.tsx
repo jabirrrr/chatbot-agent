@@ -30,7 +30,12 @@ interface NavItem {
 }
 
 export default function Sidebar() {
-  const { currentScreen, setCurrentScreen, isSidebarCollapsed, toggleSidebar, conversations, leads } = useApp();
+  const { 
+    currentScreen, setCurrentScreen, 
+    isSidebarCollapsed, toggleSidebar, 
+    conversations, leads, 
+    isDirty, discardDraft
+  } = useApp();
 
   const unreadCount = conversations.filter(c => c.isUnread).length;
   const newLeadsCount = leads.filter(l => l.status === 'new').length;

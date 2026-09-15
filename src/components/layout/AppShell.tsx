@@ -26,6 +26,7 @@ import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
 import MarketingLandingPage from '@/components/landing/MarketingLandingPage';
 import SystemStatusPage from '@/components/status/SystemStatusPage';
 import OnboardingChecklistWidget from '@/components/onboarding/OnboardingChecklistWidget';
+import { UnsavedChangesModal } from '@/components/shared/UnsavedChangesModal';
 
 import { X, Sparkles, Bot, Zap, Calendar, MessageSquare, CheckCircle2 } from 'lucide-react';
 
@@ -38,7 +39,11 @@ export default function AppShell() {
     setShowNewChatbotModal,
     showAvailabilityModal,
     setShowAvailabilityModal,
-    addToast
+    addToast,
+    pendingNavigation,
+    confirmNavigation,
+    cancelNavigation,
+    initializationError
   } = useApp();
 
   const [newBotName, setNewBotName] = useState('');
@@ -54,6 +59,27 @@ export default function AppShell() {
     });
     setCurrentScreen('onboarding');
   };
+
+  // Full-page error state for backend connection failure
+  if (initializationError) {
+    return (
+      <div className="min-h-screen bg-[#fafbfc] flex items-center justify-center p-6 font-sans antialiased text-slate-900">
+        <div className="max-w-md w-full bg-white rounded-2xl p-8 shadow-sm border border-red-100 text-center">
+          <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Zap className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Connection Error</h2>
+          <p className="text-slate-600 mb-8">{initializationError}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Full-bleed standalone mode for Landing Page (Panel 1)
   if (currentScreen === 'landing') {
@@ -121,6 +147,13 @@ export default function AppShell() {
 
       {/* Global Toast System */}
       <ToastContainer />
+
+      <UnsavedChangesModal
+        isOpen={pendingNavigation !== null}
+        onSave={() => confirmNavigation('save')}
+        onDiscard={() => confirmNavigation('discard')}
+        onCancel={cancelNavigation}
+      />
 
       {/* Global "Create New Chatbot" Modal */}
       {showNewChatbotModal && (

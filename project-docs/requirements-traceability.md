@@ -95,4 +95,8 @@ No requirement may be modified, deprecated, or removed without an approved entry
 | **REQ-M9-02** | Automated Onboarding Checklist & Email Sequences | P0 | M9 | `app.services.onboarding_service`, `app.services.email_service` | `TEST-M9-004..005` | **PASSED** |
 | **REQ-M9-03** | Real-Time System Status Page & Sentry Monitoring | P0 | M9 | `app.api.v1.status`, `app.core.sentry`, `SystemStatusPage.tsx` | `TEST-M9-003..006` | **PASSED** |
 | **REQ-M9-04** | Commercial Financial Telemetry (MRR, Churn <5%, AI Margin >65%) | P0 | M9 | `app.services.analytics_service`, `app.api.v1.analytics` | `TEST-M9-001..002` | **PASSED** |
+| **REQ-OPS-01** | K8s-Style Liveness & Readiness Probes | P0 | M9 | `app.api.v1.health`, `app.main` | `test_api_v1_health_ready_endpoint` | **PASSED** |
+| **REQ-ADMIN-01**| Super Admin Management Console & Operational Routes | P1 | M9 | `src/app/admin/`, `src/components/admin/` | `npm run build` static verification | **PASSED** |
+| **REQ-DEPLOY-01**| Multi-Platform Widget Deployment Hub | P0 | M9 | `DeploymentPage.tsx`, `AppShell.tsx` | `npm run build` static verification | **PASSED** |
+| **REQ-UI-01**   | Apple-Inspired Minimalist Visual Architecture | P0 | M9 | `project-docs/ui-design-spec.md`, `src/components/` | Visual & Build Verification | **PASSED** |
 

@@ -110,6 +110,7 @@ export type KnowledgeSourceStatus = 'ready' | 'processing' | 'failed';
 
 export interface KnowledgeSource {
   id: string;
+  chatbotId?: string;
   name: string;
   type: KnowledgeSourceType;
   status: KnowledgeSourceStatus;
@@ -123,6 +124,7 @@ export interface KnowledgeSource {
 
 export interface FAQItem {
   id: string;
+  chatbotId?: string;
   question: string;
   answer: string;
   category: string;
@@ -148,6 +150,13 @@ export interface ChatbotConfig {
   name: string;
   status: 'active' | 'draft' | 'disabled';
   domain: string;
+  description?: string;
+  primaryGoals?: {
+    answerQuestions: boolean;
+    captureLeads: boolean;
+    scheduleAppointments: boolean;
+    transferToHuman: boolean;
+  };
   conversationsCount: number;
   lastUpdated: string;
   themeColor: string;

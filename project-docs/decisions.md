@@ -99,9 +99,10 @@ All architectural, business, design, and integration decisions must be formally 
 ### DEC-007: Mandatory UI Design Approval Gate
 * **Area:** Frontend & Design System
 * **Question:** Has the UI design prompt and reference design image/Figma specification been provided and approved for Milestone 1 / Dashboard implementation?
-* **Recommended Option:** **Enforce strict pause on Milestone 1 UI implementation until the design reference is supplied.**
-* **Alternatives:** None. (Mandatory protocol rule).
-* **Impact:** Prevents arbitrary UI invention and guarantees visual fidelity with product owner expectations.
-* **Blocking Status:** **BLOCKING FOR MILESTONE 1 IMPLEMENTATION.**
-* **Final Decision:** *Awaiting UI Design Prompt & Reference Image from User*
-* **Decision Date/Status:** `BLOCKED_AWAITING_ASSET`
+* **Recommended Option:** Standardize on the Apple-inspired minimalist design system specified in [ui-design-spec.md](file:///e:/webverse%20files/antigravity/chat-agent/project-docs/ui-design-spec.md), featuring high contrast, soft glassmorphic depth, spring count-up transitions, and consistent 16px/12px corner radii.
+* **Alternatives:** Material Design 3, Plain Tailwind UI defaults.
+* **Impact:** Controls visual tokens, color palettes, responsive shell layouts, and component styling across the entire dashboard and widget.
+* **Blocking Status:** **Resolved & Approved.**
+* **Final Decision:** Formally approved. UI Design Prompt & Specification documented in [ui-design-spec.md](file:///e:/webverse%20files/antigravity/chat-agent/project-docs/ui-design-spec.md).
+* **Decision Date/Status:** `APPROVED`
+

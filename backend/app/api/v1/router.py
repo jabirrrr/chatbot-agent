@@ -14,6 +14,7 @@ from app.api.v1.public import router as public_router
 from app.api.v1.beta import router as beta_router
 from app.api.v1.onboarding import router as onboarding_router
 from app.api.v1.status import router as status_router
+from app.api.v1.health import router as health_router
 
 api_router = APIRouter()
 
@@ -31,8 +32,6 @@ api_router.include_router(handoff_router)
 api_router.include_router(billing_router)
 api_router.include_router(public_router)
 api_router.include_router(beta_router)
+api_router.include_router(health_router, prefix="/health", tags=["Health & Readiness"])
 api_router.include_router(onboarding_router, prefix="/onboarding", tags=["Automated Onboarding & Email Sequences"])
 api_router.include_router(status_router, prefix="/status", tags=["System Status & Health SLA"])
-
-
-

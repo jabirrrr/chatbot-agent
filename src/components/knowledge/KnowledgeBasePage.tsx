@@ -29,47 +29,10 @@ interface SourceItem {
 }
 
 export default function KnowledgeBasePage() {
-  const { addToast } = useApp();
+  const { addToast, knowledgeSources, addKnowledgeSource, removeKnowledgeSource, activeChatbotId } = useApp();
   const [activeTab, setActiveTab] = useState<'Documents' | 'Websites' | 'FAQs' | 'Text' | 'Notion'>('Documents');
   
-  const [sources, setSources] = useState<SourceItem[]>([
-    {
-      id: 'src_1',
-      name: 'Company_Overview.pdf',
-      type: 'pdf',
-      timeAgo: 'Uploaded 2 days ago',
-      status: 'Ready'
-    },
-    {
-      id: 'src_2',
-      name: 'Services_2025.pdf',
-      type: 'pdf',
-      timeAgo: 'Uploaded 5 days ago',
-      status: 'Ready'
-    },
-    {
-      id: 'src_3',
-      name: 'Pricing_FAQ.pdf',
-      type: 'pdf',
-      timeAgo: 'Uploaded 1 week ago',
-      status: 'Ready'
-    },
-    {
-      id: 'src_4',
-      name: 'Website',
-      type: 'website',
-      url: 'https://yourbusiness.com',
-      timeAgo: 'Uploaded 1 week ago',
-      status: 'Ready'
-    },
-    {
-      id: 'src_5',
-      name: 'Product_Guide.pdf',
-      type: 'pdf',
-      timeAgo: 'Uploaded 1 week ago',
-      status: 'Ready'
-    }
-  ]);
+  const sources = knowledgeSources.filter(s => s.chatbotId === activeChatbotId);
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -81,24 +44,18 @@ export default function KnowledgeBasePage() {
     setUploadProgress(15);
 
     const newId = `src_${Date.now()}`;
-    const newDoc: SourceItem = {
-      id: newId,
+    addKnowledgeSource({
+      chatbotId: activeChatbotId,
       name: fileName,
-      type: fileName.endsWith('.pdf') ? 'pdf' : fileName.startsWith('http') ? 'website' : 'txt',
-      timeAgo: 'Just now',
-      status: 'Uploading'
-    };
-
-    setSources(prev => [newDoc, ...prev]);
-
-    setTimeout(() => {
-      setUploadProgress(65);
-      setSources(prev => prev.map(s => s.id === newId ? { ...s, status: 'Processing' } : s));
-    }, 700);
+      type: fileName.endsWith('.pdf') ? 'document' : fileName.startsWith('http') ? 'website' : 'document',
+      status: 'ready',
+      chunksIndexed: Math.floor(Math.random() * 50) + 10,
+      fileSize: '1.2 MB',
+      lastUpdated: new Date().toISOString()
+    });
 
     setTimeout(() => {
       setUploadProgress(100);
-      setSources(prev => prev.map(s => s.id === newId ? { ...s, status: 'Ready' } : s));
       setIsUploading(false);
       addToast({
         type: 'success',
@@ -117,7 +74,7 @@ export default function KnowledgeBasePage() {
   };
 
   const handleDeleteSource = (id: string, name: string) => {
-    setSources(prev => prev.filter(s => s.id !== id));
+    removeKnowledgeSource(id);
     addToast({
       type: 'info',
       title: 'Source Removed',
@@ -246,7 +203,7 @@ export default function KnowledgeBasePage() {
 
           <div className="divide-y divide-slate-100">
             {sources.map(src => {
-              const isPdf = src.type === 'pdf';
+              const isPdf = src.type === 'document';
               const isWeb = src.type === 'website';
 
               return (
@@ -263,33 +220,23 @@ export default function KnowledgeBasePage() {
                       <p className="text-xs font-semibold text-slate-900 truncate">
                         {src.name}
                       </p>
-                      {src.url && (
-                        <p className="text-[10px] text-slate-400 truncate">
-                          {src.url}
-                        </p>
-                      )}
                       <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                        {src.timeAgo}
+                        {new Date(src.lastUpdated).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
                     {/* Status Pill */}
-                    {src.status === 'Ready' && (
+                    {src.status === 'ready' && (
                       <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
                         Ready
                       </span>
                     )}
-                    {src.status === 'Processing' && (
+                    {src.status === 'processing' && (
                       <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1">
                         <RotateCw className="w-2.5 h-2.5 animate-spin" />
                         Processing
-                      </span>
-                    )}
-                    {src.status === 'Uploading' && (
-                      <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                        Uploading
                       </span>
                     )}
 

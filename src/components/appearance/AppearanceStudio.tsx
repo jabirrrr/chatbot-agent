@@ -49,12 +49,47 @@ export default function AppearanceStudio() {
     ]);
   };
 
-  const handlePreviewSend = (customText?: string) => {
+  const handlePreviewSend = async (customText?: string) => {
     const text = customText || previewMsg;
     if (!text.trim()) return;
 
     setInteractiveMessages(prev => [...prev, { sender: 'visitor', text }]);
     setPreviewMsg('');
+
+    let llmKey: string | null = null;
+    let llmProvider: string | null = null;
+    if (typeof window !== 'undefined') {
+      llmKey = localStorage.getItem('helio_llm_key');
+      llmProvider = localStorage.getItem('helio_llm_provider');
+    }
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          history: interactiveMessages,
+          apiKey: llmKey,
+          provider: llmProvider || 'OpenAI',
+          botConfig: {
+            name: chatbot.name,
+            tone: chatbot.tone,
+            businessDescription: chatbot.description || 'Our business provides exceptional customer service and support.',
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.reply) {
+          setInteractiveMessages(prev => [...prev, { sender: 'bot', text: data.reply }]);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching chat in AppearanceStudio:', err);
+    }
 
     setTimeout(() => {
       setInteractiveMessages(prev => [
@@ -315,23 +350,25 @@ export default function AppearanceStudio() {
                 </div>
               ))}
 
-              {/* Sample Suggested Quick-Replies */}
-              <div className="pt-2 flex flex-col gap-1.5">
-                {[
-                  'Tell me about your services',
-                  'I want a free quote',
-                  'Talk to a human'
-                ].map((chip, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handlePreviewSend(chip)}
-                    style={{ borderColor: `${primaryColor}40`, color: primaryColor }}
-                    className="text-left text-[11px] font-medium bg-white hover:bg-slate-50 px-3 py-1.5 rounded-full shadow-2xs transition-colors w-fit border"
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
+              {/* Sample Suggested Quick-Replies (Only on first message) */}
+              {interactiveMessages.length <= 1 && (
+                <div className="pt-2 flex flex-col gap-1.5">
+                  {[
+                    'Tell me about your services',
+                    'I want a free quote',
+                    'Talk to a human'
+                  ].map((chip, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handlePreviewSend(chip)}
+                      style={{ borderColor: `${primaryColor}40`, color: primaryColor }}
+                      className="text-left text-[11px] font-medium bg-white hover:bg-slate-50 px-3 py-1.5 rounded-full shadow-2xs transition-colors w-fit border"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Input Footer */}

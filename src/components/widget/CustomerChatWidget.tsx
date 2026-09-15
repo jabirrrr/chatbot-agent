@@ -62,23 +62,19 @@ export default function CustomerChatWidget({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [widgetMessages, isTyping, showLeadForm, showCalendarBooking]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputVal.trim()) return;
     const text = inputVal.trim();
     setInputVal('');
     setIsTyping(true);
-    addVisitorMessage(text);
-    setTimeout(() => {
-      setIsTyping(false);
-    }, 1100);
+    await addVisitorMessage(text);
+    setIsTyping(false);
   };
 
-  const handleQuestionClick = (q: string) => {
+  const handleQuestionClick = async (q: string) => {
     setIsTyping(true);
-    addVisitorMessage(q);
-    setTimeout(() => {
-      setIsTyping(false);
-    }, 1100);
+    await addVisitorMessage(q);
+    setIsTyping(false);
   };
 
   const handleLeadSubmit = (e: React.FormEvent) => {
@@ -381,8 +377,8 @@ export default function CustomerChatWidget({
           </div>
         )}
 
-        {/* Suggested Question Chips (Only show if few messages) */}
-        {widgetMessages.length < 4 && (
+        {/* Suggested Question Chips (Only show on first message) */}
+        {widgetMessages.length <= 1 && (
           <div className="space-y-1.5 pt-2">
             <p className="text-[11px] font-semibold text-slate-400">Suggested questions:</p>
             <div className="flex flex-wrap gap-1.5">

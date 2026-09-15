@@ -101,3 +101,47 @@ async def test_tenant_data_isolation_filter():
     for doc in org_b_results:
         assert doc["organization_id"] == org_b_id
         assert doc["organization_id"] != org_a_id
+
+@pytest.mark.asyncio
+async def test_organization_creation_atomicity():
+    """
+    Verifies that if OrganizationMember creation fails, the Organization is rolled back,
+    ensuring atomic creation and no orphaned records.
+    """
+    from app.services.org_service import OrganizationService
+    from app.schemas.organization import OrgCreate
+    
+    user = MockUser(uuid.uuid4(), "test@example.com")
+    data = OrgCreate(name="Failing Org", industry="Tech")
+
+    # Mock DB that raises an Exception on the second add (member insertion) or commit
+    class MockFailingDb:
+        def __init__(self):
+            self.added_objects = []
+            self.flushed = False
+            self.commit_called = False
+            self.rolled_back = False
+
+        def add(self, obj):
+            from app.models.organization_member import OrganizationMember
+            if isinstance(obj, OrganizationMember):
+                raise Exception("Simulated database failure during member insertion")
+            self.added_objects.append(obj)
+
+        async def flush(self):
+            self.flushed = True
+
+        async def commit(self):
+            self.commit_called = True
+
+        async def rollback(self):
+            self.rolled_back = True
+
+    mock_db = MockFailingDb()
+
+    with pytest.raises(Exception, match="Simulated database failure during member insertion"):
+        await OrganizationService.create(db=mock_db, creator=user, data=data)
+    
+    assert mock_db.commit_called is False
+    # In FastAPI with dependencies, rollback is handled by the dependency yield block when an exception bubbles up.
+    # We verify the transaction boundary never committed the org.

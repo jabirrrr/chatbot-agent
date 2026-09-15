@@ -34,11 +34,9 @@ async def override_get_db():
     yield MockDbSession()
 
 
-app.dependency_overrides[get_db] = override_get_db
-
-
 def test_health_check_endpoint():
     """Validates the root health check endpoint."""
+    app.dependency_overrides[get_db] = override_get_db
     response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
@@ -46,13 +44,23 @@ def test_health_check_endpoint():
     assert "Helio Chatbot Platform" in data["service"]
 
 
-def test_api_v1_health_endpoint():
-    """Validates the versioned API v1 health endpoint."""
-    response = client.get("/api/v1/health")
+def test_api_v1_health_ready_endpoint():
+    """Validates the versioned API v1 health ready endpoint."""
+    app.dependency_overrides[get_db] = override_get_db
+    response = client.get("/api/v1/health/ready")
+    print("HEALTH ENDPOINT DATA:", response.json())
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "healthy"
-    assert data["api_prefix"] == "/api/v1"
+    assert data["status"] == "ready"
+    assert data["components"]["database"] == "ok"
+
+def test_api_v1_health_live_endpoint():
+    """Validates the versioned API v1 health live endpoint."""
+    app.dependency_overrides[get_db] = override_get_db
+    response = client.get("/api/v1/health/live")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "alive"
 
 
 def test_unauthorized_access_to_protected_route():

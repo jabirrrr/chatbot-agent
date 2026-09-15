@@ -33,7 +33,14 @@ export const initialChatbot: ChatbotConfig = {
   leadFields: ['name', 'email', 'phone', 'company', 'budget'],
   fallbackBehavior: 'human_help',
   monthlyBudgetUsd: 150,
-  currentCostUsd: 42.18
+  currentCostUsd: 42.18,
+  description: 'Northstar Studio is a premium digital agency based in Chicago. We build high-converting websites, execute ROI-driven paid acquisition campaigns, and formulate bespoke brand identities for growth-stage businesses.',
+  primaryGoals: {
+    answerQuestions: true,
+    captureLeads: true,
+    scheduleAppointments: true,
+    transferToHuman: true
+  }
 };
 
 export const mockChatbotsList: ChatbotConfig[] = [
@@ -59,7 +66,14 @@ export const mockChatbotsList: ChatbotConfig[] = [
     leadFields: ['name', 'email'],
     fallbackBehavior: 'human_help',
     monthlyBudgetUsd: 80,
-    currentCostUsd: 18.50
+    currentCostUsd: 18.50,
+    description: 'We provide prompt and helpful customer support for existing clients and active sprint management.',
+    primaryGoals: {
+      answerQuestions: true,
+      captureLeads: false,
+      scheduleAppointments: false,
+      transferToHuman: true
+    }
   },
   {
     id: 'bot_03',
@@ -82,7 +96,14 @@ export const mockChatbotsList: ChatbotConfig[] = [
     leadFields: ['name', 'email', 'company', 'budget'],
     fallbackBehavior: 'capture_lead',
     monthlyBudgetUsd: 50,
-    currentCostUsd: 0.00
+    currentCostUsd: 0.00,
+    description: 'Specialized brand discovery and visual identity consultation services.',
+    primaryGoals: {
+      answerQuestions: true,
+      captureLeads: true,
+      scheduleAppointments: true,
+      transferToHuman: false
+    }
   }
 ];
 
@@ -108,6 +129,7 @@ export const initialBusinessInfo: BusinessInfo = {
 export const mockKnowledgeSources: KnowledgeSource[] = [
   {
     id: 'src_01',
+    chatbotId: 'bot_01',
     name: '2026 Agency Services & Retainer Guide.pdf',
     type: 'document',
     status: 'ready',
@@ -119,6 +141,7 @@ export const mockKnowledgeSources: KnowledgeSource[] = [
   },
   {
     id: 'src_02',
+    chatbotId: 'bot_01',
     name: 'Web Design Process & Tech Stack Overview.docx',
     type: 'document',
     status: 'ready',
@@ -130,6 +153,7 @@ export const mockKnowledgeSources: KnowledgeSource[] = [
   },
   {
     id: 'src_03',
+    chatbotId: 'bot_01',
     name: 'https://northstarstudio.io/case-studies/fintech-rebrand',
     type: 'website',
     status: 'ready',
@@ -141,6 +165,7 @@ export const mockKnowledgeSources: KnowledgeSource[] = [
   },
   {
     id: 'src_04',
+    chatbotId: 'bot_01',
     name: 'Enterprise Master Services Agreement FAQ.pdf',
     type: 'document',
     status: 'failed',
@@ -152,6 +177,7 @@ export const mockKnowledgeSources: KnowledgeSource[] = [
   },
   {
     id: 'src_05',
+    chatbotId: 'bot_01',
     name: 'Northstar Standard Onboarding & Client FAQ.txt',
     type: 'faq',
     status: 'ready',
@@ -163,6 +189,7 @@ export const mockKnowledgeSources: KnowledgeSource[] = [
   },
   {
     id: 'src_06',
+    chatbotId: 'bot_01',
     name: 'Q3 Agency Portfolio Showcase.pdf',
     type: 'document',
     status: 'processing',
@@ -177,6 +204,7 @@ export const mockKnowledgeSources: KnowledgeSource[] = [
 export const mockFaqs: FAQItem[] = [
   {
     id: 'faq_01',
+    chatbotId: 'bot_01',
     question: 'How fast can a new website project launch?',
     answer: 'Most custom website projects launch within 4 to 8 weeks depending on scope and client asset readiness. We provide a guaranteed milestone roadmap at project kickoff.',
     category: 'Timeline',
@@ -185,6 +213,7 @@ export const mockFaqs: FAQItem[] = [
   },
   {
     id: 'faq_02',
+    chatbotId: 'bot_01',
     question: 'What is included in your monthly marketing retainer?',
     answer: 'Retainers include full-funnel paid search & social management, conversion landing page design, bi-weekly CRO testing, weekly dashboard reporting, and dedicated Slack communication.',
     category: 'Pricing',
@@ -193,6 +222,7 @@ export const mockFaqs: FAQItem[] = [
   },
   {
     id: 'faq_03',
+    chatbotId: 'bot_01',
     question: 'Do you work with non-US or international clients?',
     answer: 'Yes! While our headquarters is in Chicago, approximately 35% of our client base is located across the UK, Canada, and Western Europe.',
     category: 'General',
@@ -201,6 +231,7 @@ export const mockFaqs: FAQItem[] = [
   },
   {
     id: 'faq_04',
+    chatbotId: 'bot_01',
     question: 'What payment methods and payment schedules do you accept?',
     answer: 'We accept ACH wire transfer, major credit cards via Stripe, and corporate purchase orders. Custom projects are structured as 50% deposit and 50% upon launch milestone signoff.',
     category: 'Billing',
