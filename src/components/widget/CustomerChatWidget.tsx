@@ -265,7 +265,7 @@ export default function CustomerChatWidget({
               >
                 <p className="whitespace-pre-wrap">{msg.content}</p>
 
-                {msg.referencedSource && (
+                {msg.referencedSource && !msg.referencedSource.toLowerCase().startsWith('live') && (
                   <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-1 text-[10px] text-slate-400 font-medium">
                     <Sparkles className="w-3 h-3 text-blue-500 shrink-0" />
                     <span className="truncate">Grounded in: {msg.referencedSource}</span>

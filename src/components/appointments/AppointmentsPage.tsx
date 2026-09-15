@@ -115,7 +115,8 @@ export default function AppointmentsPage() {
   };
 
   return (
-    <div className="space-y-6 page-transition pb-12">
+    <>
+      <div className="space-y-6 page-transition pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -222,10 +223,11 @@ export default function AppointmentsPage() {
           </div>
         )}
       </div>
+    </div>
 
       {/* Appointment Detail Modal */}
       {selectedAppt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-2xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 animate-fade-in space-y-5">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="text-sm font-semibold text-slate-900">Appointment Overview</h3>
@@ -281,6 +283,6 @@ export default function AppointmentsPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

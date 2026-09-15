@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -27,7 +27,8 @@ class Invitation(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     token = Column(String(255), unique=True, index=True, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
-    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    is_accepted = Column(Boolean, default=False, nullable=False)
+
 
     # Relationship
     organization = relationship("Organization", back_populates="invitations")

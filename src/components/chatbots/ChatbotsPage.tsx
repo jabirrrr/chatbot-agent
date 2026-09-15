@@ -36,7 +36,8 @@ export default function ChatbotsPage() {
     setActiveChatbotId,
     chatbotsList,
     createNewChatbot,
-    knowledgeSources
+    knowledgeSources,
+    setPendingNavigation
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'behavior' | 'knowledge' | 'appearance' | 'deployment'>('behavior');
@@ -248,7 +249,8 @@ export default function ChatbotsPage() {
   };
 
   return (
-    <div className="space-y-6 page-transition pb-12">
+    <>
+      <div className="space-y-6 page-transition pb-12">
       {/* Top Header (Matches Panel 3: Build Your AI Assistant) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -346,7 +348,6 @@ export default function ChatbotsPage() {
             key={tab.id}
             onClick={() => {
               if (isDirty) {
-                // @ts-ignore
                 setPendingNavigation({ type: 'custom', target: tab.id, onConfirm: () => setActiveTab(tab.id as any) });
               } else {
                 setActiveTab(tab.id as any);
@@ -653,6 +654,7 @@ export default function ChatbotsPage() {
         </div>
 
       </div>
+    </div>
 
       {/* Connect API Key Modal */}
       {showKeyModal && (
@@ -779,6 +781,6 @@ export default function ChatbotsPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -83,7 +83,8 @@ export default function KnowledgeBasePage() {
   };
 
   return (
-    <div className="space-y-6 page-transition pb-12">
+    <>
+      <div className="space-y-6 page-transition pb-12">
       {/* Header (Matches Panel 4) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -180,12 +181,7 @@ export default function KnowledgeBasePage() {
           <div className="pt-2 flex items-center justify-between text-xs text-slate-500">
             <span>Need to crawl your live website?</span>
             <button
-              onClick={() => {
-                const url = prompt('Enter your website URL to index:');
-                if (url) {
-                  handleSimulateUpload(url.startsWith('http') ? url : `https://${url}`);
-                }
-              }}
+              onClick={() => setShowAddModal(true)}
               className="text-indigo-600 font-medium hover:text-indigo-700"
             >
               Add Website URL →
@@ -255,14 +251,15 @@ export default function KnowledgeBasePage() {
         </div>
 
       </div>
-
+    </div>
+    
       {/* Modal: Add Source */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 animate-fade-in space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-900">Add Knowledge Source</h3>
-              <button 
+               <h3 className="text-sm font-semibold text-slate-900">Add Knowledge Source</h3>
+               <button 
                 onClick={() => setShowAddModal(false)}
                 className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
               >
@@ -307,6 +304,6 @@ export default function KnowledgeBasePage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

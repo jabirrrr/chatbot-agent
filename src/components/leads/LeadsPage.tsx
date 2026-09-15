@@ -160,7 +160,8 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="space-y-6 page-transition pb-12">
+    <>
+      <div className="space-y-6 page-transition pb-12">
       {/* Header (Matches Prompt Requirements) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -260,11 +261,12 @@ export default function LeadsPage() {
           </table>
         </div>
       </div>
+    </div>
 
       {/* Polished Detail Drawer (Opens on clicking lead) */}
       {selectedLead && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/20 backdrop-blur-2xs animate-fade-in">
-          <div className="w-full max-w-md bg-white h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto page-transition border-l border-slate-200">
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 animate-fade-in">
+          <div className="w-full max-w-md bg-white h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto border-l border-slate-200">
             
             <div className="space-y-6">
               {/* Drawer Header */}
@@ -368,6 +370,6 @@ export default function LeadsPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
