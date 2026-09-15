@@ -3,16 +3,25 @@ import uuid
 from typing import Optional
 from app.core.config import settings
 
-UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "storage_uploads"))
+UPLOAD_DIR = (
+    getattr(settings, "STORAGE_LOCAL_DIR", None)
+    or ("/tmp/storage_uploads" if os.environ.get("VERCEL") else os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "storage_uploads")))
+)
 
 
 class StorageAdapter:
     """
     Adapter for multi-tenant object storage.
     Supports MinIO/S3 with graceful local file system storage for isolated environments.
+    Handles serverless read-only container environments safely.
     """
     def __init__(self):
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        global UPLOAD_DIR
+        try:
+            os.makedirs(UPLOAD_DIR, exist_ok=True)
+        except (OSError, PermissionError):
+            UPLOAD_DIR = "/tmp/storage_uploads"
+            os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     def upload_file(
         self,

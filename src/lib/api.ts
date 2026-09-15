@@ -3,7 +3,12 @@
  * Connects Next.js frontend with FastAPI backend
  */
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL !== undefined
+    ? process.env.NEXT_PUBLIC_API_URL
+    : process.env.NODE_ENV === 'production'
+    ? ''
+    : 'http://localhost:8000';
 
 export interface BackendHealthResponse {
   status: string;
@@ -150,5 +155,74 @@ export async function updateChatbot(token: string, chatbotId: string, data: any)
     return null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Fetch all integration statuses for the tenant organization
+ */
+export async function fetchIntegrationsStatus(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/integrations/status`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch (err) {
+    console.warn('Failed to fetch integrations status:', err);
+    return null;
+  }
+}
+
+/**
+ * Fetch Google Calendar OAuth Authorization URL
+ */
+export async function getGoogleCalendarAuthUrl(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/integrations/google-calendar/auth-url`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      return data;
+    }
+    return { error: data.detail || `Failed to initiate authorization (HTTP ${res.status})` };
+  } catch (err: any) {
+    console.error('Failed to get Google Calendar auth URL:', err);
+    return { error: err?.message || 'Network connection failed' };
+  }
+}
+
+/**
+ * Disconnect Google Calendar integration
+ */
+export async function disconnectGoogleCalendar(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/integrations/google-calendar/disconnect`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      return data;
+    }
+    return { success: false, error: data.detail || 'Failed to disconnect integration' };
+  } catch (err: any) {
+    console.error('Failed to disconnect Google Calendar:', err);
+    return { success: false, error: err?.message || 'Network connection failed' };
   }
 }

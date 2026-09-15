@@ -94,6 +94,8 @@ class OpenRouterProvider(LLMProvider):
                 json=payload
             ) as response:
                 if response.status_code != 200:
+                    error_body = await response.aread()
+                    print(f"[OpenRouter Error] Status: {response.status_code}, Body: {error_body.decode('utf-8')}")
                     # Fallback to mock on upstream API failure
                     mock = MockLLMProvider()
                     async for chunk in mock.stream_chat(messages, tools, temperature, max_tokens, model_name):
@@ -156,6 +158,78 @@ class MockLLMProvider(LLMProvider):
                 system_context = m.get("content", "")
 
         user_lower = user_message.lower()
+
+        # Check for calendar appointment tools if available in tools
+        has_calendar_tool = tools and any(t.get("function", {}).get("name") in ("get_calendar_availability", "create_calendar_event") for t in tools)
+        
+        if has_calendar_tool:
+            is_availability_query = any(k in user_lower for k in ["availability", "available slots", "open slots", "what times", "free slots", "calendar open", "what time", "schedule", "when are you free"])
+            is_booking_intent = any(k in user_lower for k in ["book appointment", "schedule consultation", "schedule meeting", "book a call", "reserve a slot", "book for", "book an appointment", "book a slot"])
+
+            # 1. Booking intent with contact email provided -> execute create_calendar_event
+            if (is_booking_intent or "book" in user_lower) and ("@" in user_message):
+                name = "Prospective Customer"
+                if "name is" in user_lower:
+                    try:
+                        name = user_message.split("name is", 1)[1].split(",")[0].split(".")[0].strip()
+                    except Exception:
+                        name = "Prospective Customer"
+                elif "for " in user_lower:
+                    try:
+                        name = user_message.split("for ", 1)[1].split(" at ")[0].split(" on ")[0].strip()
+                    except Exception:
+                        name = "Prospective Customer"
+                
+                email = "customer@example.com"
+                for token in user_message.split():
+                    if "@" in token and "." in token:
+                        email = token.strip(" ,.;:()")
+                        break
+
+                yield {
+                    "type": "tool_call",
+                    "tool_name": "create_calendar_event",
+                    "arguments": {
+                        "attendee_name": name,
+                        "attendee_email": email,
+                        "start_time": "2026-09-20T14:00:00Z",
+                        "duration_minutes": 30,
+                        "summary": f"Consultation with {name}",
+                        "notes": f"Booked via chat: {user_message}"
+                    }
+                }
+                msg = f"Your appointment has been confirmed and scheduled on Google Calendar for {name}! A calendar invite has been sent to {email}."
+                for word in msg.split(" "):
+                    yield {"type": "content", "delta": word + " "}
+                    await asyncio.sleep(0.01)
+                yield {"type": "done", "total_tokens": 90}
+                return
+
+            # 2. Availability query or date check -> execute get_calendar_availability
+            if is_availability_query and not ("@" in user_message):
+                yield {
+                    "type": "tool_call",
+                    "tool_name": "get_calendar_availability",
+                    "arguments": {
+                        "target_date": "2026-09-20",
+                        "duration_minutes": 30
+                    }
+                }
+                msg = "I've checked our live Google Calendar. We have slots available on 2026-09-20 at 10:00 AM, 11:30 AM, 2:00 PM, and 3:30 PM UTC. Which time works best for you? Please provide your name and email to confirm."
+                for word in msg.split(" "):
+                    yield {"type": "content", "delta": word + " "}
+                    await asyncio.sleep(0.01)
+                yield {"type": "done", "total_tokens": 75}
+                return
+
+            # 3. Booking intent without contact email or specific date -> ask user for booking details
+            if is_booking_intent:
+                msg = "I'd be glad to help you book an appointment! Could you please share your preferred date and time, as well as your name and email address?"
+                for word in msg.split(" "):
+                    yield {"type": "content", "delta": word + " "}
+                    await asyncio.sleep(0.01)
+                yield {"type": "done", "total_tokens": 50}
+                return
 
         # Check for lead capture trigger: name/email/phone provided
         has_email = "@" in user_message and "." in user_message

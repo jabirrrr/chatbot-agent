@@ -34,11 +34,11 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware)
 
 # 3. Configure CORS
-if settings.BACKEND_CORS_ORIGINS:
+if settings.BACKEND_CORS_ORIGINS or settings.CORS_ORIGIN_REGEX:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.BACKEND_CORS_ORIGINS,
-        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$",
+        allow_origin_regex=settings.CORS_ORIGIN_REGEX,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

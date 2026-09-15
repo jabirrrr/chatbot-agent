@@ -8,6 +8,7 @@ from app.models.conversation import Conversation, Message
 from app.models.lead import Lead
 from app.models.knowledge import BusinessInfo
 from app.services.knowledge_service import KnowledgeService
+from app.services.calendar_tools import CALENDAR_TOOLS, CalendarToolsExecutor
 from app.adapters.llm.provider import OpenRouterProvider, LLMProvider
 
 LEAD_CAPTURE_TOOL = {
@@ -139,7 +140,13 @@ class RAGService:
             role = "user" if m.sender_type == "visitor" else "assistant"
             messages_payload.append({"role": role, "content": m.content})
 
-        tools = [LEAD_CAPTURE_TOOL] if chatbot.lead_capture_enabled else None
+        tools: List[Dict[str, Any]] = []
+        if chatbot.lead_capture_enabled:
+            tools.append(LEAD_CAPTURE_TOOL)
+        if chatbot.appointment_booking_enabled:
+            tools.extend(CALENDAR_TOOLS)
+
+        tools_payload = tools if tools else None
 
         # 4. Stream LLM chunks
         bot_response_text = ""
@@ -147,7 +154,7 @@ class RAGService:
 
         async for chunk in llm_provider.stream_chat(
             messages=messages_payload,
-            tools=tools,
+            tools=tools_payload,
             temperature=chatbot.temperature,
             max_tokens=int(chatbot.max_tokens),
             model_name=chatbot.model_name
@@ -178,6 +185,27 @@ class RAGService:
                     db.add(lead)
                     await db.commit()
                     yield {"event": "lead_captured", "data": {"name": lead.name, "email": lead.email}}
+
+                elif tool_name in (
+                    "get_calendar_availability",
+                    "create_calendar_event",
+                    "get_calendar_event",
+                    "cancel_calendar_event",
+                    "update_calendar_event"
+                ):
+                    action_result = await CalendarToolsExecutor.execute_tool(
+                        tool_name=tool_name,
+                        arguments=args,
+                        db=db,
+                        organization_id=chatbot.organization_id,
+                        conversation_id=conversation.id
+                    )
+                    if tool_name == "create_calendar_event" and action_result.get("success"):
+                        yield {"event": "appointment_booked", "data": action_result}
+                    elif tool_name == "get_calendar_availability":
+                        yield {"event": "calendar_availability", "data": action_result}
+                    else:
+                        yield {"event": "calendar_action", "data": action_result}
 
             elif chunk_type == "done":
                 # 5. Persist bot reply in database

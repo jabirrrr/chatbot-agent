@@ -37,6 +37,7 @@ interface AppContextType {
   setCurrentScreen: (screen: NavigationScreen) => void;
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  authToken: string | null;
   
   // Data State
   activeChatbotId: string;
@@ -771,6 +772,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setCurrentScreen,
         isSidebarCollapsed,
         toggleSidebar,
+        authToken,
         activeChatbotId,
         setActiveChatbotId,
         pendingNavigation,

@@ -1,19 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { 
-  Calendar, 
-  Check, 
-  RotateCw, 
-  ExternalLink, 
-  Layers, 
-  MessageSquare, 
-  Zap, 
-  Globe, 
-  FileText, 
-  Lock 
-} from 'lucide-react';
+  fetchIntegrationsStatus, 
+  getGoogleCalendarAuthUrl, 
+  disconnectGoogleCalendar 
+} from '@/lib/api';
+import { RotateCw } from 'lucide-react';
 
 interface IntegrationCard {
   id: string;
@@ -22,11 +16,12 @@ interface IntegrationCard {
   category: string;
   iconBg: string;
   status: 'connected' | 'disconnected' | 'connecting';
+  accountEmail?: string;
   logoSvg: React.ReactNode;
 }
 
 export default function IntegrationsPage() {
-  const { addToast } = useApp();
+  const { addToast, authToken } = useApp();
 
   const [integrations, setIntegrations] = useState<IntegrationCard[]>([
     {
@@ -35,7 +30,7 @@ export default function IntegrationsPage() {
       desc: 'Schedule appointments automatically',
       category: 'Scheduling',
       iconBg: 'bg-blue-50 text-blue-600',
-      status: 'connected',
+      status: 'disconnected', // dynamically fetched from backend
       logoSvg: (
         <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="4" width="18" height="18" rx="2" stroke="#2563eb" strokeWidth="2"/>
@@ -144,7 +139,138 @@ export default function IntegrationsPage() {
     }
   ]);
 
-  const handleToggleConnect = (id: string, name: string, currentStatus: string) => {
+  // Load real integration status from backend
+  const loadStatus = async (tokenOverride?: string) => {
+    const token = tokenOverride || authToken || (typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null);
+    if (!token) return;
+
+    try {
+      const data = await fetchIntegrationsStatus(token);
+      if (data?.integrations?.google_calendar) {
+        const gcal = data.integrations.google_calendar;
+        const isConnected = gcal.connected && gcal.status === 'connected';
+        const accountEmail = gcal.metadata?.account_email;
+
+        setIntegrations(prev => prev.map(i => {
+          if (i.id === 'gcal') {
+            return {
+              ...i,
+              status: isConnected ? 'connected' : 'disconnected',
+              accountEmail: accountEmail || undefined,
+              desc: accountEmail ? `Connected as ${accountEmail}` : 'Schedule appointments automatically'
+            };
+          }
+          return i;
+        }));
+      }
+    } catch (e) {
+      console.warn('Could not load integrations status:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadStatus();
+
+    // Check for OAuth redirect response in query params
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const gcalSuccess = params.get('gcal_success');
+      const gcalError = params.get('gcal_error');
+
+      if (gcalSuccess === 'true') {
+        addToast({
+          type: 'success',
+          title: 'Google Calendar Connected',
+          description: 'Successfully authenticated Google Calendar OAuth integration.'
+        });
+        loadStatus();
+        // Clean URL
+        params.delete('gcal_success');
+        const newUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
+        window.history.replaceState({}, '', newUrl);
+      } else if (gcalError) {
+        addToast({
+          type: 'error',
+          title: 'Connection Failed',
+          description: `Google Calendar authorization failed: ${gcalError.replace(/_/g, ' ')}`
+        });
+        // Clean URL
+        params.delete('gcal_error');
+        const newUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [authToken]);
+
+  const handleToggleConnect = async (id: string, name: string, currentStatus: string) => {
+    // 1. Special Real OAuth flow for Google Calendar
+    if (id === 'gcal') {
+      const token = authToken || (typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null);
+      if (!token) {
+        addToast({
+          type: 'error',
+          title: 'Authentication Required',
+          description: 'Please log in or refresh your session to manage integrations.'
+        });
+        return;
+      }
+
+      if (currentStatus === 'connected') {
+        setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'connecting' } : i));
+        try {
+          const res = await disconnectGoogleCalendar(token);
+          if (res?.success) {
+            setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'disconnected', desc: 'Schedule appointments automatically', accountEmail: undefined } : i));
+            addToast({
+              type: 'info',
+              title: 'Disconnected',
+              description: 'Disconnected Google Calendar integration and revoked access tokens.'
+            });
+          } else {
+            setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'connected' } : i));
+            addToast({
+              type: 'error',
+              title: 'Disconnect Failed',
+              description: 'Could not disconnect Google Calendar. Please try again.'
+            });
+          }
+        } catch {
+          setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'connected' } : i));
+          addToast({
+            type: 'error',
+            title: 'Error',
+            description: 'Network failure when disconnecting Google Calendar.'
+          });
+        }
+        return;
+      }
+
+      // Start OAuth flow
+      setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'connecting' } : i));
+      try {
+        const authData = await getGoogleCalendarAuthUrl(token);
+        if (authData?.auth_url) {
+          window.location.assign(authData.auth_url);
+        } else {
+          setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'disconnected' } : i));
+          addToast({
+            type: 'error',
+            title: 'Authorization Error',
+            description: authData?.error || 'Unable to initiate Google OAuth flow. Check client configuration.'
+          });
+        }
+      } catch {
+        setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'disconnected' } : i));
+        addToast({
+          type: 'error',
+          title: 'Network Error',
+          description: 'Failed to request Google authorization URL.'
+        });
+      }
+      return;
+    }
+
+    // 2. Keep other mock integrations untouched as specified
     if (currentStatus === 'connected') {
       setIntegrations(prev => prev.map(i => i.id === id ? { ...i, status: 'disconnected' } : i));
       addToast({

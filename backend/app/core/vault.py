@@ -8,9 +8,18 @@ from app.core.config import settings
 
 def _derive_vault_key(secret: Optional[str] = None) -> bytes:
     """
-    Derives a 256-bit AES key from the system secret key using SHA-256.
+    Derives a 256-bit AES key from the dedicated vault secret key or system secret key using SHA-256.
+    Fulfills REQ-INT-01.
     """
-    base_secret = secret or settings.SECRET_KEY
+    base_secret = secret or getattr(settings, "VAULT_SECRET_KEY", None) or settings.SECRET_KEY
+    if not base_secret or (
+        settings.ENVIRONMENT == "production"
+        and base_secret == "super-secret-development-key-change-in-production-min-32-chars-long"
+    ):
+        raise ValueError(
+            "CRITICAL SECURITY CONFIGURATION ERROR: A strong, non-default SECRET_KEY or VAULT_SECRET_KEY "
+            "must be configured in environment variables for production AES-256-GCM encryption."
+        )
     return hashlib.sha256(base_secret.encode("utf-8")).digest()
 
 

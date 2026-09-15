@@ -15,6 +15,7 @@ from app.api.v1.beta import router as beta_router
 from app.api.v1.onboarding import router as onboarding_router
 from app.api.v1.status import router as status_router
 from app.api.v1.health import router as health_router
+from app.api.v1.integrations import router as integrations_router
 
 api_router = APIRouter()
 
@@ -28,6 +29,7 @@ api_router.include_router(conversations_router)
 api_router.include_router(leads_router)
 api_router.include_router(analytics_router)
 api_router.include_router(appointments_router)
+api_router.include_router(integrations_router)
 api_router.include_router(handoff_router)
 api_router.include_router(billing_router)
 api_router.include_router(public_router)
