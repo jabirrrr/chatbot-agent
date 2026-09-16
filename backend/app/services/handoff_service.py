@@ -150,6 +150,15 @@ class HandoffService:
         operator: User,
         content: str
     ) -> Message:
+        stmt = select(Conversation).where(
+            Conversation.id == conversation_id,
+            Conversation.organization_id == organization_id
+        )
+        result = await db.execute(stmt)
+        conv = result.scalar_one_or_none()
+        if not conv:
+            raise ValueError("Conversation not found for this organization")
+
         msg = Message(
             organization_id=organization_id,
             conversation_id=conversation_id,

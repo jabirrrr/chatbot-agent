@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { 
   NavigationScreen, 
   ChatbotConfig, 
@@ -85,6 +85,7 @@ interface AppContextType {
   setIsWidgetError: (error: boolean) => void;
   widgetMessages: ChatMessage[];
   addVisitorMessage: (text: string) => void;
+  resetWidgetConversation: (botId?: string) => void;
 
   // View Controls
   isEmptyStateDemo: boolean;
@@ -332,18 +333,60 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [faqs, isLoaded]);
 
+  // Helper to load or initialize messages for a specific chatbot
+  const getInitialBotMessages = (botId: string, welcomeMsg?: string): ChatMessage[] => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(`helio_conversation_${botId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse stored conversation for bot', botId, e);
+      }
+    }
+    return [
+      {
+        id: `wm_${botId}_init`,
+        sender: 'ai',
+        content: welcomeMsg || "👋 Hi there! How can we help you today?",
+        timestamp: 'Just now'
+      }
+    ];
+  };
+
+  // Chatbot-scoped conversations mapping in memory
+  const [chatbotConversations, setChatbotConversations] = useState<Record<string, ChatMessage[]>>({});
+  const activeChatbotIdRef = useRef<string>(activeChatbotId);
+  useEffect(() => {
+    activeChatbotIdRef.current = activeChatbotId;
+  }, [activeChatbotId]);
+
   // Widget State
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const [isWidgetOffline, setIsWidgetOffline] = useState(false);
   const [isWidgetError, setIsWidgetError] = useState(false);
-  const [widgetMessages, setWidgetMessages] = useState<ChatMessage[]>([
-    {
-      id: 'wm_1',
-      sender: 'ai',
-      content: initialChatbot.welcomeMessage,
-      timestamp: 'Just now'
+  const [widgetMessages, setWidgetMessages] = useState<ChatMessage[]>(() => {
+    return getInitialBotMessages(initialChatbot.id, initialChatbot.welcomeMessage);
+  });
+
+  // Switch conversation whenever activeChatbotId changes
+  useEffect(() => {
+    if (!activeChatbotId) return;
+    const currentBot = chatbotsList.find(b => b.id === activeChatbotId) || draftChatbot;
+    const welcome = currentBot?.welcomeMessage || "👋 Hi there! How can we help you today?";
+
+    if (chatbotConversations[activeChatbotId] && chatbotConversations[activeChatbotId].length > 0) {
+      setWidgetMessages(chatbotConversations[activeChatbotId]);
+    } else {
+      const loaded = getInitialBotMessages(activeChatbotId, welcome);
+      setWidgetMessages(loaded);
+      setChatbotConversations(prev => ({ ...prev, [activeChatbotId]: loaded }));
     }
-  ]);
+  }, [activeChatbotId]);
 
   // Demo Controls
   const [isEmptyStateDemo, setIsEmptyStateDemo] = useState(false);
@@ -680,17 +723,72 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // Visitor interactive chat in the customer widget
+  // Reset conversation for a specific chatbot or currently active bot
+  const resetWidgetConversation = (botId?: string) => {
+    const targetId = botId || activeChatbotId;
+    const currentBot = chatbotsList.find(b => b.id === targetId) || draftChatbot;
+    const welcome = currentBot?.welcomeMessage || "👋 Hi there! How can we help you today?";
+    const initialMsgs: ChatMessage[] = [
+      {
+        id: `wm_${targetId}_${Date.now()}`,
+        sender: 'ai',
+        content: welcome,
+        timestamp: 'Just now'
+      }
+    ];
+    setChatbotConversations(prev => ({ ...prev, [targetId]: initialMsgs }));
+    if (targetId === activeChatbotId) {
+      setWidgetMessages(initialMsgs);
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`helio_conversation_${targetId}`);
+    }
+  };
+
+  // Visitor interactive chat in the customer widget (scoped strictly to target chatbot)
   const addVisitorMessage = async (text: string) => {
+    const targetBotId = activeChatbotId;
+    const currentBot = chatbotsList.find(b => b.id === targetBotId) || draftChatbot;
     const visitorMsg: ChatMessage = {
       id: `wm_${Date.now()}`,
       sender: 'visitor',
       content: text,
       timestamp: 'Just now'
     };
-    
-    // Optimistically update the UI with visitor message
-    setWidgetMessages(prev => [...prev, visitorMsg]);
+
+    const currentHistory = chatbotConversations[targetBotId] || widgetMessages;
+    const updatedHistory = [...currentHistory, visitorMsg];
+
+    // Optimistically update memory and storage
+    setChatbotConversations(prev => ({ ...prev, [targetBotId]: updatedHistory }));
+    if (activeChatbotIdRef.current === targetBotId) {
+      setWidgetMessages(updatedHistory);
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`helio_conversation_${targetBotId}`, JSON.stringify(updatedHistory));
+    }
+
+    const appendAiResponse = (replyText: string, refSrc?: string) => {
+      const aiMsg: ChatMessage = {
+        id: `ai_${Date.now()}`,
+        sender: 'ai',
+        content: replyText,
+        referencedSource: refSrc,
+        timestamp: 'Just now'
+      };
+      setChatbotConversations(prev => {
+        const hist = prev[targetBotId] || updatedHistory;
+        const newHist = [...hist, aiMsg];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`helio_conversation_${targetBotId}`, JSON.stringify(newHist));
+        }
+        return { ...prev, [targetBotId]: newHist };
+      });
+      // Race condition guard: only update live widget if user is STILL viewing targetBotId
+      if (activeChatbotIdRef.current === targetBotId) {
+        setWidgetMessages(prev => [...prev, aiMsg]);
+      }
+    };
 
     let llmKey = null;
     let llmProvider = null;
@@ -705,13 +803,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          history: widgetMessages,
+          history: updatedHistory,
           apiKey: llmKey,
           provider: llmProvider || 'OpenAI',
           botConfig: {
-            name: draftChatbot.name,
-            tone: draftChatbot.tone,
-            businessDescription: draftChatbot.description || businessInfo.description,
+            name: currentBot.name,
+            tone: currentBot.tone,
+            businessDescription: currentBot.description || businessInfo.description,
           }
         })
       });
@@ -719,16 +817,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         if (data.reply) {
-          setWidgetMessages(prev => [
-            ...prev,
-            {
-              id: `ai_${Date.now()}`,
-              sender: 'ai',
-              content: data.reply,
-              referencedSource: data.source || undefined,
-              timestamp: 'Just now'
-            }
-          ]);
+          appendAiResponse(data.reply, data.source || undefined);
           return;
         }
       } else {
@@ -740,7 +829,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     // Fallback: Simulated AI response with grounding
     setTimeout(() => {
-      let reply = "Thanks for asking! At Northstar Studio, we specialize in custom web architectures, high-ROI paid acquisition, and brand design. Would you like to check our pricing packages or speak with Sarah Jenkins?";
+      let reply = `Thanks for asking! At ${currentBot.name || 'our studio'}, we specialize in custom web architectures, high-ROI paid acquisition, and brand design. Would you like to check our pricing packages or speak with an agent?`;
       const refSource = '2026 Agency Services & Retainer Guide.pdf';
 
       const lower = text.toLowerCase();
@@ -749,19 +838,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else if (lower.includes('book') || lower.includes('schedule') || lower.includes('call') || lower.includes('meeting') || lower.includes('demo')) {
         reply = "I'd be glad to arrange that! I have discovery slots open tomorrow at 2:00 PM CST and Thursday at 10:30 AM CST. Which time works best for you?";
       } else if (lower.includes('human') || lower.includes('person') || lower.includes('agent') || lower.includes('operator')) {
-        reply = "I've alerted Sarah Jenkins and our client success team. An operator will join this chat thread shortly, or you can drop your email address and we'll reply directly!";
+        reply = "I've alerted our client success team. An operator will join this chat thread shortly, or you can drop your email address and we'll reply directly!";
       }
 
-      setWidgetMessages(prev => [
-        ...prev,
-        {
-          id: `ai_${Date.now()}`,
-          sender: 'ai',
-          content: reply,
-          referencedSource: refSource,
-          timestamp: 'Just now'
-        }
-      ]);
+      appendAiResponse(reply, refSource);
     }, 1000);
   };
 
@@ -816,6 +896,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setIsWidgetError,
         widgetMessages,
         addVisitorMessage,
+        resetWidgetConversation,
         isEmptyStateDemo,
         setIsEmptyStateDemo,
         dateFilter,

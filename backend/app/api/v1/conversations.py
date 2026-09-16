@@ -64,6 +64,7 @@ async def list_conversations(
 )
 async def get_conversation_thread(
     conversation_id: uuid.UUID,
+    chatbot_id: Optional[uuid.UUID] = Query(None, description="Verify conversation belongs to this chatbot"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     org: Organization = Depends(get_current_organization),
@@ -74,7 +75,8 @@ async def get_conversation_thread(
     res = await ConversationService.get_conversation_with_messages(
         db=db,
         organization_id=org.id,
-        conversation_id=conversation_id
+        conversation_id=conversation_id,
+        chatbot_id=chatbot_id
     )
     if not res:
         raise HTTPException(

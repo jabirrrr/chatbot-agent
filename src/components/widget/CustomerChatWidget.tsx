@@ -35,6 +35,7 @@ export default function CustomerChatWidget({
     setIsWidgetError,
     widgetMessages, 
     addVisitorMessage,
+    resetWidgetConversation,
     addToast,
     addLead,
     addAppointment
@@ -166,30 +167,47 @@ export default function CustomerChatWidget({
           </div>
         </div>
 
-        {!embedded && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setIsWidgetOpen(false)}
-              className="p-1 rounded-lg hover:bg-white/20 text-white/90 transition-colors"
-              title="Minimize widget"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setIsWidgetOpen(false)}
-              className="p-1 rounded-lg hover:bg-white/20 text-white/90 transition-colors"
-              title="Close widget"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => resetWidgetConversation()}
+            className="p-1 rounded-lg hover:bg-white/20 text-white/90 transition-colors"
+            title="Reset conversation"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+          {!embedded && (
+            <>
+              <button
+                onClick={() => setIsWidgetOpen(false)}
+                className="p-1 rounded-lg hover:bg-white/20 text-white/90 transition-colors"
+                title="Minimize widget"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setIsWidgetOpen(false)}
+                className="p-1 rounded-lg hover:bg-white/20 text-white/90 transition-colors"
+                title="Close widget"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Widget Simulation Control Bar */}
       <div className="bg-slate-100 border-b border-slate-200 px-3 py-1.5 flex items-center justify-between text-[11px] text-slate-600">
         <span className="font-semibold text-slate-700">Simulator Controls:</span>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => resetWidgetConversation()}
+            className="px-2 py-0.5 rounded text-[10px] font-bold border bg-white hover:bg-slate-50 text-slate-600 border-slate-300 flex items-center gap-1"
+            title="Reset conversation for this chatbot"
+          >
+            <RotateCcw className="w-2.5 h-2.5" />
+            New Session
+          </button>
           <button
             onClick={() => setIsWidgetOffline(!isWidgetOffline)}
             className={`px-2 py-0.5 rounded text-[10px] font-bold border ${

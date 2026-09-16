@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { 
   Palette, 
@@ -31,9 +31,24 @@ export default function AppearanceStudio() {
   const [interactiveMessages, setInteractiveMessages] = useState<Array<{ sender: 'bot' | 'visitor'; text: string }>>([
     {
       sender: 'bot',
-      text: welcomeMsg
+      text: chatbot.welcomeMessage || 'Hi! 👋 How can I help you today?'
     }
   ]);
+
+  // Synchronize when active chatbot changes
+  useEffect(() => {
+    const welcome = chatbot.welcomeMessage || 'Hi! 👋 How can I help you today?';
+    setPrimaryColor(chatbot.themeColor || '#6366f1');
+    setWelcomeMsg(welcome);
+    setWidgetPosition(chatbot.position || 'bottom-right');
+    setInteractiveMessages([
+      {
+        sender: 'bot',
+        text: welcome
+      }
+    ]);
+    setPreviewMsg('');
+  }, [chatbot.id]);
 
   const handleColorChange = (newColor: string) => {
     setPrimaryColor(newColor);

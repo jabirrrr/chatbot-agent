@@ -38,6 +38,7 @@ class ConversationSessionResponse(BaseModel):
 class ChatMessageRequest(BaseModel):
     session_token: str
     message: str
+    chatbot_id: Optional[uuid.UUID] = None
 
 
 class ConversationRead(BaseModel):

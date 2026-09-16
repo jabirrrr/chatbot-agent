@@ -131,6 +131,13 @@ async def send_chat_message(
     if not conv:
         raise HTTPException(status_code=404, detail="Invalid or expired conversation session.")
 
+    # Validate chatbot ownership if chatbot_id was specified
+    if data.chatbot_id and conv.chatbot_id != data.chatbot_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Conversation does not belong to the requested chatbot."
+        )
+
     # Fetch chatbot configuration
     bot_stmt = select(Chatbot).where(Chatbot.id == conv.chatbot_id)
     bot_res = await db.execute(bot_stmt)

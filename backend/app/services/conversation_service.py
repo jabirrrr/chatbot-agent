@@ -47,12 +47,15 @@ class ConversationService:
     async def get_conversation(
         db: AsyncSession,
         organization_id: uuid.UUID,
-        conversation_id: uuid.UUID
+        conversation_id: uuid.UUID,
+        chatbot_id: Optional[uuid.UUID] = None
     ) -> Optional[Conversation]:
         stmt = select(Conversation).where(
             Conversation.id == conversation_id,
             Conversation.organization_id == organization_id
         )
+        if chatbot_id:
+            stmt = stmt.where(Conversation.chatbot_id == chatbot_id)
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -60,9 +63,10 @@ class ConversationService:
     async def get_conversation_with_messages(
         db: AsyncSession,
         organization_id: uuid.UUID,
-        conversation_id: uuid.UUID
+        conversation_id: uuid.UUID,
+        chatbot_id: Optional[uuid.UUID] = None
     ) -> Optional[Tuple[Conversation, List[Message]]]:
-        conv = await ConversationService.get_conversation(db, organization_id, conversation_id)
+        conv = await ConversationService.get_conversation(db, organization_id, conversation_id, chatbot_id=chatbot_id)
         if not conv:
             return None
 

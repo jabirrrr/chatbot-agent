@@ -54,17 +54,49 @@ export default function ChatbotsPage() {
 
 
 
-  // Preview interactive state
-  const [previewMessages, setPreviewMessages] = useState<Array<{ sender: 'bot' | 'visitor'; text: string }>>([
-    {
-      sender: 'bot',
-      text: 'Hi! 👋 How can I help you today?'
+  // Helper to load or initialize preview messages for a specific chatbot
+  const getInitialPreviewMessages = (botId: string, welcome?: string) => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(`helio_preview_${botId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {
+        console.warn('Failed to parse preview messages for bot', botId, e);
+      }
     }
-  ]);
+    return [{ sender: 'bot' as const, text: welcome || 'Hi! 👋 How can I help you today?' }];
+  };
+
+  // Preview interactive state scoped per chatbot
+  const [previewMessagesMap, setPreviewMessagesMap] = useState<Record<string, Array<{ sender: 'bot' | 'visitor'; text: string }>>>({});
+  const [previewMessages, setPreviewMessages] = useState<Array<{ sender: 'bot' | 'visitor'; text: string }>>(() => {
+    return getInitialPreviewMessages(activeChatbotId, chatbot.welcomeMessage);
+  });
   const [previewInput, setPreviewInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const activeBotRef = useRef(activeChatbotId);
+
+  // Synchronize preview messages immediately when activeChatbotId changes
+  useEffect(() => {
+    activeBotRef.current = activeChatbotId;
+    const bot = chatbotsList.find(b => b.id === activeChatbotId) || chatbot;
+    const welcome = bot?.welcomeMessage || 'Hi! 👋 How can I help you today?';
+
+    if (previewMessagesMap[activeChatbotId] && previewMessagesMap[activeChatbotId].length > 0) {
+      setPreviewMessages(previewMessagesMap[activeChatbotId]);
+    } else {
+      const initial = getInitialPreviewMessages(activeChatbotId, welcome);
+      setPreviewMessages(initial);
+      setPreviewMessagesMap(prev => ({ ...prev, [activeChatbotId]: initial }));
+    }
+    setPreviewInput('');
+    setIsTyping(false);
+  }, [activeChatbotId]);
 
   // Connected LLM state
   const [connectedKey, setConnectedKey] = useState<string | null>(null);
@@ -159,12 +191,20 @@ export default function ChatbotsPage() {
   };
 
   const resetPreviewChat = () => {
-    setPreviewMessages([
+    const targetId = activeChatbotId;
+    const bot = chatbotsList.find(b => b.id === targetId) || chatbot;
+    const welcome = bot?.welcomeMessage || 'Hi! 👋 How can I help you today?';
+    const initial = [
       {
-        sender: 'bot',
-        text: 'Hi! 👋 How can I help you today?'
+        sender: 'bot' as const,
+        text: welcome
       }
-    ]);
+    ];
+    setPreviewMessages(initial);
+    setPreviewMessagesMap(prev => ({ ...prev, [targetId]: initial }));
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`helio_preview_${targetId}`);
+    }
     setPreviewInput('');
     setIsTyping(false);
   };
@@ -173,11 +213,39 @@ export default function ChatbotsPage() {
     const text = msgText || previewInput;
     if (!text.trim() || isTyping) return;
 
+    const targetBotId = activeChatbotId;
+    const bot = chatbotsList.find(b => b.id === targetBotId) || chatbot;
     const userMessage = { sender: 'visitor' as const, text };
-    const currentHistory = [...previewMessages, userMessage];
-    setPreviewMessages(currentHistory);
+    const currentHistory = previewMessagesMap[targetBotId] || previewMessages;
+    const updatedHistory = [...currentHistory, userMessage];
+
+    // Optimistically update memory and storage for this specific chatbot
+    setPreviewMessagesMap(prev => ({ ...prev, [targetBotId]: updatedHistory }));
+    if (activeBotRef.current === targetBotId) {
+      setPreviewMessages(updatedHistory);
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`helio_preview_${targetBotId}`, JSON.stringify(updatedHistory));
+    }
     setPreviewInput('');
     setIsTyping(true);
+
+    const appendBotReply = (reply: string) => {
+      const replyMsg = { sender: 'bot' as const, text: reply };
+      setPreviewMessagesMap(prev => {
+        const hist = prev[targetBotId] || updatedHistory;
+        const newHist = [...hist, replyMsg];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`helio_preview_${targetBotId}`, JSON.stringify(newHist));
+        }
+        return { ...prev, [targetBotId]: newHist };
+      });
+      // Race condition guard: only update UI if user is STILL viewing targetBotId
+      if (activeBotRef.current === targetBotId) {
+        setPreviewMessages(prev => [...prev, replyMsg]);
+        setIsTyping(false);
+      }
+    };
 
     let llmKey: string | null = null;
     let llmProvider: string | null = null;
@@ -192,14 +260,14 @@ export default function ChatbotsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          history: previewMessages,
+          history: updatedHistory,
           apiKey: llmKey,
           provider: llmProvider || 'OpenAI',
           botConfig: {
-            name: assistantName,
-            tone: tone,
-            businessDescription: businessDescription,
-            primaryGoals: goals
+            name: bot.name || assistantName,
+            tone: bot.tone || tone,
+            businessDescription: bot.description || businessDescription,
+            primaryGoals: bot.primaryGoals || goals
           }
         })
       });
@@ -207,8 +275,7 @@ export default function ChatbotsPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.reply) {
-          setPreviewMessages(prev => [...prev, { sender: 'bot', text: data.reply }]);
-          setIsTyping(false);
+          appendBotReply(data.reply);
           return;
         }
       }
@@ -218,7 +285,9 @@ export default function ChatbotsPage() {
 
     // Dynamic smart fallback if API call cannot reach upstream
     setTimeout(() => {
-      let reply = `Thank you for contacting ${assistantName}! We specialize in ${businessDescription.slice(0, 70)}... How can I assist you with your inquiry?`;
+      const bName = bot.name || assistantName;
+      const bDesc = bot.description || businessDescription;
+      let reply = `Thank you for contacting ${bName}! We specialize in ${bDesc.slice(0, 70)}... How can I assist you with your inquiry?`;
       const lower = text.toLowerCase();
       if (lower.includes('product') || lower.includes('item')) {
         reply = "We offer a wide collection of verified products and artisanal crafts with express shipping across India! Would you like details on a specific category?";
@@ -229,8 +298,7 @@ export default function ChatbotsPage() {
       } else if (lower.includes('human') || lower.includes('agent') || lower.includes('person')) {
         reply = "Transferring to a specialist now. One moment while I alert our team!";
       }
-      setPreviewMessages(prev => [...prev, { sender: 'bot', text: reply }]);
-      setIsTyping(false);
+      appendBotReply(reply);
     }, 600);
   };
 
