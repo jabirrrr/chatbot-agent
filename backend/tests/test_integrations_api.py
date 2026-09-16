@@ -125,6 +125,26 @@ def test_get_google_calendar_auth_url():
     assert "auth_url" in data
     assert data["provider"] == "google_calendar"
     assert "accounts.google.com" in data["auth_url"]
+    assert "prompt=select_account" in data["auth_url"]
+    assert "access_type=offline" in data["auth_url"]
+
+
+def test_google_oauth_dev_picker_screen():
+    state_token = create_access_token(
+        subject=str(mock_org_id),
+        extra_claims={
+            "org_id": str(mock_org_id),
+            "user_id": str(mock_user_id),
+            "oauth_flow": "google_calendar",
+            "type": "google_oauth_state"
+        }
+    )
+    response = client.get(f"/api/v1/integrations/google-calendar/dev-picker?state={state_token}")
+    assert response.status_code == 200
+    assert "Choose an account" in response.text
+    assert "Chatly" in response.text
+    assert "operator@helio-demo.com" in response.text
+    assert "sarah@northstarstudio.agency" in response.text
 
 
 def test_google_oauth_callback_success():
@@ -144,7 +164,7 @@ def test_google_oauth_callback_success():
     )
 
     response = client.get(
-        f"/api/v1/integrations/google-calendar/callback?code=mock_code_123&state={state_token}",
+        f"/api/v1/integrations/google-calendar/callback?code=mock_code_user@company.com&state={state_token}",
         follow_redirects=False
     )
     assert response.status_code == 302
@@ -188,3 +208,45 @@ def test_disconnect_google_calendar():
     data = response.json()
     assert data["success"] is True
     assert data["provider"] == "google_calendar"
+
+
+def test_reconnect_google_calendar():
+    """Verify that reconnecting after a disconnect successfully generates a fresh auth flow."""
+    async def override_user():
+        return mock_user
+
+    async def override_org():
+        return mock_org
+
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_current_organization] = override_org
+
+    # 1. Initiate fresh auth-url for reconnection
+    response = client.get("/api/v1/integrations/google-calendar/auth-url")
+    assert response.status_code == 200
+    auth_data = response.json()
+    assert "auth_url" in auth_data
+    assert "prompt=select_account" in auth_data["auth_url"]
+
+    # 2. Callback succeeds on reconnected session
+    async def override_get_db():
+        yield MockDbIntegrations(integration_exists=False)
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    state_token = create_access_token(
+        subject=str(mock_org_id),
+        extra_claims={
+            "org_id": str(mock_org_id),
+            "user_id": str(mock_user_id),
+            "oauth_flow": "google_calendar",
+            "type": "google_oauth_state"
+        }
+    )
+
+    cb_response = client.get(
+        f"/api/v1/integrations/google-calendar/callback?code=mock_code_reconnect@company.com&state={state_token}",
+        follow_redirects=False
+    )
+    assert cb_response.status_code == 302
+    assert "gcal_success=true" in cb_response.headers["location"]

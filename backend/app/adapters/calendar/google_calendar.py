@@ -43,7 +43,7 @@ class GoogleCalendarService:
             "response_type": "code",
             "scope": scope_str,
             "access_type": "offline",
-            "prompt": "select_account consent",
+            "prompt": "select_account",
             "include_granted_scopes": "true",
             "state": state
         }
@@ -60,6 +60,13 @@ class GoogleCalendarService:
             or settings.GOOGLE_CLIENT_SECRET.startswith("mock-")
             or code.startswith("mock_")
         ):
+            # Extract email if encoded in mock code (e.g., mock_code_user@example.com)
+            account_email = "operator@helio-demo.com"
+            if code.startswith("mock_code_") and len(code) > len("mock_code_"):
+                extracted = code[len("mock_code_"):]
+                if "@" in extracted:
+                    account_email = extracted
+
             # Deterministic mock response for testing/offline environments
             return {
                 "access_token": f"ya29.mock_access_token_{uuid.uuid4().hex[:8]}",
@@ -67,7 +74,7 @@ class GoogleCalendarService:
                 "expires_in": 3599,
                 "token_type": "Bearer",
                 "scope": " ".join(SCOPES),
-                "account_email": "operator@helio-demo.com"
+                "account_email": account_email
             }
 
         r_uri = redirect_uri or settings.GOOGLE_REDIRECT_URI

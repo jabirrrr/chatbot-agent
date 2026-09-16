@@ -11,6 +11,7 @@ async def test_google_calendar_auth_url():
     assert "state=test_signed_state_token_123" in auth_url
     assert "calendar.events" in auth_url
     assert "access_type=offline" in auth_url
+    assert "prompt=select_account" in auth_url
 
 
 @pytest.mark.asyncio

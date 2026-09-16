@@ -7,7 +7,7 @@ import {
   getGoogleCalendarAuthUrl, 
   disconnectGoogleCalendar 
 } from '@/lib/api';
-import { RotateCw } from 'lucide-react';
+import { RotateCw, Mail } from 'lucide-react';
 
 interface IntegrationCard {
   id: string;
@@ -323,8 +323,8 @@ export default function IntegrationsPage() {
                     {tool.logoSvg}
                   </div>
                   {isConnected && (
-                    <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                       Connected
                     </span>
                   )}
@@ -333,6 +333,12 @@ export default function IntegrationsPage() {
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900">{tool.name}</h3>
                   <p className="text-xs text-slate-500 mt-1 leading-relaxed">{tool.desc}</p>
+                  {tool.id === 'gcal' && isConnected && tool.accountEmail && (
+                    <div className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200/80 px-2.5 py-1.5 rounded-xl w-fit">
+                      <Mail className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span className="truncate">{tool.accountEmail}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -350,7 +356,15 @@ export default function IntegrationsPage() {
                   }`}
                 >
                   {isConnecting && <RotateCw className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{isConnected ? 'Disconnect' : isConnecting ? 'Connecting...' : 'Connect'}</span>
+                  <span>
+                    {isConnected 
+                      ? 'Disconnect' 
+                      : isConnecting 
+                      ? 'Connecting...' 
+                      : tool.id === 'gcal' 
+                      ? 'Connect Google Calendar' 
+                      : 'Connect'}
+                  </span>
                 </button>
               </div>
             </div>

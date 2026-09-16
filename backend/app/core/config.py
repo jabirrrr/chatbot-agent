@@ -92,6 +92,10 @@ class Settings(BaseSettings):
             if canonical_frontend not in self.BACKEND_CORS_ORIGINS:
                 self.BACKEND_CORS_ORIGINS.append(canonical_frontend)
 
+        # If FRONTEND_URL is explicitly set to production domain and GOOGLE_REDIRECT_URI is still localhost default
+        if self.FRONTEND_URL and "localhost" not in self.FRONTEND_URL and "localhost" in self.GOOGLE_REDIRECT_URI:
+            self.GOOGLE_REDIRECT_URI = f"{self.FRONTEND_URL.rstrip('/')}/api/v1/integrations/google-calendar/callback"
+
         # Ensure FRONTEND_URL is always included in allowed CORS origins
         if self.FRONTEND_URL and self.FRONTEND_URL not in self.BACKEND_CORS_ORIGINS:
             self.BACKEND_CORS_ORIGINS.append(self.FRONTEND_URL)
