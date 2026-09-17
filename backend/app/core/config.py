@@ -100,6 +100,26 @@ class Settings(BaseSettings):
         if self.FRONTEND_URL and self.FRONTEND_URL not in self.BACKEND_CORS_ORIGINS:
             self.BACKEND_CORS_ORIGINS.append(self.FRONTEND_URL)
 
+        # If running in Vercel environment and ENVIRONMENT is still default development, promote to production
+        if os.environ.get("VERCEL") and self.ENVIRONMENT == "development":
+            self.ENVIRONMENT = "production"
+
+        # If DATABASE_URL is set to production but DATABASE_ASYNC_URL is still default localhost, sync it
+        if self.DATABASE_URL and "localhost:5432/helio_db" in self.DATABASE_ASYNC_URL and "localhost" not in self.DATABASE_URL:
+            raw_url = self.DATABASE_URL
+            if raw_url.startswith("postgres://"):
+                self.DATABASE_ASYNC_URL = "postgresql+asyncpg://" + raw_url[len("postgres://"):]
+            elif raw_url.startswith("postgresql://") and not raw_url.startswith("postgresql+asyncpg://"):
+                self.DATABASE_ASYNC_URL = "postgresql+asyncpg://" + raw_url[len("postgresql://"):]
+            else:
+                self.DATABASE_ASYNC_URL = raw_url
+
+        # Ensure DATABASE_ASYNC_URL uses asyncpg scheme
+        if self.DATABASE_ASYNC_URL.startswith("postgres://"):
+            self.DATABASE_ASYNC_URL = "postgresql+asyncpg://" + self.DATABASE_ASYNC_URL[len("postgres://"):]
+        elif self.DATABASE_ASYNC_URL.startswith("postgresql://") and not self.DATABASE_ASYNC_URL.startswith("postgresql+asyncpg://"):
+            self.DATABASE_ASYNC_URL = "postgresql+asyncpg://" + self.DATABASE_ASYNC_URL[len("postgresql://"):]
+
         return self
 
     model_config = SettingsConfigDict(

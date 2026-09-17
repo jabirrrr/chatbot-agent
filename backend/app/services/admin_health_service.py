@@ -47,12 +47,26 @@ async def check_api_application() -> AdminComponentHealth:
     )
 
 
-async def check_database(db: AsyncSession) -> AdminComponentHealth:
-    """Executes a real SELECT 1 query on PostgreSQL and measures monotonic latency."""
+async def check_database(db: Optional[AsyncSession] = None) -> AdminComponentHealth:
+    """
+    Executes a real SELECT 1 query on PostgreSQL and measures monotonic latency.
+    Guaranteed to never raise an unhandled exception or crash the health endpoint.
+    If database fails or times out, returns status="down" with sanitized error.
+    """
     now = datetime.now(timezone.utc)
     t0 = time.perf_counter()
     try:
-        await db.execute(text("SELECT 1"))
+        if db is not None:
+            async def _run_session():
+                return await db.execute(text("SELECT 1"))
+            await asyncio.wait_for(_run_session(), timeout=3.5)
+        else:
+            from app.core.database import engine
+            async def _run_engine():
+                async with engine.connect() as conn:
+                    await conn.execute(text("SELECT 1"))
+            await asyncio.wait_for(_run_engine(), timeout=3.5)
+
         latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
         return AdminComponentHealth(
             name="Main Database (PostgreSQL)",
@@ -63,6 +77,11 @@ async def check_database(db: AsyncSession) -> AdminComponentHealth:
             checked_at=now
         )
     except Exception as exc:
+        if db is not None:
+            try:
+                await db.rollback()
+            except Exception:
+                pass
         sanitized_msg = _sanitize_error_message(str(exc))
         return AdminComponentHealth(
             name="Main Database (PostgreSQL)",
@@ -78,12 +97,19 @@ async def check_redis() -> AdminComponentHealth:
     """
     Checks Redis connectivity via real PING if configured.
     Accurately reports NOT CONFIGURED or DEGRADED without fabricating uptime.
+    Guaranteed to never raise an unhandled exception or crash the health endpoint.
     """
+    import os
     now = datetime.now(timezone.utc)
     redis_url = getattr(settings, "REDIS_URL", None)
+    is_serverless = bool(os.environ.get("VERCEL")) or settings.ENVIRONMENT == "production"
     
-    # Check if Redis is explicitly disabled or not configured
-    if not redis_url or redis_url in ("", "none", "disabled") or ("localhost" in redis_url and settings.ENVIRONMENT == "production"):
+    # Check if Redis is missing, empty, disabled, or default localhost in serverless/production
+    if (
+        not redis_url 
+        or redis_url in ("", "none", "disabled") 
+        or (("localhost" in redis_url or "127.0.0.1" in redis_url) and is_serverless)
+    ):
         return AdminComponentHealth(
             name="Redis Cache",
             status="not_configured",
@@ -93,17 +119,17 @@ async def check_redis() -> AdminComponentHealth:
             checked_at=now
         )
 
+    client = None
     try:
         import redis.asyncio as aioredis
         client = aioredis.from_url(
             redis_url,
-            socket_connect_timeout=1.0,
-            socket_timeout=1.0
+            socket_connect_timeout=1.5,
+            socket_timeout=1.5
         )
         t0 = time.perf_counter()
-        await client.ping()
+        await asyncio.wait_for(client.ping(), timeout=2.0)
         latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
-        await client.aclose()
         
         return AdminComponentHealth(
             name="Redis Cache",
@@ -115,15 +141,20 @@ async def check_redis() -> AdminComponentHealth:
         )
     except Exception as exc:
         sanitized = _sanitize_error_message(str(exc))
-        status_val: ComponentStatus = "degraded" if settings.ENVIRONMENT == "production" else "not_configured"
         return AdminComponentHealth(
             name="Redis Cache",
-            status=status_val,
+            status="degraded",
             latency_ms=None,
             uptime="No historical data",
             details=f"Redis check: {sanitized}",
             checked_at=now
         )
+    finally:
+        if client is not None:
+            try:
+                await client.aclose()
+            except Exception:
+                pass
 
 
 def check_background_workers() -> AdminComponentHealth:
@@ -145,25 +176,28 @@ def check_background_workers() -> AdminComponentHealth:
 def calculate_overall_status(components: Dict[str, AdminComponentHealth]) -> OverallStatus:
     """
     Calculates overall system status strictly based on real component health:
-    - If required component (API / Application or Database) is down -> down
-    - If any component is down or degraded -> degraded
-    - If required components are healthy -> healthy
+    - Required components: API / Application and PostgreSQL
+    - If required component is down -> down
+    - If any component is degraded (or optional Redis is down) -> degraded
+    - If required components are healthy and optional components are healthy or not_configured -> healthy
     """
     db_status = components.get("database")
     api_status = components.get("api")
     
+    # Required component outages produce overall down
     if db_status and db_status.status == "down":
         return "down"
     if api_status and api_status.status == "down":
         return "down"
         
+    # Any degraded component produces overall degraded
     if db_status and db_status.status == "degraded":
         return "degraded"
     if api_status and api_status.status == "degraded":
         return "degraded"
 
     redis_status = components.get("redis")
-    if redis_status and redis_status.status == "degraded":
+    if redis_status and (redis_status.status in ("degraded", "down")):
         return "degraded"
 
     if (api_status and api_status.status == "healthy") and (db_status and db_status.status == "healthy"):
