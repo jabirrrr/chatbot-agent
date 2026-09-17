@@ -301,3 +301,54 @@ export async function updateOrganization(
   }
 }
 
+export interface AdminComponentData {
+  name: string;
+  status: 'healthy' | 'degraded' | 'down' | 'not_configured' | 'unknown';
+  latency_ms?: number | null;
+  uptime: string;
+  details?: string | null;
+  checked_at: string;
+}
+
+export interface AdminErrorLogData {
+  id: string;
+  service: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  message: string;
+  time: string;
+  timestamp: string;
+}
+
+export interface AdminHealthData {
+  overall_status: 'healthy' | 'degraded' | 'down' | 'unknown';
+  checked_at: string;
+  components: Record<string, AdminComponentData>;
+  recent_errors: AdminErrorLogData[];
+  has_persistent_error_telemetry?: boolean;
+  environment: string;
+}
+
+/**
+ * Fetch real administrative infrastructure health telemetry
+ */
+export async function fetchAdminHealth(token?: string | null): Promise<AdminHealthData | null> {
+  try {
+    const headers: Record<string, string> = { 'Accept': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const res = await fetch(`${API_BASE}/api/v1/admin/health`, {
+      method: 'GET',
+      headers,
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch (err) {
+    console.warn('Failed to fetch admin health telemetry:', err);
+    return null;
+  }
+}
+
