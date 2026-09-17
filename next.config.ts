@@ -7,28 +7,30 @@ const nextConfig: NextConfig = {
       (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000" : "");
 
     // If FASTAPI_URL is configured (e.g. decoupled backend) or in dev, proxy to that URL.
-    // Otherwise on Vercel unified deployment, route to the Python serverless entrypoint.
-    const destinationTarget = (path: string) =>
-      fastApiUrl ? `${fastApiUrl}${path}` : `/api/index.py`;
+    // In production on Vercel, leave routing to platform-level vercel.json so Next.js does not
+    // try to render /api/index.py as an internal React page route.
+    if (fastApiUrl) {
+      return [
+        {
+          source: "/api/v1/:path*",
+          destination: `${fastApiUrl}/api/v1/:path*`,
+        },
+        {
+          source: "/health",
+          destination: `${fastApiUrl}/health`,
+        },
+        {
+          source: "/docs",
+          destination: `${fastApiUrl}/docs`,
+        },
+        {
+          source: "/openapi.json",
+          destination: `${fastApiUrl}/openapi.json`,
+        },
+      ];
+    }
 
-    return [
-      {
-        source: "/api/v1/:path*",
-        destination: destinationTarget("/api/v1/:path*"),
-      },
-      {
-        source: "/health",
-        destination: destinationTarget("/health"),
-      },
-      {
-        source: "/docs",
-        destination: destinationTarget("/docs"),
-      },
-      {
-        source: "/openapi.json",
-        destination: destinationTarget("/openapi.json"),
-      },
-    ];
+    return [];
   },
 };
 
