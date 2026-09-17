@@ -104,15 +104,28 @@ class Settings(BaseSettings):
         if os.environ.get("VERCEL") and self.ENVIRONMENT == "development":
             self.ENVIRONMENT = "production"
 
-        # If DATABASE_URL is set to production but DATABASE_ASYNC_URL is still default localhost, sync it
-        if self.DATABASE_URL and "localhost:5432/helio_db" in self.DATABASE_ASYNC_URL and "localhost" not in self.DATABASE_URL:
-            raw_url = self.DATABASE_URL
-            if raw_url.startswith("postgres://"):
-                self.DATABASE_ASYNC_URL = "postgresql+asyncpg://" + raw_url[len("postgres://"):]
-            elif raw_url.startswith("postgresql://") and not raw_url.startswith("postgresql+asyncpg://"):
-                self.DATABASE_ASYNC_URL = "postgresql+asyncpg://" + raw_url[len("postgresql://"):]
-            else:
-                self.DATABASE_ASYNC_URL = raw_url
+        # Resolve production database URL from any standard Vercel / Supabase environment variable
+        for candidate_url in [
+            getattr(self, "DATABASE_ASYNC_URL", None),
+            getattr(self, "DATABASE_URL", None),
+            getattr(self, "SUPABASE_DATABASE_URL", None),
+            getattr(self, "SUPABASE_DIRECT_DATABASE_URL", None),
+            getattr(self, "POSTGRES_URL", None),
+            os.environ.get("DATABASE_ASYNC_URL"),
+            os.environ.get("DATABASE_URL"),
+            os.environ.get("SUPABASE_DATABASE_URL"),
+            os.environ.get("SUPABASE_DIRECT_DATABASE_URL"),
+            os.environ.get("POSTGRES_URL"),
+        ]:
+            if candidate_url and "localhost" not in candidate_url:
+                raw = candidate_url.strip().strip("'").strip('"')
+                if raw.startswith("postgres://"):
+                    self.DATABASE_ASYNC_URL = "postgresql+asyncpg://" + raw[len("postgres://"):]
+                elif raw.startswith("postgresql://") and not raw.startswith("postgresql+asyncpg://"):
+                    self.DATABASE_ASYNC_URL = "postgresql+asyncpg://" + raw[len("postgresql://"):]
+                else:
+                    self.DATABASE_ASYNC_URL = raw
+                break
 
         # Ensure DATABASE_ASYNC_URL uses asyncpg scheme
         if self.DATABASE_ASYNC_URL.startswith("postgres://"):
