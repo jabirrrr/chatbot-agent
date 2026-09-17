@@ -1,8 +1,23 @@
 import uuid
 from datetime import datetime
+import zoneinfo
 from typing import Optional
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
 from app.models.organization_member import MemberRole
+
+
+def validate_iana_timezone(v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return v
+    cleaned = v.strip()
+    # Normalize legacy display format if present, e.g. "America/Chicago (CST - UTC-6)" -> "America/Chicago"
+    if " " in cleaned and "(" in cleaned:
+        cleaned = cleaned.split(" ")[0].strip()
+    try:
+        zoneinfo.ZoneInfo(cleaned)
+        return cleaned
+    except Exception:
+        raise ValueError(f"'{v}' is not a valid IANA timezone identifier (e.g. 'America/New_York', 'Asia/Kolkata', 'Europe/London')")
 
 
 class OrgBase(BaseModel):
@@ -10,6 +25,11 @@ class OrgBase(BaseModel):
     website: Optional[str] = None
     industry: Optional[str] = None
     timezone: Optional[str] = "America/Chicago"
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, v: Optional[str]) -> Optional[str]:
+        return validate_iana_timezone(v)
 
 
 class OrgCreate(OrgBase):
@@ -21,6 +41,11 @@ class OrgUpdate(BaseModel):
     website: Optional[str] = None
     industry: Optional[str] = None
     timezone: Optional[str] = None
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, v: Optional[str]) -> Optional[str]:
+        return validate_iana_timezone(v)
 
 
 class OrgRead(OrgBase):

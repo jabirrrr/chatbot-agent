@@ -143,6 +143,7 @@ export interface BusinessInfo {
   hours: string;
   email: string;
   phone: string;
+  timezone?: string;
 }
 
 export interface ChatbotConfig {

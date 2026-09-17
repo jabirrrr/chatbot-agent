@@ -226,3 +226,78 @@ export async function disconnectGoogleCalendar(token: string) {
     return { success: false, error: err?.message || 'Network connection failed' };
   }
 }
+
+/**
+ * Fetch all organizations the user belongs to
+ */
+export async function fetchUserOrganizations(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/organizations/`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return [];
+  } catch (err) {
+    console.warn('Failed to fetch user organizations:', err);
+    return [];
+  }
+}
+
+/**
+ * Fetch a specific organization by ID
+ */
+export async function fetchOrganization(token: string, orgId: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/organizations/${orgId}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch (err) {
+    console.warn('Failed to fetch organization:', err);
+    return null;
+  }
+}
+
+/**
+ * Update an organization's settings (name, website, industry, timezone)
+ */
+export async function updateOrganization(
+  token: string,
+  orgId: string,
+  data: { name?: string; website?: string; industry?: string; timezone?: string }
+) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/organizations/${orgId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const errData = await res.json().catch(() => ({}));
+    return { error: errData.detail || `Failed to update organization (${res.status})` };
+  } catch (err: any) {
+    console.error('Failed to update organization:', err);
+    return { error: err?.message || 'Network error updating organization' };
+  }
+}
+

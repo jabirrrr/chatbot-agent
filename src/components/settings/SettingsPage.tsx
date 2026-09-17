@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
+import TimezoneSelector from '@/components/common/TimezoneSelector';
+import { normalizeIanaTimezone } from '@/lib/timezones';
+import { fetchUserOrganizations, updateOrganization } from '@/lib/api';
 import { 
   Building2, 
   Users, 
@@ -11,13 +14,10 @@ import {
   Mail, 
   UserPlus, 
   Save, 
-  Check, 
   Download, 
-  AlertTriangle,
-  Clock,
-  Globe,
-  Sliders,
-  Sparkles
+  AlertTriangle, 
+  Globe, 
+  RefreshCw
 } from 'lucide-react';
 import Badge from '@/components/common/Badge';
 
@@ -32,16 +32,91 @@ interface TeamMember {
 }
 
 export default function SettingsPage() {
-  const { addToast } = useApp();
+  const { addToast, authToken } = useApp();
 
   const [activeTab, setActiveTab] = useState<'organization' | 'team' | 'notifications' | 'privacy' | 'danger'>('organization');
+
+  // Organizations List & Active Selection
+  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; timezone: string; website?: string; industry?: string }>>([
+    { id: 'org_northstar', name: 'Northstar Studio', timezone: 'America/Chicago', website: 'https://northstarstudio.agency', industry: 'Digital Marketing & Creative Agency' }
+  ]);
+  const [activeOrgId, setActiveOrgId] = useState<string>('org_northstar');
+  const [isSavingOrg, setIsSavingOrg] = useState(false);
 
   // Organization Form State
   const [orgName, setOrgName] = useState('Northstar Studio');
   const [orgWebsite, setOrgWebsite] = useState('https://northstarstudio.agency');
-  const [orgTimezone, setOrgTimezone] = useState('America/Chicago (CST - UTC-6)');
+  const [orgTimezone, setOrgTimezone] = useState('America/Chicago');
   const [orgEmail, setOrgEmail] = useState('sarah@northstarstudio.agency');
   const [orgIndustry, setOrgIndustry] = useState('Digital Marketing & Creative Agency');
+
+  // Load organizations from backend or local cache
+  useEffect(() => {
+    async function loadOrgs() {
+      if (authToken) {
+        try {
+          const backendOrgs = await fetchUserOrganizations(authToken);
+          if (Array.isArray(backendOrgs) && backendOrgs.length > 0) {
+            const mapped = backendOrgs.map((o: any) => ({
+              id: o.id,
+              name: o.name,
+              timezone: normalizeIanaTimezone(o.timezone),
+              website: o.website || '',
+              industry: o.industry || ''
+            }));
+            setOrganizations(mapped);
+            const savedOrgId = typeof window !== 'undefined' ? localStorage.getItem('helio_active_org_id') : null;
+            const toSelect = mapped.find(o => o.id === savedOrgId) || mapped[0];
+            setActiveOrgId(toSelect.id);
+            setOrgName(toSelect.name);
+            setOrgWebsite(toSelect.website || '');
+            setOrgIndustry(toSelect.industry || '');
+            setOrgTimezone(normalizeIanaTimezone(toSelect.timezone));
+            return;
+          }
+        } catch (e) {
+          console.warn('Failed to fetch organizations from backend:', e);
+        }
+      }
+
+      // Local fallback
+      if (typeof window !== 'undefined') {
+        const savedOrgId = localStorage.getItem('helio_active_org_id') || 'org_northstar';
+        const stored = localStorage.getItem(`helio_org_profile_${savedOrgId}`);
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (parsed.name) setOrgName(parsed.name);
+            if (parsed.website) setOrgWebsite(parsed.website);
+            if (parsed.industry) setOrgIndustry(parsed.industry);
+            if (parsed.timezone) setOrgTimezone(normalizeIanaTimezone(parsed.timezone));
+          } catch {}
+        }
+      }
+    }
+    loadOrgs();
+  }, [authToken]);
+
+  // Switch active organization
+  const handleSelectOrganization = (orgId: string) => {
+    setActiveOrgId(orgId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('helio_active_org_id', orgId);
+    }
+    const target = organizations.find(o => o.id === orgId);
+    if (target) {
+      setOrgName(target.name);
+      setOrgWebsite(target.website || '');
+      setOrgIndustry(target.industry || '');
+      const tz = normalizeIanaTimezone(target.timezone);
+      setOrgTimezone(tz);
+      addToast({
+        type: 'info',
+        title: 'Switched Workspace',
+        description: `Loaded ${target.name} (Operating Timezone: ${tz})`
+      });
+    }
+  };
 
   // Team Members State
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
@@ -102,12 +177,53 @@ export default function SettingsPage() {
   const [cookieConsent, setCookieConsent] = useState(true);
   const [aiTrainingConsent, setAiTrainingConsent] = useState(false);
 
-  const handleSaveOrg = (e: React.FormEvent) => {
+  const handleSaveOrg = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSavingOrg(true);
+    const canonicalTz = normalizeIanaTimezone(orgTimezone);
+
+    if (authToken && activeOrgId && !activeOrgId.startsWith('org_')) {
+      const res = await updateOrganization(authToken, activeOrgId, {
+        name: orgName,
+        website: orgWebsite,
+        industry: orgIndustry,
+        timezone: canonicalTz
+      });
+      if (res && res.error) {
+        addToast({
+          type: 'error',
+          title: 'Update Failed',
+          description: res.error
+        });
+        setIsSavingOrg(false);
+        return;
+      }
+    }
+
+    // Update state and local storage
+    setOrganizations(prev => prev.map(o => o.id === activeOrgId ? {
+      ...o,
+      name: orgName,
+      website: orgWebsite,
+      industry: orgIndustry,
+      timezone: canonicalTz
+    } : o));
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`helio_org_profile_${activeOrgId}`, JSON.stringify({
+        name: orgName,
+        website: orgWebsite,
+        industry: orgIndustry,
+        timezone: canonicalTz
+      }));
+    }
+
+    setOrgTimezone(canonicalTz);
+    setIsSavingOrg(false);
     addToast({
       type: 'success',
       title: 'Organization Settings Saved',
-      description: 'Northstar Studio workspace details have been updated.'
+      description: `${orgName} workspace profile updated. Operating timezone: ${canonicalTz}.`
     });
   };
 
@@ -213,6 +329,30 @@ export default function SettingsPage() {
             </p>
           </div>
 
+          {organizations.length > 1 && (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="text-xs font-semibold text-slate-700">
+                Switch Workspace:
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {organizations.map(org => (
+                  <button
+                    key={org.id}
+                    type="button"
+                    onClick={() => handleSelectOrganization(org.id)}
+                    className={`text-xs px-2.5 py-1 rounded-md border font-medium transition-colors ${
+                      org.id === activeOrgId
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    {org.name} ({org.timezone})
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
@@ -272,33 +412,37 @@ export default function SettingsPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+              <label htmlFor="operating-timezone" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                 Operating Timezone (For Calendar & Bot Scheduling)
               </label>
-              <div className="relative">
-                <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <select
-                  value={orgTimezone}
-                  onChange={e => setOrgTimezone(e.target.value)}
-                  className="w-full text-sm border border-slate-300 rounded-lg pl-9 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
-                >
-                  <option value="America/Chicago (CST - UTC-6)">America/Chicago (Central Time - CST)</option>
-                  <option value="America/New_York (EST - UTC-5)">America/New_York (Eastern Time - EST)</option>
-                  <option value="America/Denver (MST - UTC-7)">America/Denver (Mountain Time - MST)</option>
-                  <option value="America/Los_Angeles (PST - UTC-8)">America/Los_Angeles (Pacific Time - PST)</option>
-                  <option value="Europe/London (GMT - UTC+0)">Europe/London (Greenwich Mean Time - GMT)</option>
-                </select>
-              </div>
+              <TimezoneSelector
+                id="operating-timezone"
+                value={orgTimezone}
+                onChange={setOrgTimezone}
+              />
+              <p className="text-[11px] text-slate-500 mt-1.5">
+                All AI appointment bookings, operator handoffs, and customer conversation timestamps align to this business timezone.
+              </p>
             </div>
           </div>
 
           <div className="pt-4 border-t border-slate-200 flex justify-end">
             <button
               type="submit"
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg shadow-xs transition-colors"
+              disabled={isSavingOrg}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-semibold px-5 py-2.5 rounded-lg shadow-xs transition-colors"
             >
-              <Save className="w-4 h-4" />
-              <span>Save Changes</span>
+              {isSavingOrg ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Saving Changes...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save Changes</span>
+                </>
+              )}
             </button>
           </div>
         </form>
