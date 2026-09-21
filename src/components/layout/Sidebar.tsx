@@ -19,7 +19,8 @@ import {
   Globe,
   ChevronLeft,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  LogOut
 } from 'lucide-react';
 
 interface NavItem {
@@ -34,7 +35,8 @@ export default function Sidebar() {
     currentScreen, setCurrentScreen, 
     isSidebarCollapsed, toggleSidebar, 
     conversations, leads, 
-    isDirty, discardDraft
+    isDirty, discardDraft,
+    setAuthToken
   } = useApp();
 
   const unreadCount = conversations.filter(c => c.isUnread).length;
@@ -185,11 +187,11 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Bottom Profile Account Info (Matches Reference: Acme Store Free Plan) */}
-      <div className="p-3 border-t border-slate-100">
+      {/* Bottom Profile Account Info & Logout */}
+      <div className="p-3 border-t border-slate-100 flex items-center justify-between">
         <div 
           onClick={() => setCurrentScreen('billing')}
-          className={`flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-colors cursor-pointer flex-1 ${
             isSidebarCollapsed ? 'justify-center p-1.5' : ''
           }`}
         >
@@ -203,6 +205,18 @@ export default function Sidebar() {
             </div>
           )}
         </div>
+        {!isSidebarCollapsed && (
+          <button 
+            onClick={() => {
+              localStorage.removeItem('helio_auth_token');
+              setAuthToken(null);
+            }}
+            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="Log Out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </aside>
   );
