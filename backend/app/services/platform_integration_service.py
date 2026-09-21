@@ -63,10 +63,19 @@ async def update_integration_by_provider(
 ) -> PlatformIntegration:
     integration = await get_integration_by_provider(db, provider)
     if not integration:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Integration not found."
+        credentials = integration_in.credentials or ""
+        encrypted = encrypt_vault_secret(credentials)
+        
+        integration = PlatformIntegration(
+            name=integration_in.name or provider,
+            provider=integration_in.provider or provider,
+            is_active=integration_in.is_active if integration_in.is_active is not None else True,
+            encrypted_credentials=encrypted
         )
+        db.add(integration)
+        await db.commit()
+        await db.refresh(integration)
+        return integration
         
     if integration_in.name is not None and integration_in.name != integration.name:
         stmt = select(PlatformIntegration).where(PlatformIntegration.name == integration_in.name)
