@@ -38,6 +38,7 @@ interface AppContextType {
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
   authToken: string | null;
+  setAuthToken: (token: string | null) => void;
   
   // Data State
   activeChatbotId: string;
@@ -150,59 +151,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const { API_BASE, fetchChatbots } = await import('@/lib/api');
         let token = typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null;
         
-        const loginOrRegister = async () => {
-          try {
-            let loginRes = await fetch(`${API_BASE}/api/v1/auth/login`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: 'demo@helio.com', password: 'Password123!' })
-            });
-            
-            if (!loginRes.ok) {
-              // Register
-              loginRes = await fetch(`${API_BASE}/api/v1/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  email: 'demo@helio.com', 
-                  password: 'Password123!', 
-                  full_name: 'Demo User', 
-                  organization_name: 'Helio Demo' 
-                })
-              });
-            }
-            
-            if (loginRes.ok) {
-              const data = await loginRes.json();
-              if (data.access_token) {
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('helio_auth_token', data.access_token);
-                }
-                return data.access_token as string;
-              }
-            }
-          } catch (authErr) {
-            console.warn('Could not complete backend authentication handshake:', authErr);
-          }
-          return null;
-        };
-
-        if (!token) {
-          token = await loginOrRegister();
-        }
-
         if (token) {
           setAuthToken(token);
           let bots: any[] = [];
           try {
             bots = await fetchChatbots(token);
           } catch (fetchErr) {
-            // Token might be stale/invalid; retry with fresh login
-            console.warn('Initial token rejected, refreshing credentials...', fetchErr);
-            token = await loginOrRegister();
-            if (token) {
-              setAuthToken(token);
-              bots = await fetchChatbots(token).catch(() => []);
+            // Token might be stale/invalid
+            console.warn('Initial token rejected, clearing credentials...', fetchErr);
+            token = null;
+            setAuthToken(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('helio_auth_token');
             }
           }
 
@@ -853,6 +813,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isSidebarCollapsed,
         toggleSidebar,
         authToken,
+        setAuthToken,
         activeChatbotId,
         setActiveChatbotId,
         pendingNavigation,

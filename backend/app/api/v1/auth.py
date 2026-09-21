@@ -5,6 +5,9 @@ from sqlalchemy import select
 
 from app.core.database import get_db
 from app.core.config import settings
+import secrets
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from app.core.security import create_access_token, create_refresh_token, get_password_hash
 from app.models.user import User
 from app.models.organization import Organization
@@ -15,7 +18,8 @@ from app.schemas.auth import (
     TokenResponse,
     RefreshTokenRequest,
     ForgotPasswordRequest,
-    ResetPasswordRequest
+    ResetPasswordRequest,
+    GoogleLoginRequest
 )
 from app.schemas.user import UserRead
 from app.schemas.organization import OrgRead
@@ -87,6 +91,72 @@ async def login(
         extra_claims={"org_id": str(primary_org_id)} if primary_org_id else None
     )
     refresh_token = create_refresh_token(subject=user.id)
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user=UserRead.model_validate(user),
+        organizations=[OrgRead.model_validate(o) for o in orgs]
+    )
+
+
+@router.post(
+    "/google",
+    response_model=TokenResponse,
+    summary="Authenticate with Google Single Sign-On (SSO)"
+)
+async def google_login(
+    req: GoogleLoginRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Authenticates a user via Google ID token. Auto-registers new users.
+    """
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            req.credential, google_requests.Request(), settings.GOOGLE_CLIENT_ID
+        )
+        email = idinfo.get("email")
+        name = idinfo.get("name")
+        
+        if not email:
+            raise ValueError("Email not provided by Google.")
+            
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid Google token: {str(e)}"
+        )
+
+    user = await AuthService.get_by_email(db, email)
+    if not user:
+        # Auto-register
+        reg_req = RegisterRequest(
+            email=email,
+            password=secrets.token_urlsafe(32),
+            full_name=name,
+            organization_name=f"{name}'s Workspace" if name else "My Workspace"
+        )
+        user, org, access_token, refresh_token = await AuthService.register(db, reg_req)
+        orgs = [org]
+    else:
+        # Existing user, generate tokens
+        stmt = (
+            select(Organization)
+            .join(OrganizationMember, OrganizationMember.organization_id == Organization.id)
+            .where(OrganizationMember.user_id == user.id)
+        )
+        result = await db.execute(stmt)
+        orgs = list(result.scalars().all())
+
+        primary_org_id = orgs[0].id if orgs else None
+        access_token = create_access_token(
+            subject=user.id,
+            extra_claims={"org_id": str(primary_org_id)} if primary_org_id else None
+        )
+        refresh_token = create_refresh_token(subject=user.id)
 
     return TokenResponse(
         access_token=access_token,

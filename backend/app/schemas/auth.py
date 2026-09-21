@@ -16,6 +16,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class GoogleLoginRequest(BaseModel):
+    credential: str  # The ID token from Google
+
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str

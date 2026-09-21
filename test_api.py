@@ -1,37 +1,17 @@
-"""
-Helio Platform - CLI API Smoke Test
-Quickly verifies local FastAPI authentication endpoint connectivity.
-"""
-
-import urllib.request
-import urllib.error
-import json
 import sys
+import os
+from pathlib import Path
 
-def test_login(base_url="http://127.0.0.1:8000"):
-    endpoint = f"{base_url}/api/v1/auth/login"
-    payload = {"email": "demo@helio.com", "password": "Password123!"}
-    
-    req = urllib.request.Request(
-        endpoint, 
-        data=json.dumps(payload).encode('utf-8'), 
-        headers={'Content-Type': 'application/json'}, 
-        method='POST'
-    )
+current_file = Path(__file__).resolve()
+backend_dir = current_file.parent / "backend"
+root_dir = current_file.parent
 
-    try:
-        with urllib.request.urlopen(req) as response:
-            result = response.read().decode('utf-8')
-            print(f"[SUCCESS] Login endpoint responded 200 OK:")
-            print(result)
-            return True
-    except urllib.error.HTTPError as e:
-        print(f"[HTTP Error {e.code}] {e.read().decode('utf-8')}")
-        return False
-    except urllib.error.URLError as e:
-        print(f"[Connection Error] Could not connect to {base_url}: {e.reason}")
-        return False
+for p in [str(backend_dir), str(root_dir)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
-if __name__ == "__main__":
-    url = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8000"
-    test_login(url)
+try:
+    from backend.app.main import app
+    print("Successfully imported app via backend.app.main")
+except Exception as e:
+    print(f"Error: {e}")

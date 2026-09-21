@@ -6,6 +6,8 @@ import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import ToastContainer from '@/components/common/ToastContainer';
 import CustomerChatWidget from '@/components/widget/CustomerChatWidget';
+import AuthPage from '@/components/auth/AuthPage';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Screen Views
 import AnalyticsCommandCenter from '@/components/home/AnalyticsCommandCenter';
@@ -43,7 +45,8 @@ export default function AppShell() {
     pendingNavigation,
     confirmNavigation,
     cancelNavigation,
-    initializationError
+    initializationError,
+    authToken
   } = useApp();
 
   const [newBotName, setNewBotName] = useState('');
@@ -88,6 +91,17 @@ export default function AppShell() {
         <MarketingLandingPage />
         <ToastContainer />
       </div>
+    );
+  }
+
+  // Auth Gate
+  if (!authToken) {
+    // Make sure you have NEXT_PUBLIC_GOOGLE_CLIENT_ID set in your env vars
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'mock-client-id';
+    return (
+      <GoogleOAuthProvider clientId={clientId}>
+        <AuthPage />
+      </GoogleOAuthProvider>
     );
   }
 
