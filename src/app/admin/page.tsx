@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Users, Activity, MessageSquare, DollarSign, RefreshCw, AlertCircle, ShieldLock } from 'lucide-react';
+import { API_BASE } from '@/lib/api';
 
 interface OverviewMetrics {
   total_organizations: number;
@@ -23,7 +24,7 @@ export default function AdminDashboard() {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null;
-      const res = await fetch('/api/v1/admin/overview', {
+      const res = await fetch(`${API_BASE}/api/v1/admin/overview`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',

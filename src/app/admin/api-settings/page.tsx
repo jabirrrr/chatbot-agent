@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Cable, Key, CheckCircle2, ShieldLock, Edit2, Plus, RefreshCw, X, Trash2, AlertCircle } from 'lucide-react';
+import { API_BASE } from '@/lib/api';
 
 interface PlatformIntegrationResponse {
   id: string;
@@ -33,7 +34,7 @@ export default function ApiSettingsPage() {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null;
-      const res = await fetch('/api/v1/admin/integrations', {
+      const res = await fetch(`${API_BASE}/api/v1/admin/integrations`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -73,7 +74,7 @@ export default function ApiSettingsPage() {
     setEditSaving(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null;
-      const res = await fetch(`/api/v1/admin/integrations/${providerId}`, {
+      const res = await fetch(`${API_BASE}/api/v1/admin/integrations/${providerId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +108,7 @@ export default function ApiSettingsPage() {
     
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null;
-      const res = await fetch(`/api/v1/admin/integrations/${providerId}`, {
+      const res = await fetch(`${API_BASE}/api/v1/admin/integrations/${providerId}`, {
         method: 'DELETE',
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})

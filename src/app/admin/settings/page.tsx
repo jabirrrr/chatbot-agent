@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Save, ShieldLock, Settings2, ShieldAlert, AlertCircle, RefreshCw } from 'lucide-react';
+import { API_BASE } from '@/lib/api';
 
 interface PlatformSettingResponse {
   allow_signups: boolean;
@@ -30,7 +31,7 @@ export default function SettingsPage() {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null;
-      const res = await fetch('/api/v1/admin/settings', {
+      const res = await fetch(`${API_BASE}/api/v1/admin/settings`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -76,7 +77,7 @@ export default function SettingsPage() {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null;
-      const res = await fetch('/api/v1/admin/settings', {
+      const res = await fetch(`${API_BASE}/api/v1/admin/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

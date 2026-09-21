@@ -16,7 +16,7 @@ import {
   ShieldLock,
   Info
 } from 'lucide-react';
-import { fetchAdminHealth, AdminHealthData, AdminComponentData } from '@/lib/api';
+import { API_BASE, fetchAdminHealth, AdminHealthData, AdminComponentData } from '@/lib/api';
 
 export default function HealthPage() {
   const [data, setData] = useState<AdminHealthData | null>(null);
@@ -38,7 +38,7 @@ export default function HealthPage() {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null;
       
-      const res = await fetch('/api/v1/admin/health', {
+      const res = await fetch(`${API_BASE}/api/v1/admin/health`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',

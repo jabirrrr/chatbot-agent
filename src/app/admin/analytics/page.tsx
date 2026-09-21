@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, RefreshCw, AlertCircle, ShieldLock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { API_BASE } from '@/lib/api';
 
 interface AnalyticsTimeseriesPoint {
   date: string;
@@ -31,7 +32,7 @@ export default function AnalyticsPage() {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null;
-      const res = await fetch(`/api/v1/admin/analytics/timeseries?interval=${interval}`, {
+      const res = await fetch(`${API_BASE}/api/v1/admin/analytics/timeseries?interval=${interval}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',

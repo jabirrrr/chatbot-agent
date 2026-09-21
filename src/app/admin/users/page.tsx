@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, ChevronLeft, ChevronRight, AlertCircle, ShieldLock, UserX, UserCheck, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { API_BASE } from '@/lib/api';
 
 interface AdminUserItem {
   id: string;
@@ -57,7 +58,7 @@ export default function UsersPage() {
         params.append('search', debouncedSearch);
       }
 
-      const res = await fetch(`/api/v1/admin/users?${params.toString()}`, {
+      const res = await fetch(`${API_BASE}/api/v1/admin/users?${params.toString()}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
