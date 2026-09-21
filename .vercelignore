@@ -1,2 +1,8 @@
 backups/
 *.sql
+backend/tests/
+backend/test.db
+.pytest_cache/
+__pycache__/
+**/*.pyc
+**/*.pyo
