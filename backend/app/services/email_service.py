@@ -82,11 +82,12 @@ class EmailService:
     ) -> Dict[str, Any]:
         """Day 3: Assist user with embedding widget snippet on website."""
         subject = f"Embed your widget on your site: 1-line script for {org_name}"
+        default_snippet = '<script src="https://cdn.helio.ai/v1/widget.js" async></script>'
         body = (
             f"Hi there,\n\n"
             f"Deploy your trained AI agent to convert website visitors into qualified leads.\n"
             f"Paste this 1-line script before the closing </body> tag:\n\n"
-            f"{snippet or '<script src=\"https://cdn.helio.ai/v1/widget.js\" async></script>'}\n\n"
+            f"{snippet or default_snippet}\n\n"
             f"Test live: https://app.helio.ai/appearance\n"
         )
         record = {
