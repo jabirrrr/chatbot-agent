@@ -151,11 +151,11 @@ async def preview_chatbot(
     if not integration or not integration.is_active:
         integration = await get_integration_by_provider(db, "openai")
 
-    if not integration or not integration.is_active or not integration.credentials:
+    if not integration or not integration.is_active or not integration.encrypted_credentials:
         raise HTTPException(status_code=400, detail="No active OpenRouter or OpenAI integration found in Admin Panel.")
 
     try:
-        api_key = decrypt_vault_secret(integration.credentials.get("api_key", ""))
+        api_key = decrypt_vault_secret(integration.encrypted_credentials)
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to decrypt API key.")
 

@@ -116,9 +116,9 @@ class RAGService:
                 integration = await get_integration_by_provider(db, "openai")
             
             api_key = None
-            if integration and integration.is_active and integration.credentials:
+            if integration and integration.is_active and integration.encrypted_credentials:
                 try:
-                    api_key = decrypt_vault_secret(integration.credentials.get("api_key", ""))
+                    api_key = decrypt_vault_secret(integration.encrypted_credentials)
                 except Exception as e:
                     print(f"Error decrypting integration key: {e}")
             
