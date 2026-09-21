@@ -98,97 +98,9 @@ export default function ChatbotsPage() {
     setIsTyping(false);
   }, [activeChatbotId]);
 
-  // Connected LLM state
-  const [connectedKey, setConnectedKey] = useState<string | null>(null);
-  const [connectedProvider, setConnectedProvider] = useState<string>('OpenAI');
-  const [showKeyModal, setShowKeyModal] = useState(false);
-  const [tempKeyInput, setTempKeyInput] = useState('');
-  const [tempProvider, setTempProvider] = useState('OpenAI');
-  const [showKeySecret, setShowKeySecret] = useState(false);
-  const [isTestingKey, setIsTestingKey] = useState(false);
-  const [keyTestFeedback, setKeyTestFeedback] = useState<{ success?: boolean; message?: string } | null>(null);
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [previewMessages, isTyping]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedKey = localStorage.getItem('helio_llm_key');
-      const storedProvider = localStorage.getItem('helio_llm_provider');
-      if (storedKey) {
-        setConnectedKey(storedKey);
-        setTempKeyInput(storedKey);
-      }
-      if (storedProvider) {
-        setConnectedProvider(storedProvider);
-        setTempProvider(storedProvider);
-      }
-    }
-  }, []);
-
-  const handleTestAndSaveKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!tempKeyInput.trim()) return;
-
-    setIsTestingKey(true);
-    setKeyTestFeedback(null);
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: 'Hello! Please confirm connection in 5 words.',
-          apiKey: tempKeyInput.trim(),
-          provider: tempProvider,
-          botConfig: {
-            name: assistantName,
-            tone: tone,
-            businessDescription: businessDescription
-          }
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.live) {
-        localStorage.setItem('helio_llm_key', tempKeyInput.trim());
-        localStorage.setItem('helio_llm_provider', tempProvider);
-        setConnectedKey(tempKeyInput.trim());
-        setConnectedProvider(tempProvider);
-        setKeyTestFeedback({ success: true, message: `Connected to ${tempProvider}! Live replies active.` });
-        setTimeout(() => {
-          setShowKeyModal(false);
-          setKeyTestFeedback(null);
-        }, 1200);
-      } else {
-        setKeyTestFeedback({ 
-          success: false, 
-          message: data.error || data.reply || `Could not verify ${tempProvider} key. Check if the key is valid and has active quota.` 
-        });
-      }
-    } catch (err: any) {
-      setKeyTestFeedback({ success: false, message: 'Network error verifying key.' });
-    } finally {
-      setIsTestingKey(false);
-    }
-  };
-
-  const handleDisconnectKey = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('helio_llm_key');
-      localStorage.removeItem('helio_llm_provider');
-    }
-    setConnectedKey(null);
-    setTempKeyInput('');
-    setShowKeyModal(false);
-    setKeyTestFeedback(null);
-    addToast({
-      type: 'info',
-      title: 'API Disconnected',
-      description: 'Assistant switched back to simulated local AI.'
-    });
-  };
 
   const resetPreviewChat = () => {
     const targetId = activeChatbotId;
@@ -247,13 +159,6 @@ export default function ChatbotsPage() {
       }
     };
 
-    let llmKey: string | null = null;
-    let llmProvider: string | null = null;
-    if (typeof window !== 'undefined') {
-      llmKey = localStorage.getItem('helio_llm_key');
-      llmProvider = localStorage.getItem('helio_llm_provider');
-    }
-
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -261,8 +166,6 @@ export default function ChatbotsPage() {
         body: JSON.stringify({
           message: text,
           history: updatedHistory,
-          apiKey: llmKey,
-          provider: llmProvider || 'OpenAI',
           botConfig: {
             name: bot.name || assistantName,
             tone: bot.tone || tone,
@@ -587,29 +490,6 @@ export default function ChatbotsPage() {
         <div className="lg:col-span-5 flex flex-col">
           <div className="flex items-center justify-between pb-2 mb-2">
             <span className="text-xs font-medium text-slate-400">Preview</span>
-            
-            {connectedKey ? (
-              <button 
-                type="button"
-                onClick={() => { setKeyTestFeedback(null); setShowKeyModal(true); }}
-                className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 rounded-full transition-colors"
-                title="Click to manage or change LLM API key"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Live AI: {connectedProvider}</span>
-                <span className="text-[10px] text-emerald-600 underline ml-0.5">Edit</span>
-              </button>
-            ) : (
-              <button 
-                type="button"
-                onClick={() => { setKeyTestFeedback(null); setShowKeyModal(true); }}
-                className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 rounded-full transition-all shadow-2xs group"
-                title="Connect your API key to get real-time LLM replies"
-              >
-                <Zap className="w-3 h-3 text-indigo-600 group-hover:scale-110 transition-transform" />
-                <span>Connect API Key (Live AI)</span>
-              </button>
-            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden flex flex-col">
@@ -723,132 +603,6 @@ export default function ChatbotsPage() {
 
       </div>
     </div>
-
-      {/* Connect API Key Modal */}
-      {showKeyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <Key className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Connect Live AI Model</h3>
-                  <p className="text-[11px] text-slate-400">Power this assistant with real-time LLM replies</p>
-                </div>
-              </div>
-              <button 
-                type="button"
-                onClick={() => setShowKeyModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleTestAndSaveKey} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">AI Provider</label>
-                <select
-                  value={tempProvider}
-                  onChange={e => setTempProvider(e.target.value)}
-                  className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                >
-                  <option value="OpenAI">OpenAI (GPT-4o Mini / GPT-4o)</option>
-                  <option value="Google Gemini">Google Gemini (Gemini 1.5 Flash)</option>
-                  <option value="Groq">Groq (Llama 3.3 70B - Ultra Fast)</option>
-                  <option value="OpenRouter">OpenRouter (Multi-Model Gateway)</option>
-                  <option value="Anthropic">Anthropic (Claude 3.5 Haiku / Sonnet)</option>
-                </select>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-slate-700">API Key</label>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {tempProvider === 'OpenAI' && 'Starts with sk-...'}
-                    {tempProvider === 'Google Gemini' && 'Starts with AIzaSy...'}
-                    {tempProvider === 'Groq' && 'Starts with gsk_...'}
-                    {tempProvider === 'OpenRouter' && 'Starts with sk-or-...'}
-                  </span>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showKeySecret ? 'text' : 'password'}
-                    required
-                    value={tempKeyInput}
-                    onChange={e => setTempKeyInput(e.target.value)}
-                    placeholder={
-                      tempProvider === 'Google Gemini' ? 'AIzaSy...' :
-                      tempProvider === 'Groq' ? 'gsk_...' : 'sk-...'
-                    }
-                    className="w-full text-xs pl-3 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowKeySecret(!showKeySecret)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showKeySecret ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
-
-              {keyTestFeedback && (
-                <div className={`p-3 rounded-xl text-xs flex items-start gap-2 ${
-                  keyTestFeedback.success 
-                    ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-                    : 'bg-rose-50 border border-rose-200 text-rose-800'
-                }`}>
-                  {keyTestFeedback.success ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  )}
-                  <span className="leading-tight">{keyTestFeedback.message}</span>
-                </div>
-              )}
-
-              <div className="pt-2 flex items-center justify-between gap-2">
-                {connectedKey ? (
-                  <button
-                    type="button"
-                    onClick={handleDisconnectKey}
-                    className="text-xs text-rose-600 hover:text-rose-700 hover:underline font-medium"
-                  >
-                    Disconnect Key
-                  </button>
-                ) : <div />}
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowKeyModal(false)}
-                    className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-xl font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isTestingKey || !tempKeyInput.trim()}
-                    className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-                  >
-                    {isTestingKey ? (
-                      <>
-                        <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                        <span>Verifying...</span>
-                      </>
-                    ) : (
-                      <span>Test & Save Key</span>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </>
   );
 }

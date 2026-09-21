@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, ConfigDict
 
 
@@ -69,3 +69,9 @@ class PublicWidgetConfig(BaseModel):
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ChatbotPreviewRequest(BaseModel):
+    message: str
+    history: List[Dict[str, Any]] = []
+    botConfig: Optional[Dict[str, Any]] = None

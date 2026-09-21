@@ -186,7 +186,9 @@ export async function fetchIntegrationsStatus(token: string) {
  */
 export async function getGoogleCalendarAuthUrl(token: string) {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/integrations/google-calendar/auth-url`, {
+    const returnUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const queryParam = returnUrl ? `?return_url=${encodeURIComponent(returnUrl)}` : '';
+    const res = await fetch(`${API_BASE}/api/v1/integrations/google-calendar/auth-url${queryParam}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',

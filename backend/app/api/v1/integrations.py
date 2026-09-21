@@ -65,6 +65,7 @@ async def get_integrations_status(
 
 @router.get("/google-calendar/auth-url", response_model=AuthUrlResponse, summary="Get Google Calendar OAuth Authorization URL")
 async def get_google_auth_url(
+    return_url: Optional[str] = Query(None, description="Frontend base URL to return to"),
     current_user: User = Depends(get_current_user),
     org: Organization = Depends(get_current_organization)
 ):
@@ -77,7 +78,8 @@ async def get_google_auth_url(
             "org_id": str(org.id),
             "user_id": str(current_user.id),
             "oauth_flow": "google_calendar",
-            "type": "google_oauth_state"
+            "type": "google_oauth_state",
+            "return_url": return_url or settings.FRONTEND_URL.rstrip("/")
         }
     )
     auth_url = GoogleCalendarService.get_authorization_url(state=state_token)
@@ -304,7 +306,13 @@ async def google_oauth_callback(
     Receives authorization code from Google OAuth, validates signed state token,
     exchanges code for OAuth tokens, encrypts credentials, and redirects user back to dashboard.
     """
+    # Validate state JWT
+    payload = decode_token(state)
+    
+    # Safely extract return URL from token payload or default to settings
     frontend_base = settings.FRONTEND_URL.rstrip("/")
+    if payload and isinstance(payload, dict) and payload.get("return_url"):
+        frontend_base = payload.get("return_url").rstrip("/")
 
     # Handle user cancellation or error from Google OAuth
     if error:
@@ -319,8 +327,6 @@ async def google_oauth_callback(
             status_code=status.HTTP_302_FOUND
         )
 
-    # Validate state JWT
-    payload = decode_token(state)
     if not payload:
         return RedirectResponse(
             url=f"{frontend_base}/?screen=integrations&gcal_error=invalid_state_token",

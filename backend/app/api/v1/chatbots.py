@@ -10,8 +10,12 @@ from app.schemas.chatbot import (
     ChatbotCreate,
     ChatbotUpdate,
     ChatbotRead,
-    PublicWidgetConfig
+    PublicWidgetConfig,
+    ChatbotPreviewRequest
 )
+from app.services.platform_integration_service import get_integration_by_provider
+from app.core.vault import decrypt_vault_secret
+from app.adapters.llm.provider import OpenRouterProvider
 from app.services.chatbot_service import ChatbotService
 from app.api.deps import get_current_user, get_current_organization
 
@@ -127,3 +131,57 @@ async def get_public_widget_config(
     if not bot:
         raise HTTPException(status_code=404, detail="Active chatbot not found for this widget token.")
     return PublicWidgetConfig.model_validate(bot)
+
+@router.post(
+    "/preview",
+    summary="Stateless chatbot preview endpoint for the UI builder"
+)
+async def preview_chatbot(
+    data: ChatbotPreviewRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Stateless endpoint that accepts test parameters and history,
+    resolves the active LLM key from Admin Panel platform integrations,
+    and returns a test response from the LLM.
+    """
+    integration = await get_integration_by_provider(db, "openrouter")
+    
+    # Check OpenAI if openrouter is not set
+    if not integration or not integration.is_active:
+        integration = await get_integration_by_provider(db, "openai")
+
+    if not integration or not integration.is_active or not integration.credentials:
+        raise HTTPException(status_code=400, detail="No active OpenRouter or OpenAI integration found in Admin Panel.")
+
+    try:
+        api_key = decrypt_vault_secret(integration.credentials.get("api_key", ""))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to decrypt API key.")
+
+    provider = OpenRouterProvider(api_key=api_key)
+    if integration.provider == "openai":
+        provider.base_url = "https://api.openai.com/v1"
+        
+    # Build System Prompt for the preview
+    bot_name = data.botConfig.get("name", "Helio LeadBot") if data.botConfig else "Helio LeadBot"
+    bot_tone = data.botConfig.get("tone", "Friendly") if data.botConfig else "Friendly"
+    bot_desc = data.botConfig.get("businessDescription", "") if data.botConfig else ""
+    
+    system_prompt = f"You are {bot_name}, a customer support and sales AI assistant.\nTone: {bot_tone}.\nBusiness Context: {bot_desc}\nInstructions:\n- Be concise, helpful, and polite. Keep responses under 2-3 sentences unless more detail is specifically requested.\n- Focus on answering questions, capturing lead interest, and offering to schedule or assist further.\n- Do not mention you are an external model; speak as the official assistant of {bot_name}."
+
+    messages_payload = [{"role": "system", "content": system_prompt}]
+    for msg in data.history:
+        messages_payload.append({
+            "role": msg.get("role", "user"),
+            "content": msg.get("content", "")
+        })
+    messages_payload.append({"role": "user", "content": data.message})
+
+    # Call LLM
+    response_text = ""
+    async for chunk in provider.stream_chat(messages=messages_payload):
+        if chunk.get("type") == "content":
+            response_text += chunk.get("delta", "")
+
+    return {"reply": response_text.strip(), "live": True, "provider": integration.provider}

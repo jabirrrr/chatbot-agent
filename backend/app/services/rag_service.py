@@ -10,6 +10,8 @@ from app.models.knowledge import BusinessInfo
 from app.services.knowledge_service import KnowledgeService
 from app.services.calendar_tools import CALENDAR_TOOLS, CalendarToolsExecutor
 from app.adapters.llm.provider import OpenRouterProvider, LLMProvider
+from app.services.platform_integration_service import get_integration_by_provider
+from app.core.vault import decrypt_vault_secret
 
 LEAD_CAPTURE_TOOL = {
     "type": "function",
@@ -109,7 +111,20 @@ class RAGService:
         handles lead capture tools, and yields SSE stream events.
         """
         if llm_provider is None:
-            llm_provider = OpenRouterProvider()
+            integration = await get_integration_by_provider(db, "openrouter")
+            if not integration or not integration.is_active:
+                integration = await get_integration_by_provider(db, "openai")
+            
+            api_key = None
+            if integration and integration.is_active and integration.credentials:
+                try:
+                    api_key = decrypt_vault_secret(integration.credentials.get("api_key", ""))
+                except Exception as e:
+                    print(f"Error decrypting integration key: {e}")
+            
+            llm_provider = OpenRouterProvider(api_key=api_key)
+            if integration and integration.provider == "openai":
+                llm_provider.base_url = "https://api.openai.com/v1"
 
         # 1. Save visitor message to database
         visitor_msg = Message(
