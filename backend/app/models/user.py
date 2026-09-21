@@ -16,6 +16,7 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     avatar_url = Column(String(512), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
+    is_superuser = Column(Boolean, default=False, server_default="false", nullable=False)
 
     # Relationships
     memberships = relationship(

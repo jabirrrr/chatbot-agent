@@ -45,3 +45,6 @@ __all__ = [
     "OnboardingChecklist",
 ]
 
+from app.models.platform_setting import PlatformSetting
+
+from .platform_integration import PlatformIntegration

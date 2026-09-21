@@ -19,8 +19,16 @@ def anyio_backend():
 def reset_dependency_overrides():
     from app.main import app
     from app.core.rate_limit import limiter
+    from app.api.deps import check_maintenance_mode
+    
     limiter.reset()
     app.dependency_overrides.clear()
+    
+    async def dummy_maintenance_mode():
+        pass
+        
+    app.dependency_overrides[check_maintenance_mode] = dummy_maintenance_mode
+    
     yield
     limiter.reset()
     app.dependency_overrides.clear()

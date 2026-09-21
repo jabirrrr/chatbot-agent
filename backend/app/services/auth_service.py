@@ -44,6 +44,24 @@ class AuthService:
         db: AsyncSession,
         req: RegisterRequest
     ) -> Tuple[User, Organization, str, str]:
+        from app.services.platform_setting_service import get_platform_settings
+        from sqlalchemy import func
+        settings = await get_platform_settings(db)
+        if not settings.allow_signups:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="New account signups are currently disabled."
+            )
+            
+        # Check max tenants allowed
+        orgs_res = await db.execute(select(func.count()).select_from(Organization))
+        total_orgs = orgs_res.scalar() or 0
+        if total_orgs >= settings.max_tenants_allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Maximum number of tenant organizations has been reached."
+            )
+
         normalized_email = req.email.lower().strip()
         existing = await AuthService.get_by_email(db, normalized_email)
         if existing:

@@ -18,24 +18,27 @@ from app.api.v1.health import router as health_router
 from app.api.v1.integrations import router as integrations_router
 from app.api.v1.admin import router as admin_router
 
+from fastapi import Depends
+from app.api.deps import check_maintenance_mode
+
 api_router = APIRouter()
 
 # Mount endpoints
 api_router.include_router(auth_router)
-api_router.include_router(orgs_router)
-api_router.include_router(chatbots_router)
-api_router.include_router(knowledge_router)
-api_router.include_router(widget_router)
-api_router.include_router(conversations_router)
-api_router.include_router(leads_router)
-api_router.include_router(analytics_router)
-api_router.include_router(appointments_router)
-api_router.include_router(integrations_router)
-api_router.include_router(handoff_router)
-api_router.include_router(billing_router)
+api_router.include_router(orgs_router, dependencies=[Depends(check_maintenance_mode)])
+api_router.include_router(chatbots_router, dependencies=[Depends(check_maintenance_mode)])
+api_router.include_router(knowledge_router, dependencies=[Depends(check_maintenance_mode)])
+api_router.include_router(widget_router, dependencies=[Depends(check_maintenance_mode)])
+api_router.include_router(conversations_router, dependencies=[Depends(check_maintenance_mode)])
+api_router.include_router(leads_router, dependencies=[Depends(check_maintenance_mode)])
+api_router.include_router(analytics_router, dependencies=[Depends(check_maintenance_mode)])
+api_router.include_router(appointments_router, dependencies=[Depends(check_maintenance_mode)])
+api_router.include_router(integrations_router, dependencies=[Depends(check_maintenance_mode)])
+api_router.include_router(handoff_router, dependencies=[Depends(check_maintenance_mode)])
+api_router.include_router(billing_router, dependencies=[Depends(check_maintenance_mode)])
 api_router.include_router(public_router)
-api_router.include_router(beta_router)
+api_router.include_router(beta_router, dependencies=[Depends(check_maintenance_mode)])
 api_router.include_router(admin_router, prefix="/admin", tags=["Admin Health & Telemetry"])
 api_router.include_router(health_router, prefix="/health", tags=["Health & Readiness"])
-api_router.include_router(onboarding_router, prefix="/onboarding", tags=["Automated Onboarding & Email Sequences"])
+api_router.include_router(onboarding_router, prefix="/onboarding", tags=["Automated Onboarding & Email Sequences"], dependencies=[Depends(check_maintenance_mode)])
 api_router.include_router(status_router, prefix="/status", tags=["System Status & Health SLA"])

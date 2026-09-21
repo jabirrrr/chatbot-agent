@@ -1,6 +1,6 @@
 import uuid
 from typing import AsyncGenerator, Callable, List, Optional
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -66,6 +66,54 @@ async def get_current_user(
             detail="Inactive user account.",
         )
     return user
+
+oauth2_scheme_optional = OAuth2PasswordBearer(
+    tokenUrl="/api/v1/auth/login",
+    auto_error=False
+)
+
+async def get_current_user_optional(
+    db: AsyncSession = Depends(get_db),
+    token: str = Depends(oauth2_scheme_optional)
+) -> Optional[User]:
+    if not token:
+        return None
+    try:
+        return await get_current_user(db=db, token=token)
+    except HTTPException:
+        return None
+
+async def check_maintenance_mode(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user_optional)
+):
+    """
+    Explicit Maintenance-Exempt Route Policy:
+    Certain application routes must remain accessible even when the platform is under maintenance.
+    - OAuth Callbacks: External providers (e.g., Google) redirect users back with authorization codes. If blocked by 503, the flow state is dropped and the connection fails.
+    - Webhooks: Payment processors (e.g., Stripe) send asynchronous events. While Stripe retries 503s, exempting them ensures no delayed processing for critical billing events.
+    - Note: System Owner Admin, Health, and Status routes are exempted because they do not have this dependency applied in the main router.
+    """
+    exempt_paths = [
+        "/api/v1/integrations/google-calendar/callback",
+        "/api/v1/integrations/google-calendar/auth-url",
+        "/api/v1/integrations/google-calendar/dev-picker",
+        "/api/v1/billing/webhook"
+    ]
+    
+    if any(request.url.path == p or request.url.path.startswith(p + "/") for p in exempt_paths):
+        return
+
+    from app.services.platform_setting_service import get_platform_settings
+    settings = await get_platform_settings(db)
+    
+    if settings.maintenance_mode:
+        if not user or not user.is_superuser:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=settings.maintenance_message
+            )
 
 
 async def get_current_organization(
@@ -158,3 +206,18 @@ def require_role(allowed_roles: List[MemberRole]) -> Callable:
         return member
 
     return role_checker
+
+
+async def require_system_owner(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """
+    Role-Based Access Control (RBAC) for Platform System Owners.
+    Bypasses tenant boundaries; strictly requires the is_superuser flag.
+    """
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Operation requires platform System Owner privileges."
+        )
+    return current_user

@@ -38,7 +38,8 @@ class TestAdminHealth:
             hashed_password="hash",
             full_name="Regular Member",
             is_active=True,
-            is_verified=True
+            is_verified=True,
+            is_superuser=False
         )
         mock_org = Organization(
             id=org_id,
@@ -79,7 +80,7 @@ class TestAdminHealth:
         try:
             res = client.get("/api/v1/admin/health")
             assert res.status_code == 403
-            assert "Operation requires one of the following roles: owner" in res.json()["detail"]
+            assert "Operation requires platform System Owner privileges." in res.json()["detail"]
         finally:
             app.dependency_overrides.pop(get_db, None)
             app.dependency_overrides.pop(get_current_user, None)
@@ -95,7 +96,8 @@ class TestAdminHealth:
             hashed_password="hash",
             full_name="Viewer Member",
             is_active=True,
-            is_verified=True
+            is_verified=True,
+            is_superuser=False
         )
         mock_org = Organization(
             id=org_id,
@@ -136,7 +138,7 @@ class TestAdminHealth:
         try:
             res = client.get("/api/v1/admin/health")
             assert res.status_code == 403
-            assert "Operation requires one of the following roles: owner" in res.json()["detail"]
+            assert "Operation requires platform System Owner privileges." in res.json()["detail"]
         finally:
             app.dependency_overrides.pop(get_db, None)
             app.dependency_overrides.pop(get_current_user, None)
@@ -156,7 +158,8 @@ class TestAdminHealth:
             hashed_password="hash",
             full_name="Org Admin",
             is_active=True,
-            is_verified=True
+            is_verified=True,
+            is_superuser=False
         )
         mock_org = Organization(
             id=org_id,
@@ -197,7 +200,68 @@ class TestAdminHealth:
         try:
             res = client.get("/api/v1/admin/health")
             assert res.status_code == 403
-            assert "Operation requires one of the following roles: owner" in res.json()["detail"]
+            assert "Operation requires platform System Owner privileges." in res.json()["detail"]
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_current_user, None)
+            app.dependency_overrides.pop(get_current_organization, None)
+
+    def test_tenant_owner_rejected_with_403(self):
+        """
+        Ordinary tenant owners (OWNER role on an org) must NOT be permitted to access
+        platform infrastructure diagnostics and must be rejected with 403 Forbidden.
+        """
+        user_id = uuid4()
+        org_id = uuid4()
+        mock_user = User(
+            id=user_id,
+            email="tenantowner@chatly.ai",
+            hashed_password="hash",
+            full_name="Tenant Owner",
+            is_active=True,
+            is_verified=True,
+            is_superuser=False
+        )
+        mock_org = Organization(
+            id=org_id,
+            name="Chatly Org",
+            slug="chatly-org"
+        )
+        mock_tenant_owner = OrganizationMember(
+            id=uuid4(),
+            user_id=user_id,
+            organization_id=org_id,
+            role=MemberRole.OWNER
+        )
+
+        class MockTenantOwnerDb:
+            async def execute(self, stmt):
+                class MockResult:
+                    def scalar_one_or_none(self):
+                        return mock_tenant_owner
+                    def scalars(self):
+                        class MockScalars:
+                            def first(self):
+                                return mock_tenant_owner
+                        return MockScalars()
+                return MockResult()
+
+        async def override_db():
+            yield MockTenantOwnerDb()
+
+        async def override_user():
+            return mock_user
+
+        async def override_org():
+            return mock_org
+
+        app.dependency_overrides[get_db] = override_db
+        app.dependency_overrides[get_current_user] = override_user
+        app.dependency_overrides[get_current_organization] = override_org
+        try:
+            res = client.get("/api/v1/admin/health")
+            assert res.status_code == 403
+            assert "Operation requires platform System Owner privileges." in res.json()["detail"]
         finally:
             app.dependency_overrides.pop(get_db, None)
             app.dependency_overrides.pop(get_current_user, None)
@@ -216,7 +280,8 @@ class TestAdminHealth:
             hashed_password="hash",
             full_name="Platform System Owner",
             is_active=True,
-            is_verified=True
+            is_verified=True,
+            is_superuser=True
         )
         mock_org = Organization(
             id=org_id,
@@ -330,7 +395,8 @@ class TestAdminHealth:
             hashed_password="hash",
             full_name="Alpha Owner",
             is_active=True,
-            is_verified=True
+            is_verified=True,
+            is_superuser=True
         )
         mock_org_a = Organization(
             id=org_a_id,
@@ -437,7 +503,7 @@ class TestAdminHealth:
         """
         user_id = uuid4()
         org_id = uuid4()
-        mock_user = User(id=user_id, email="owner@chatly.ai", hashed_password="hash", full_name="Owner", is_active=True)
+        mock_user = User(id=user_id, email="owner@chatly.ai", hashed_password="hash", full_name="Owner", is_active=True, is_superuser=True)
         mock_org = Organization(id=org_id, name="Chatly Org", slug="chatly-org")
         mock_owner_member = OrganizationMember(id=uuid4(), user_id=user_id, organization_id=org_id, role=MemberRole.OWNER)
 

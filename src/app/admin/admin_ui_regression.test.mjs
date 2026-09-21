@@ -13,9 +13,9 @@ test('Admin UI Regression Tests: Ensure mock data is removed and BACKEND NOT IMP
   ];
 
   for (const page of pages) {
-    await t.test('Page ' + page.name + ' contains BACKEND NOT IMPLEMENTED state', () => {
+    await t.test('Page ' + page.name + ' does NOT contain BACKEND NOT IMPLEMENTED state', () => {
       const content = fs.readFileSync(path.resolve(process.cwd(), page.path), 'utf-8');
-      assert.ok(content.includes('BACKEND NOT IMPLEMENTED'), 'Missing BACKEND NOT IMPLEMENTED');
+      assert.ok(!content.includes('BACKEND NOT IMPLEMENTED'), 'Should not contain BACKEND NOT IMPLEMENTED anymore');
     });
   }
 });
