@@ -450,18 +450,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPendingNavigation(null);
   };
 
-  const createNewChatbot = () => {
-    const newId = `bot_${Date.now()}`;
+  const createNewChatbot = async () => {
+    let newId = `bot_${Date.now()}`;
+    let newName = 'New Custom Chatbot';
+    
+    // Create on backend if authenticated
+    if (authToken) {
+      try {
+        const { API_BASE } = await import('@/lib/api');
+        const createRes = await fetch(`${API_BASE}/api/v1/chatbots/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({ name: newName, description: 'A new chatbot assistant', theme_color: '#2563eb' })
+        });
+        if (createRes.ok) {
+          const b = await createRes.json();
+          newId = b.id;
+          newName = b.name;
+        }
+      } catch (err) {
+        console.error('Failed to create new chatbot on backend:', err);
+      }
+    }
+
     const newBot: ChatbotConfig = {
       ...initialChatbot,
       id: newId,
-      name: 'New Custom Chatbot',
+      name: newName,
       status: 'draft',
       conversationsCount: 0,
       lastUpdated: 'Just now',
     };
     setChatbotsList(prev => [...prev, newBot]);
-    setActiveChatbotId(newId);
+    setActiveChatbotIdInternal(newId);
     if (typeof window !== 'undefined') {
       localStorage.setItem('helio_active_chatbot_id', newId);
     }
