@@ -137,9 +137,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments);
   const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
   const [activeConversationId, setActiveConversationId] = useState<string>('conv_01');
-  const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>(mockKnowledgeSources);
-  const [faqs, setFaqs] = useState<FAQItem[]>(mockFaqs);
-  const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(initialBusinessInfo);
+  
+  // Persist Knowledge Base elements to localStorage so they survive page refreshes
+  const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('helio_knowledge_sources');
+      if (saved) return JSON.parse(saved);
+    }
+    return mockKnowledgeSources;
+  });
+  
+  const [faqs, setFaqs] = useState<FAQItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('helio_faqs');
+      if (saved) return JSON.parse(saved);
+    }
+    return mockFaqs;
+  });
+  
+  const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('helio_business_info');
+      if (saved) return JSON.parse(saved);
+    }
+    return initialBusinessInfo;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('helio_knowledge_sources', JSON.stringify(knowledgeSources));
+    }
+  }, [knowledgeSources]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('helio_faqs', JSON.stringify(faqs));
+    }
+  }, [faqs]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('helio_business_info', JSON.stringify(businessInfo));
+    }
+  }, [businessInfo]);
 
   // LocalStorage / API Persistence
   const [isLoaded, setIsLoaded] = useState(false);

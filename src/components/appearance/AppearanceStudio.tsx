@@ -10,11 +10,12 @@ import {
   Check, 
   Sparkles, 
   Smile, 
-  Sliders 
+  Sliders,
+  AlertCircle
 } from 'lucide-react';
 
 export default function AppearanceStudio() {
-  const { chatbot, updateChatbot, addToast } = useApp();
+  const { chatbot, updateChatbot, addToast, isDirty, saveDraft } = useApp();
 
   const [appearanceTab, setAppearanceTab] = useState<'Style' | 'Colors' | 'Position' | 'Messages'>('Style');
   const [bubbleStyle, setBubbleStyle] = useState<'Modern' | 'Minimal' | 'Rounded' | 'Classic'>('Modern');
@@ -136,23 +137,42 @@ export default function AppearanceStudio() {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            handleColorChange('#6366f1');
-            setBubbleStyle('Modern');
-            handleWelcomeMsgChange('Hi! 👋 How can I help you today?');
-            setWidgetPosition('bottom-right');
-            addToast({
-              type: 'info',
-              title: 'Reset to Defaults',
-              description: 'Restored default Chatly appearance settings.'
-            });
-          }}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors w-fit shadow-2xs"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Reset Defaults</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          {isDirty && (
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Unsaved Changes
+            </span>
+          )}
+          <button
+            onClick={() => saveDraft()}
+            className={`px-4 py-2 text-xs font-medium rounded-xl transition-all shadow-2xs btn-press ${
+              isDirty 
+                ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
+                : 'text-slate-700 bg-white hover:bg-slate-50 border border-slate-200'
+            }`}
+          >
+            {isDirty ? 'Save Changes' : 'Saved'}
+          </button>
+          
+          <button
+            onClick={() => {
+              handleColorChange('#6366f1');
+              setBubbleStyle('Modern');
+              handleWelcomeMsgChange('Hi! 👋 How can I help you today?');
+              setWidgetPosition('bottom-right');
+              addToast({
+                type: 'info',
+                title: 'Reset to Defaults',
+                description: 'Restored default Chatly appearance settings.'
+              });
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors w-fit shadow-2xs"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset Defaults</span>
+          </button>
+        </div>
       </div>
 
       {/* Sub-tabs (Style, Colors, Position, Messages) */}
