@@ -57,15 +57,14 @@ class OpenRouterProvider(LLMProvider):
         max_tokens: int = 1024,
         model_name: str = "anthropic/claude-3.5-sonnet"
     ) -> AsyncGenerator[Dict[str, Any], None]:
-        # Fallback to MockLLMProvider if testing or mock key
+        # Return error message if no key is configured
         if (
-            settings.ENVIRONMENT == "testing"
-            or not self.api_key
+            not self.api_key
             or self.api_key.startswith("sk-or-v1-mock")
+            or self.api_key.startswith("sk-mock-openai")
         ):
-            mock = MockLLMProvider()
-            async for chunk in mock.stream_chat(messages, tools, temperature, max_tokens, model_name):
-                yield chunk
+            yield {"type": "content", "delta": "⚠️ No valid API key configured. Please add your OpenRouter or OpenAI API key in the Admin Panel > API Settings."}
+            yield {"type": "done", "total_tokens": 0}
             return
 
         headers = {
@@ -96,10 +95,9 @@ class OpenRouterProvider(LLMProvider):
                 if response.status_code != 200:
                     error_body = await response.aread()
                     print(f"[OpenRouter Error] Status: {response.status_code}, Body: {error_body.decode('utf-8')}")
-                    # Fallback to mock on upstream API failure
-                    mock = MockLLMProvider()
-                    async for chunk in mock.stream_chat(messages, tools, temperature, max_tokens, model_name):
-                        yield chunk
+                    # Return error on upstream API failure
+                    yield {"type": "content", "delta": f"⚠️ API Error (Status {response.status_code}). Please check your API key and billing on the provider's dashboard."}
+                    yield {"type": "done", "total_tokens": 0}
                     return
 
                 async for line in response.aiter_lines():

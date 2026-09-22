@@ -12,8 +12,8 @@ interface PlatformIntegrationResponse {
 }
 
 const PROVIDERS = [
-  { id: 'openai', name: 'OpenAI API', description: 'Primary language model provider' },
-  { id: 'openrouter', name: 'OpenRouter', description: 'Secondary language model router' },
+  { id: 'openrouter', name: 'OpenRouter API', description: 'Primary language model provider' },
+  { id: 'openai', name: 'OpenAI API', description: 'Secondary language model provider' },
   { id: 'stripe', name: 'Stripe', description: 'Payment and subscription billing' }
 ];
 
