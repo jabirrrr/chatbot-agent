@@ -20,7 +20,7 @@ export default function AiModelsPage() {
   const { chatbot, updateChatbot, addToast } = useApp();
 
   const [defaultModel, setDefaultModel] = useState('openai/gpt-4o-mini');
-  const [complexModel, setComplexModel] = useState('anthropic/claude-3.5-sonnet');
+  const [complexModel, setComplexModel] = useState('anthropic/claude-sonnet-5');
   const [fallbackModel, setFallbackModel] = useState('meta-llama/llama-3.1-8b-instruct');
   const [monthlyBudget, setMonthlyBudget] = useState(150);
   const [warningThreshold, setWarningThreshold] = useState(80);
@@ -31,7 +31,7 @@ export default function AiModelsPage() {
       name: 'OpenRouter',
       role: 'Primary Multi-Model Gateway',
       status: 'connected',
-      models: ['gpt-4o-mini', 'claude-3.5-sonnet', 'llama-3.1-8b'],
+      models: ['gpt-4o-mini', 'claude-sonnet-5', 'llama-3.1-8b'],
       ping: '142ms'
     },
     {
@@ -127,7 +127,7 @@ export default function AiModelsPage() {
               onChange={e => setComplexModel(e.target.value)}
               className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-mono text-xs cursor-pointer"
             >
-              <option value="anthropic/claude-3.5-sonnet">anthropic/claude-3.5-sonnet ($3.00 / 1M tokens)</option>
+              <option value="anthropic/claude-sonnet-5">anthropic/claude-sonnet-5 ($3.00 / 1M tokens)</option>
               <option value="openai/gpt-4o">openai/gpt-4o ($2.50 / 1M tokens)</option>
             </select>
           </div>

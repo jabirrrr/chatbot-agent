@@ -41,7 +41,7 @@ Key technical characteristics:
 
 | Component | Selected Technology | PRD Reference | Rationale & Architectural Suitability |
 | :--- | :--- | :--- | :--- |
-| **Primary LLM Gateway** | **OpenRouter API** | PRD v1.1, REQ-AI-07 | Single unified API for routing across top-tier models (`openai/gpt-4o-mini`, `anthropic/claude-3.5-sonnet`, `meta-llama/llama-3.1-8b-instruct`); eliminates vendor lock-in; unified cost tracking. |
+| **Primary LLM Gateway** | **OpenRouter API** | PRD v1.1, REQ-AI-07 | Single unified API for routing across top-tier models (`openai/gpt-4o-mini`, `anthropic/claude-sonnet-5`, `meta-llama/llama-3.1-8b-instruct`); eliminates vendor lock-in; unified cost tracking. |
 | **Direct Failover LLMs** | **OpenAI SDK / Anthropic SDK** | REQ-AI-07 | Native SDK implementations providing fallback routes if the primary gateway experiences degraded performance. |
 | **Embedding Model** | **OpenAI `text-embedding-3-small`** | REQ-KB-05 | 1536 dimensions; high semantic fidelity; industry-leading price-performance ratio ($0.02 / 1M tokens). |
 | **Vector Indexing** | **HNSW (`vector_cosine_ops`)** | PRD §7.7, §13.1 | Hierarchical Navigable Small World index in pgvector; provides sub-50ms approximate nearest-neighbor retrieval at scale with high recall. |

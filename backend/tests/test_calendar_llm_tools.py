@@ -34,7 +34,7 @@ mock_chatbot = Chatbot(
     fallback_message="Sorry, let me connect you with a team member.",
     appointment_booking_enabled=True,
     lead_capture_enabled=True,
-    model_name="anthropic/claude-3.5-sonnet",
+    model_name="anthropic/claude-sonnet-5",
     temperature=0.3,
     max_tokens=500
 )

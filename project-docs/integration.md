@@ -23,7 +23,7 @@ The platform integrates with the following external providers:
 
 ### 2.1 OpenRouter API (Primary LLM Gateway)
 * **Provider:** OpenRouter (`openrouter.ai`)
-* **Purpose:** Serves as the primary unified API gateway for conversational inference, multi-turn chat, and tool execution across diverse model architectures (`openai/gpt-4o-mini`, `anthropic/claude-3.5-sonnet`, `meta-llama/llama-3.1-8b-instruct`).
+* **Purpose:** Serves as the primary unified API gateway for conversational inference, multi-turn chat, and tool execution across diverse model architectures (`openai/gpt-4o-mini`, `anthropic/claude-sonnet-5`, `meta-llama/llama-3.1-8b-instruct`).
 * **Why it is needed:** Prevents single-vendor lock-in, unifies LLM credit billing into a single corporate account, and dynamically routes between models based on tenant requirements and cost tiers.
 * **Data Sent:** Dynamic system prompt (with injected RAG context), conversation message history, function schemas (`create_lead`, `check_availability`, `book_appointment`), and generation hyperparameters (`temperature`, `max_tokens`).
 * **Data Received:** Server-Sent Event (SSE) chunks containing token deltas and tool call arguments (`delta.content`, `delta.tool_calls`), total token usage metrics (`prompt_tokens`, `completion_tokens`).

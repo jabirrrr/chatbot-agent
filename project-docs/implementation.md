@@ -30,7 +30,7 @@ The `chatbot-agent` platform is a production-grade, multi-tenant conversational 
 | **Vector Search** | `pgvector` 0.7+ | Native HNSW vector index (`vector_cosine_ops`) with 1536-dimensional embeddings. |
 | **In-Memory Store & Cache**| Redis 7.2+ | Rate limiting (Token Bucket), session state, task broker, and Pub/Sub for WebSockets. |
 | **Asynchronous Workers** | Celery 5.4+ / ARQ | Offloads document text extraction, chunking, embedding generation, and outbound webhooks. |
-| **LLM Gateway** | OpenRouter API Gateway | Multi-model routing (`gpt-4o-mini`, `claude-3.5-sonnet`, `llama-3.1`) with direct OpenAI/Anthropic fallback adapters. |
+| **LLM Gateway** | OpenRouter API Gateway | Multi-model routing (`gpt-4o-mini`, `claude-sonnet-5`, `llama-3.1`) with direct OpenAI/Anthropic fallback adapters. |
 | **Embedding Engine** | OpenAI `text-embedding-3-small` | 1536-dimensional embeddings with high semantic fidelity ($0.02 / 1M tokens). |
 | **Operator Dashboard** | Next.js 14 App Router (TypeScript) | Server components, Tailwind CSS, and accessible shadcn/ui primitives. |
 | **Embeddable Widget** | Vanilla TypeScript + Vite (<40 KB) | Framework-free IIFE bundle rendering inside an open Shadow DOM with SSE streaming. |

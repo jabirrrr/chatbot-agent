@@ -33,7 +33,7 @@ All architectural, business, design, and integration decisions must be formally 
 * **Question:** How should the platform route chat completion requests across model providers?
 * **Recommended Option:** **OpenRouter as Primary Default Gateway**, backed by direct OpenAI and Anthropic SDK adapters as automated fallbacks when OpenRouter returns 5xx errors or exceeds 8,000ms latency.
 * **Alternatives:** Direct OpenAI as primary provider; OpenRouter only as secondary multi-model backup.
-* **Trade-offs:** OpenRouter simplifies billing into a single corporate account and gives access to multiple models (`gpt-4o-mini`, `claude-3.5-sonnet`, `llama-3.1`), but introduces an external gateway hop. Fallback adapters ensure zero single-point-of-failure risk.
+* **Trade-offs:** OpenRouter simplifies billing into a single corporate account and gives access to multiple models (`gpt-4o-mini`, `claude-sonnet-5`, `llama-3.1`), but introduces an external gateway hop. Fallback adapters ensure zero single-point-of-failure risk.
 * **Impact:** Controls environment variables, `LLMProvider` interface configuration, and API key management.
 * **Blocking Status:** **Non-blocking for M0/M1; Blocking for M3 (Chat Engine).**
 * **Final Decision:** *Pending User Confirmation*

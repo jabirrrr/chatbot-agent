@@ -30,7 +30,7 @@ class LLMProvider(ABC):
         tools: Optional[List[Dict[str, Any]]] = None,
         temperature: float = 0.3,
         max_tokens: int = 1024,
-        model_name: str = "anthropic/claude-3.5-sonnet"
+        model_name: str = "anthropic/claude-sonnet-5"
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Yields dictionaries with:
@@ -55,8 +55,12 @@ class OpenRouterProvider(LLMProvider):
         tools: Optional[List[Dict[str, Any]]] = None,
         temperature: float = 0.3,
         max_tokens: int = 1024,
-        model_name: str = "anthropic/claude-3.5-sonnet"
+        model_name: str = "anthropic/claude-sonnet-5"
     ) -> AsyncGenerator[Dict[str, Any], None]:
+        # Upgrade deprecated models dynamically
+        if model_name == "anthropic/claude-3.5-sonnet":
+            model_name = "anthropic/claude-sonnet-5"
+
         # Return error message if no key is configured
         if (
             not self.api_key
@@ -144,7 +148,7 @@ class MockLLMProvider(LLMProvider):
         tools: Optional[List[Dict[str, Any]]] = None,
         temperature: float = 0.3,
         max_tokens: int = 1024,
-        model_name: str = "anthropic/claude-3.5-sonnet"
+        model_name: str = "anthropic/claude-sonnet-5"
     ) -> AsyncGenerator[Dict[str, Any], None]:
         # Extract user's latest query and system context
         user_message = ""

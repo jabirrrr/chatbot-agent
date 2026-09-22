@@ -28,10 +28,10 @@ Based on our architectural deep-dive into PRD v1.1, the following high-impact en
   This provides 100% precision on exact keywords while retaining deep semantic search capabilities.
 
 ### 2.3 Dynamic Multi-Model Tiering via OpenRouter
-* **The Challenge:** Running every query through top-tier models (`gpt-4o` or `claude-3.5-sonnet`) drives AI infrastructure costs above the 30% revenue target (PRD §1.3).
+* **The Challenge:** Running every query through top-tier models (`gpt-4o` or `claude-sonnet-5`) drives AI infrastructure costs above the 30% revenue target (PRD §1.3).
 * **The Solution:** Implement a dual-tier model selector within the `RAGEngine`:
   - **Tier 1 (Fast / Inexpensive):** Use `openai/gpt-4o-mini` or `meta-llama/llama-3.1-8b-instruct` ($0.15 / 1M input tokens) for standard FAQ and knowledge base question answering.
-  - **Tier 2 (High-Capability Escalation):** Dynamically switch to `anthropic/claude-3.5-sonnet` or `openai/gpt-4o` only when:
+  - **Tier 2 (High-Capability Escalation):** Dynamically switch to `anthropic/claude-sonnet-5` or `openai/gpt-4o` only when:
     1. Multi-field conversational lead qualification is active.
     2. Date/time arithmetic for calendar appointment scheduling is required.
     3. Sentiment analysis flags high visitor frustration.

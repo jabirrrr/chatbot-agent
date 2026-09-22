@@ -34,7 +34,7 @@ class Chatbot(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
     )
 
     # AI Model Settings
-    model_name = Column(String(100), default="anthropic/claude-3.5-sonnet", nullable=False)
+    model_name = Column(String(100), default="anthropic/claude-sonnet-5", nullable=False)
     temperature = Column(Float, default=0.3, nullable=False)
     max_tokens = Column(Float, default=1024, nullable=False)
 

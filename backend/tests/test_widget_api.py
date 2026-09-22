@@ -28,7 +28,7 @@ mock_bot = Chatbot(
     widget_token=mock_token,
     system_prompt="Help customers.",
     fallback_message="I cannot answer that.",
-    model_name="anthropic/claude-3.5-sonnet",
+    model_name="anthropic/claude-sonnet-5",
     temperature=0.3,
     max_tokens=1024
 )

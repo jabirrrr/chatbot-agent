@@ -666,7 +666,7 @@ export const mockAIModelLogs: AIModelLog[] = [
     id: 'log_02',
     timestamp: '10:45:04',
     chatbot: 'Helio LeadBot',
-    model: 'anthropic/claude-3.5-sonnet',
+    model: 'anthropic/claude-sonnet-5',
     provider: 'OpenRouter',
     tokens: 1280,
     cost: 0.003840,

@@ -11,7 +11,7 @@ class ChatbotBase(BaseModel):
     system_prompt: Optional[str] = "You are a helpful, accurate, and polite customer support assistant for our business."
     welcome_message: Optional[str] = "Hi there! 👋 How can I help you today?"
     fallback_message: Optional[str] = "I'm sorry, I don't have that information. Would you like me to connect you with a team member?"
-    model_name: Optional[str] = "anthropic/claude-3.5-sonnet"
+    model_name: Optional[str] = "anthropic/claude-sonnet-5"
     temperature: Optional[float] = 0.3
     max_tokens: Optional[float] = 1024
     theme_color: Optional[str] = "#3b82f6"
@@ -26,7 +26,7 @@ class ChatbotCreate(BaseModel):
     system_prompt: Optional[str] = "You are a helpful, accurate, and polite customer support assistant for our business."
     welcome_message: Optional[str] = "Hi there! 👋 How can I help you today?"
     fallback_message: Optional[str] = "I'm sorry, I don't have that information. Would you like me to connect you with a team member?"
-    model_name: Optional[str] = "anthropic/claude-3.5-sonnet"
+    model_name: Optional[str] = "anthropic/claude-sonnet-5"
     temperature: Optional[float] = 0.3
     theme_color: Optional[str] = "#3b82f6"
     position: Optional[str] = "bottom-right"

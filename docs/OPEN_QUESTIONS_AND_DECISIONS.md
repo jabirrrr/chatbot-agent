@@ -32,7 +32,7 @@ This document formalizes the key architectural, business, and operational questi
 * **PRD Reference:** §5.1.5 REQ-AI-07, v1.1
 * **Context:** The PRD v1.1 explicitly introduces the OpenRouter API gateway while requiring abstraction over multiple LLM providers (OpenRouter, OpenAI, Anthropic).
 * **Options:**
-  1. **OpenRouter as Primary Default Gateway (Recommended):** All conversational LLM requests route through OpenRouter by default. Gives instant access to multiple model families (`gpt-4o-mini`, `claude-3.5-sonnet`, `llama-3.1`) under a unified billing account. Direct OpenAI/Anthropic SDKs serve as automated fallbacks.
+  1. **OpenRouter as Primary Default Gateway (Recommended):** All conversational LLM requests route through OpenRouter by default. Gives instant access to multiple model families (`gpt-4o-mini`, `claude-sonnet-5`, `llama-3.1`) under a unified billing account. Direct OpenAI/Anthropic SDKs serve as automated fallbacks.
   2. **Direct OpenAI as Primary Default, OpenRouter as Multi-Model Backup:** Primary queries route directly to OpenAI (`api.openai.com`), falling back to OpenRouter or Anthropic if OpenAI returns 5xx errors or hits rate limits.
 * **Impact:** Dictates default environment variables, routing logic in `adapters/llm/`, and API key management for early testing.
 

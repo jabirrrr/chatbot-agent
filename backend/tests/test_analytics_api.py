@@ -43,7 +43,7 @@ class MockDbSessionAnalytics:
                 elif "ai_usage_records" in stmt_str and "group by" in stmt_str:
                     # Model usage items: model, provider, count, prompt, completion, total, cost
                     return [
-                        ("anthropic/claude-3.5-sonnet", "openrouter", 10, 4500, 1200, 5700, Decimal("0.028500")),
+                        ("anthropic/claude-sonnet-5", "openrouter", 10, 4500, 1200, 5700, Decimal("0.028500")),
                         ("openai/gpt-4o-mini", "openrouter", 5, 2000, 600, 2600, Decimal("0.003900"))
                     ]
                 elif "conversations" in stmt_str:
@@ -121,7 +121,7 @@ def test_ai_usage_breakdown_endpoint():
     data = response.json()
     assert data["total_tokens"] == 8300
     assert len(data["models"]) == 2
-    assert data["models"][0]["model"] == "anthropic/claude-3.5-sonnet"
+    assert data["models"][0]["model"] == "anthropic/claude-sonnet-5"
     assert data["models"][0]["total_tokens"] == 5700
     assert data["models"][1]["model"] == "openai/gpt-4o-mini"
 
@@ -134,7 +134,7 @@ async def test_record_ai_usage_service():
         organization_id=mock_org_id,
         conversation_id=uuid.uuid4(),
         provider="openrouter",
-        model="anthropic/claude-3.5-sonnet",
+        model="anthropic/claude-sonnet-5",
         prompt_tokens=500,
         completion_tokens=150,
         estimated_cost_usd=0.00325

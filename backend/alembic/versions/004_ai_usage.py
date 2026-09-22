@@ -23,7 +23,7 @@ def upgrade() -> None:
         sa.Column('organization_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('organizations.id', ondelete='CASCADE'), nullable=False),
         sa.Column('conversation_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('conversations.id', ondelete='SET NULL'), nullable=True),
         sa.Column('provider', sa.String(length=50), nullable=False, server_default='openrouter'),
-        sa.Column('model', sa.String(length=100), nullable=False, server_default='anthropic/claude-3.5-sonnet'),
+        sa.Column('model', sa.String(length=100), nullable=False, server_default='anthropic/claude-sonnet-5'),
         sa.Column('prompt_tokens', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('completion_tokens', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('total_tokens', sa.Integer(), nullable=False, server_default='0'),

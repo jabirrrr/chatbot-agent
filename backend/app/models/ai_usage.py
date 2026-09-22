@@ -19,7 +19,7 @@ class AIUsageRecord(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
         index=True
     )
     provider = Column(String(50), default="openrouter", nullable=False)
-    model = Column(String(100), default="anthropic/claude-3.5-sonnet", nullable=False, index=True)
+    model = Column(String(100), default="anthropic/claude-sonnet-5", nullable=False, index=True)
     prompt_tokens = Column(Integer, default=0, nullable=False)
     completion_tokens = Column(Integer, default=0, nullable=False)
     total_tokens = Column(Integer, default=0, nullable=False)

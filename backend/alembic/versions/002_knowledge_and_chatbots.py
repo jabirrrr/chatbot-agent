@@ -29,7 +29,7 @@ def upgrade() -> None:
         sa.Column('system_prompt', sa.Text(), nullable=False),
         sa.Column('welcome_message', sa.String(length=1024), nullable=False),
         sa.Column('fallback_message', sa.String(length=1024), nullable=False),
-        sa.Column('model_name', sa.String(length=100), nullable=False, server_default='anthropic/claude-3.5-sonnet'),
+        sa.Column('model_name', sa.String(length=100), nullable=False, server_default='anthropic/claude-sonnet-5'),
         sa.Column('temperature', sa.Float(), nullable=False, server_default='0.3'),
         sa.Column('max_tokens', sa.Float(), nullable=False, server_default='1024'),
         sa.Column('widget_token', sa.String(length=128), nullable=False),
