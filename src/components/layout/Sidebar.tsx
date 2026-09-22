@@ -20,7 +20,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  LogOut
+  LogOut,
+  Cpu
 } from 'lucide-react';
 
 interface NavItem {
@@ -50,6 +51,7 @@ export default function Sidebar() {
     { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'integrations', label: 'Integrations', icon: Layers },
+    { id: 'ai-models', label: 'AI Models', icon: Cpu },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'deployment', label: 'Deployment', icon: Globe },
     { id: 'billing', label: 'Billing', icon: CreditCard },
