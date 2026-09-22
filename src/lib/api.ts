@@ -159,6 +159,24 @@ export async function updateChatbot(token: string, chatbotId: string, data: any)
 }
 
 /**
+ * Delete a chatbot
+ */
+export async function deleteChatbot(token: string, chatbotId: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/chatbots/${chatbotId}`, {
+      method: 'DELETE',
+      headers: { 
+        'Authorization': `Bearer ${token}`
+      },
+    });
+    return res.ok;
+  } catch (err) {
+    console.error('Failed to delete chatbot:', err);
+    return false;
+  }
+}
+
+/**
  * Fetch all integration statuses for the tenant organization
  */
 export async function fetchIntegrationsStatus(token: string) {

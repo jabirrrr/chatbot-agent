@@ -97,6 +97,24 @@ async def update_chatbot(
     return ChatbotRead.model_validate(bot)
 
 
+@router.delete(
+    "/{chatbot_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a chatbot"
+)
+async def delete_chatbot(
+    chatbot_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    org: Organization = Depends(get_current_organization)
+):
+    """
+    Deletes the chatbot permanently.
+    """
+    await ChatbotService.delete(db, org.id, chatbot_id)
+    return None
+
+
 @router.post(
     "/{chatbot_id}/regenerate-token",
     response_model=ChatbotRead,

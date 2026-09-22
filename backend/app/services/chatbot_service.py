@@ -117,3 +117,18 @@ class ChatbotService:
         await db.commit()
         await db.refresh(chatbot)
         return chatbot
+
+    @staticmethod
+    async def delete(
+        db: AsyncSession,
+        org_id: uuid.UUID,
+        chatbot_id: uuid.UUID
+    ) -> None:
+        """Deletes a chatbot and cascades to its dependencies."""
+        chatbot = await ChatbotService.get_by_id(db, org_id, chatbot_id)
+        if not chatbot:
+            raise HTTPException(status_code=404, detail="Chatbot not found.")
+
+        await db.delete(chatbot)
+        await db.commit()
+

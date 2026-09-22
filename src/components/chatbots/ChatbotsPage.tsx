@@ -20,7 +20,8 @@ import {
   Key,
   X,
   Zap,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 
 export default function ChatbotsPage() {
@@ -36,6 +37,7 @@ export default function ChatbotsPage() {
     setActiveChatbotId,
     chatbotsList,
     createNewChatbot,
+    deleteChatbot,
     knowledgeSources,
     setPendingNavigation
   } = useApp();
@@ -248,13 +250,24 @@ export default function ChatbotsPage() {
                 : 'text-slate-700 bg-white hover:bg-slate-50 border border-slate-200'
             }`}
           >
-            Save Changes
+            {isDirty ? 'Save Changes' : 'Saved'}
           </button>
           <button
             onClick={handlePublish}
             className="px-4 py-2 text-xs font-medium text-white bg-slate-900 hover:bg-black rounded-xl transition-all shadow-xs btn-press"
           >
             Publish
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm('Are you sure you want to delete this chatbot? This action cannot be undone.')) {
+                deleteChatbot(activeChatbotId);
+              }
+            }}
+            className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all shadow-xs btn-press ml-1 border border-red-200"
+            title="Delete Chatbot"
+          >
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>

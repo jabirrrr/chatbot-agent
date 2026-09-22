@@ -54,6 +54,7 @@ interface AppContextType {
   isDirty: boolean;
   chatbotsList: ChatbotConfig[];
   createNewChatbot: () => void;
+  deleteChatbot: (id: string) => Promise<void>;
   leads: Lead[];
   addLead: (lead: Omit<Lead, 'id' | 'lastActivity'>) => void;
   updateLeadStatus: (leadId: string, newStatus: LeadStatus) => void;
@@ -530,6 +531,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       type: 'success',
       title: 'Chatbot Created',
       description: 'A new chatbot profile has been initialized.'
+    });
+  };
+
+  const deleteChatbot = async (id: string) => {
+    if (authToken) {
+      const { deleteChatbot: deleteChatbotApi } = await import('@/lib/api');
+      await deleteChatbotApi(authToken, id);
+    }
+    
+    setChatbotsList(prev => {
+      const filtered = prev.filter(bot => bot.id !== id);
+      if (activeChatbotIdInternal === id) {
+        const nextId = filtered.length > 0 ? filtered[0].id : '';
+        setActiveChatbotIdInternal(nextId);
+        if (typeof window !== 'undefined') {
+          if (nextId) localStorage.setItem('helio_active_chatbot_id', nextId);
+          else localStorage.removeItem('helio_active_chatbot_id');
+        }
+      }
+      return filtered;
+    });
+
+    addToast({
+      type: 'info',
+      title: 'Chatbot Deleted',
+      description: 'The chatbot has been permanently removed.'
     });
   };
 
