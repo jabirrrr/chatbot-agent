@@ -26,9 +26,10 @@ export default function DeveloperPage() {
   const [domains, setDomains] = useState(['northstarstudio.io', 'portal.northstarstudio.io']);
   const [newDomain, setNewDomain] = useState('');
 
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://chatly.ai';
   const snippet = `<script
-  src="https://cdn.helio.ai/v1/widget.js"
-  data-token="wgt_live_9a8b7c6d5e4f3a2b1c"
+  src="${appUrl}/widget.js"
+  data-chatly-id="bot_live_9a8b7c6d5e4f3a2b1c"
   async
 ></script>`;
 

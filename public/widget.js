@@ -4,11 +4,11 @@
  * Encapsulated via Shadow DOM for zero host-CSS collision.
  */
 (function () {
-  const currentScript = document.currentScript || document.querySelector('script[data-token]');
+  const currentScript = document.currentScript || document.querySelector('script[data-token], script[data-chatly-id]');
   if (!currentScript) return;
 
-  const WIDGET_TOKEN = currentScript.getAttribute('data-token');
-  const API_BASE = currentScript.getAttribute('data-api') || window.location.origin;
+  const WIDGET_TOKEN = currentScript.getAttribute('data-token') || currentScript.getAttribute('data-chatly-id');
+  const API_BASE = currentScript.getAttribute('data-api') || new URL(currentScript.src).origin;
 
   if (!WIDGET_TOKEN) {
     console.error('[Helio Widget] Error: data-token attribute is required on script tag.');
