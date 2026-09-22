@@ -915,6 +915,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isDirty,
         chatbotsList,
         createNewChatbot,
+        deleteChatbot,
         leads,
         addLead,
         updateLeadStatus,
