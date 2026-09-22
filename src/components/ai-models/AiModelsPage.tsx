@@ -31,7 +31,7 @@ export default function AiModelsPage() {
       name: 'OpenRouter',
       role: 'Primary Multi-Model Gateway',
       status: 'connected',
-      models: ['gpt-4o-mini', 'claude-sonnet-5', 'llama-3.1-8b'],
+      models: ['gpt-4o-mini', 'claude-sonnet-5', 'llama-3.1-8b', 'openrouter/free'],
       ping: '142ms'
     },
     {
@@ -117,6 +117,7 @@ export default function AiModelsPage() {
             >
               <option value="openai/gpt-4o-mini">openai/gpt-4o-mini ($0.15 / 1M tokens)</option>
               <option value="meta-llama/llama-3.1-8b-instruct">meta-llama/llama-3.1-8b-instruct ($0.05 / 1M tokens)</option>
+              <option value="openrouter/free">openrouter/free ($0.00 / 1M tokens)</option>
             </select>
           </div>
 
@@ -129,6 +130,7 @@ export default function AiModelsPage() {
             >
               <option value="anthropic/claude-sonnet-5">anthropic/claude-sonnet-5 ($3.00 / 1M tokens)</option>
               <option value="openai/gpt-4o">openai/gpt-4o ($2.50 / 1M tokens)</option>
+              <option value="openrouter/free">openrouter/free ($0.00 / 1M tokens)</option>
             </select>
           </div>
 
@@ -139,8 +141,9 @@ export default function AiModelsPage() {
               onChange={e => setFallbackModel(e.target.value)}
               className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-mono text-xs cursor-pointer"
             >
-              <option value="meta-llama/llama-3.1-8b-instruct">meta-llama/llama-3.1-8b-instruct</option>
-              <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+              <option value="meta-llama/llama-3.1-8b-instruct">meta-llama/llama-3.1-8b-instruct ($0.05 / 1M tokens)</option>
+              <option value="openai/gpt-4o-mini">openai/gpt-4o-mini ($0.15 / 1M tokens)</option>
+              <option value="openrouter/free">openrouter/free ($0.00 / 1M tokens)</option>
             </select>
           </div>
         </div>
