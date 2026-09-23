@@ -80,3 +80,4 @@ class ChatbotPreviewRequest(BaseModel):
     message: str
     history: List[Dict[str, Any]] = []
     botConfig: Optional[Dict[str, Any]] = None
+    chatbot_id: Optional[str] = None

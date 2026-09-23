@@ -24,7 +24,8 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           message,
           history,
-          botConfig
+          botConfig,
+          chatbot_id: body.chatbot_id
         })
       });
 

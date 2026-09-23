@@ -1,11 +1,15 @@
 import uuid
+import json
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.core.database import get_db
 from app.models.user import User
 from app.models.organization import Organization
+from app.models.chatbot import Chatbot
+from app.models.platform_integration import PlatformIntegration
 from app.schemas.chatbot import (
     ChatbotCreate,
     ChatbotUpdate,
@@ -17,6 +21,8 @@ from app.services.platform_integration_service import get_integration_by_provide
 from app.core.vault import decrypt_vault_secret
 from app.adapters.llm.provider import OpenRouterProvider
 from app.services.chatbot_service import ChatbotService
+from app.services.calendar_tools import CALENDAR_TOOLS, CalendarToolsExecutor
+from app.services.rag_service import LEAD_CAPTURE_TOOL
 from app.api.deps import get_current_user, get_current_organization
 
 router = APIRouter(prefix="/chatbots", tags=["Chatbots"])
@@ -206,10 +212,83 @@ async def preview_chatbot(
         })
     messages_payload.append({"role": "user", "content": data.message})
 
+    tools_payload = None
+    if data.chatbot_id:
+        try:
+            bot_uuid = uuid.UUID(data.chatbot_id)
+            bot = await db.scalar(select(Chatbot).where(Chatbot.id == bot_uuid))
+            if bot:
+                integration = await db.scalar(
+                    select(PlatformIntegration).where(
+                        PlatformIntegration.organization_id == bot.organization_id,
+                        PlatformIntegration.provider == "google_calendar"
+                    )
+                )
+                if integration and integration.is_active and integration.access_token:
+                    tools_payload = CALENDAR_TOOLS + [LEAD_CAPTURE_TOOL]
+        except ValueError:
+            bot = None
+
     # Call LLM
     response_text = ""
-    async for chunk in provider.stream_chat(messages=messages_payload):
-        if chunk.get("type") == "content":
-            response_text += chunk.get("delta", "")
+    while True:
+        tool_call_made = False
+        async for chunk in provider.stream_chat(messages=messages_payload, tools=tools_payload):
+            chunk_type = chunk.get("type")
+
+            if chunk_type == "content":
+                response_text += chunk.get("delta", "")
+
+            elif chunk_type == "tool_call":
+                tool_call_made = True
+                tool_name = chunk.get("tool_name")
+                args = chunk.get("arguments", {})
+
+                call_id = "call_" + str(uuid.uuid4())[:8]
+                messages_payload.append({
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [{
+                        "id": call_id,
+                        "type": "function",
+                        "function": {
+                            "name": tool_name,
+                            "arguments": json.dumps(args)
+                        }
+                    }]
+                })
+
+                action_result = {}
+
+                if tool_name == "create_lead":
+                    action_result = {"success": True, "note": "Lead captured (preview mode - no database record created)."}
+
+                elif tool_name in (
+                    "get_calendar_availability",
+                    "create_calendar_event",
+                    "get_calendar_event",
+                    "cancel_calendar_event",
+                    "update_calendar_event",
+                    "search_calendar_events"
+                ) and tools_payload:
+                    action_result = await CalendarToolsExecutor.execute_tool(
+                        tool_name=tool_name,
+                        arguments=args,
+                        db=db,
+                        organization_id=bot.organization_id,
+                        conversation_id=uuid.uuid4() # Mock conversation ID
+                    )
+                else:
+                    action_result = {"error": "Tool execution failed or tools are not configured."}
+
+                messages_payload.append({
+                    "role": "tool",
+                    "tool_call_id": call_id,
+                    "name": tool_name,
+                    "content": json.dumps(action_result)
+                })
+
+        if not tool_call_made:
+            break
 
     return {"reply": response_text.strip(), "live": True, "provider": integration.provider}

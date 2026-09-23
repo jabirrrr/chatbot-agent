@@ -899,7 +899,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             name: currentBot.name,
             tone: currentBot.tone,
             businessDescription: currentBot.description || businessInfo.description,
-          }
+          },
+          chatbot_id: targetBotId
         })
       });
 
