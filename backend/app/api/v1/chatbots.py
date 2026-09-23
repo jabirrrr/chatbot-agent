@@ -218,13 +218,13 @@ async def preview_chatbot(
             bot_uuid = uuid.UUID(data.chatbot_id)
             bot = await db.scalar(select(Chatbot).where(Chatbot.id == bot_uuid))
             if bot:
-                integration = await db.scalar(
+                calendar_integration = await db.scalar(
                     select(PlatformIntegration).where(
                         PlatformIntegration.organization_id == bot.organization_id,
                         PlatformIntegration.provider == "google_calendar"
                     )
                 )
-                if integration and integration.is_active and integration.access_token:
+                if calendar_integration and calendar_integration.is_active and calendar_integration.access_token:
                     tools_payload = CALENDAR_TOOLS + [LEAD_CAPTURE_TOOL]
         except ValueError:
             bot = None
