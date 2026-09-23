@@ -18,6 +18,7 @@ class ChatbotBase(BaseModel):
     position: Optional[str] = "bottom-right"
     lead_capture_enabled: Optional[bool] = True
     appointment_booking_enabled: Optional[bool] = True
+    config_json: Optional[Dict[str, Any]] = {}
 
 
 class ChatbotCreate(BaseModel):
@@ -32,6 +33,7 @@ class ChatbotCreate(BaseModel):
     position: Optional[str] = "bottom-right"
     lead_capture_enabled: Optional[bool] = True
     appointment_booking_enabled: Optional[bool] = True
+    config_json: Optional[Dict[str, Any]] = {}
 
 
 class ChatbotUpdate(BaseModel):
@@ -47,6 +49,7 @@ class ChatbotUpdate(BaseModel):
     position: Optional[str] = None
     lead_capture_enabled: Optional[bool] = None
     appointment_booking_enabled: Optional[bool] = None
+    config_json: Optional[Dict[str, Any]] = None
 
 
 class ChatbotRead(ChatbotBase):

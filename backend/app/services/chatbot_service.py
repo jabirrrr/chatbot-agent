@@ -33,6 +33,7 @@ class ChatbotService:
             position=data.position,
             lead_capture_enabled=data.lead_capture_enabled,
             appointment_booking_enabled=data.appointment_booking_enabled,
+            config_json=data.config_json,
             widget_token=widget_token,
             is_active=True
         )

@@ -162,7 +162,12 @@
   async function init() {
     try {
       const res = await fetch(`${API_BASE}/api/v1/widget/config?token=${encodeURIComponent(WIDGET_TOKEN)}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        appendMessage('bot', 'Chatbot is temporarily offline. Please try again later.');
+        input.disabled = true;
+        sendBtn.disabled = true;
+        return;
+      }
       config = await res.json();
 
       botNameEl.textContent = config.name;
@@ -195,9 +200,16 @@
         } else if (config.welcome_message) {
           appendMessage('bot', config.welcome_message);
         }
+      } else {
+        appendMessage('bot', 'Failed to connect to chat session. Please try again later.');
+        input.disabled = true;
+        sendBtn.disabled = true;
       }
     } catch (e) {
       console.warn('[Helio Widget] Offline or initialization error:', e);
+      appendMessage('bot', 'Chatbot is temporarily offline or unreachable.');
+      input.disabled = true;
+      sendBtn.disabled = true;
     }
   }
 

@@ -113,7 +113,16 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [currentScreen, setCurrentScreenInternal] = useState<NavigationScreen>('home');
+  const [currentScreen, setCurrentScreenInternal] = useState<NavigationScreen>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const screen = params.get('screen');
+      if (screen) {
+        return screen as NavigationScreen;
+      }
+    }
+    return 'home';
+  });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -190,17 +199,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async function initData() {
       try {
         const { API_BASE, fetchChatbots } = await import('@/lib/api');
-        let token = typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null;
         
-        if (token) {
-          setAuthToken(token);
+        let tokenToUse = authToken;
+        if (!tokenToUse && typeof window !== 'undefined') {
+          tokenToUse = localStorage.getItem('helio_auth_token');
+          if (tokenToUse) {
+            setAuthToken(tokenToUse);
+            return; // Setting state will trigger a re-render and re-run this effect
+          }
+        }
+        
+        if (tokenToUse) {
           let bots: any[] = [];
           try {
-            bots = await fetchChatbots(token);
+            bots = await fetchChatbots(tokenToUse);
           } catch (fetchErr) {
             // Token might be stale/invalid
             console.warn('Initial token rejected, clearing credentials...', fetchErr);
-            token = null;
+            tokenToUse = null;
             setAuthToken(null);
             if (typeof window !== 'undefined') {
               localStorage.removeItem('helio_auth_token');
@@ -208,59 +224,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (bots && bots.length > 0) {
-            const mappedBots: ChatbotConfig[] = bots.map((b: any) => ({
-              id: b.id,
-              name: b.name,
-              status: b.is_active ? 'active' : 'draft',
-              domain: b.domain || '',
-              tone: b.tone || 'Friendly',
-              description: b.description || '',
-              primaryGoals: {
-                answerQuestions: true,
-                captureLeads: true,
-                scheduleAppointments: true,
-                transferToHuman: true
-              },
-              conversationsCount: b.conversations_count || 1248,
-              lastUpdated: 'Just now',
-              themeColor: b.theme_color || '#2563eb',
-              welcomeMessage: b.welcome_message || "👋 Hi there! How can we help you today?",
-              avatarUrl: b.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
-              position: b.position || 'bottom-right',
-              launcherStyle: 'pill',
-              suggestedQuestions: [
-                'What services do you offer?',
-                'How much does a project cost?',
-                'Book a discovery call'
-              ],
-              leadFields: ['name', 'email', 'phone', 'company', 'budget'],
-              fallbackBehavior: 'human_help',
-              monthlyBudgetUsd: 150,
-              currentCostUsd: 42.18,
-            }));
+            const mappedBots: ChatbotConfig[] = bots.map((b: any) => {
+              const cfg = b.config_json || {};
+              return {
+                id: b.id,
+                name: b.name,
+                status: b.is_active ? 'active' : 'draft',
+                domain: b.domain || '',
+                tone: cfg.tone || 'Friendly',
+                description: b.description || '',
+                primaryGoals: cfg.primaryGoals || {
+                  answerQuestions: true,
+                  captureLeads: true,
+                  scheduleAppointments: true,
+                  transferToHuman: true
+                },
+                conversationsCount: b.conversations_count || 1248,
+                lastUpdated: 'Just now',
+                themeColor: b.theme_color || '#2563eb',
+                welcomeMessage: b.welcome_message || "👋 Hi there! How can we help you today?",
+                avatarUrl: cfg.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
+                position: b.position || 'bottom-right',
+                launcherStyle: cfg.launcherStyle || 'pill',
+                suggestedQuestions: cfg.suggestedQuestions || [
+                  'What services do you offer?',
+                  'How much does a project cost?',
+                  'Book a discovery call'
+                ],
+                leadFields: cfg.leadFields || ['name', 'email', 'phone', 'company', 'budget'],
+                fallbackBehavior: cfg.fallbackBehavior || 'human_help',
+                monthlyBudgetUsd: cfg.monthlyBudgetUsd || 150,
+                currentCostUsd: cfg.currentCostUsd || 42.18,
+              };
+            });
+
             setChatbotsList(mappedBots);
             const savedActiveId = typeof window !== 'undefined' ? localStorage.getItem('helio_active_chatbot_id') : null;
             const botToActivate = mappedBots.find((b: any) => b.id === savedActiveId) || mappedBots[0];
             setDraftChatbot(botToActivate);
             setActiveChatbotIdInternal(botToActivate.id);
-          } else if (token) {
+          } else if (tokenToUse) {
             // Create default bot on backend
             try {
               const createRes = await fetch(`${API_BASE}/api/v1/chatbots/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` },
                 body: JSON.stringify({ name: 'Helio LeadBot', description: 'Customer Support & Sales', theme_color: '#2563eb' })
               });
               if (createRes.ok) {
                 const b = await createRes.json();
+                const cfg = b.config_json || {};
                 const newBot: ChatbotConfig = {
                   id: b.id,
                   name: b.name,
                   status: 'active',
                   domain: 'northstarstudio.io',
-                  tone: 'Friendly',
+                  tone: cfg.tone || 'Friendly',
                   description: b.description || '',
-                  primaryGoals: {
+                  primaryGoals: cfg.primaryGoals || {
                     answerQuestions: true,
                     captureLeads: true,
                     scheduleAppointments: true,
@@ -270,18 +291,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   lastUpdated: 'Just now',
                   themeColor: b.theme_color || '#2563eb',
                   welcomeMessage: b.welcome_message || "👋 Hi there! How can we help you today?",
-                  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
+                  avatarUrl: cfg.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
                   position: b.position || 'bottom-right',
-                  launcherStyle: 'pill',
-                  suggestedQuestions: [
+                  launcherStyle: cfg.launcherStyle || 'pill',
+                  suggestedQuestions: cfg.suggestedQuestions || [
                     'What services do you offer?',
                     'How much does a project cost?',
                     'Book a discovery call'
                   ],
-                  leadFields: ['name', 'email', 'phone', 'company', 'budget'],
-                  fallbackBehavior: 'human_help',
-                  monthlyBudgetUsd: 150,
-                  currentCostUsd: 0,
+                  leadFields: cfg.leadFields || ['name', 'email', 'phone', 'company', 'budget'],
+                  fallbackBehavior: cfg.fallbackBehavior || 'human_help',
+                  monthlyBudgetUsd: cfg.monthlyBudgetUsd || 150,
+                  currentCostUsd: cfg.currentCostUsd || 0,
                 };
                 setChatbotsList([newBot]);
                 setDraftChatbot(newBot);
@@ -291,6 +312,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               console.warn('Could not create default bot on backend:', createErr);
             }
           }
+        } else {
+          // No token found, reset to mock state (e.g. after logout)
+          setChatbotsList(mockChatbotsList);
+          const defaultBot = mockChatbotsList[0];
+          setDraftChatbot(defaultBot);
+          setActiveChatbotIdInternal(defaultBot.id);
         }
       } catch (e: any) {
         console.warn('Backend init error, continuing with cached/default state:', e);
@@ -300,7 +327,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     
     initData();
-  }, []);
+  }, [authToken]);
 
   // Removed localStorage sync for chatbotsList as it's now managed via backend API save
   useEffect(() => {
@@ -430,6 +457,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (draftChatbot.welcomeMessage) payload.welcome_message = draftChatbot.welcomeMessage;
       if (draftChatbot.themeColor) payload.theme_color = draftChatbot.themeColor;
       if (draftChatbot.position) payload.position = draftChatbot.position;
+      if (draftChatbot.status) payload.is_active = draftChatbot.status === 'active';
+      
+      payload.config_json = {
+        tone: draftChatbot.tone,
+        avatarUrl: draftChatbot.avatarUrl,
+        launcherStyle: draftChatbot.launcherStyle,
+        suggestedQuestions: draftChatbot.suggestedQuestions,
+        leadFields: draftChatbot.leadFields,
+        fallbackBehavior: draftChatbot.fallbackBehavior,
+        monthlyBudgetUsd: draftChatbot.monthlyBudgetUsd,
+        currentCostUsd: draftChatbot.currentCostUsd,
+        primaryGoals: draftChatbot.primaryGoals
+      };
       
       await updateChatbotApi(authToken, activeChatbotId, payload);
     }

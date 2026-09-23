@@ -1,7 +1,7 @@
 import uuid
 import secrets
 from sqlalchemy import Column, String, Text, Boolean, Float, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.models.base import Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin
 
 
@@ -50,3 +50,6 @@ class Chatbot(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
     position = Column(String(20), default="bottom-right", nullable=False)
     lead_capture_enabled = Column(Boolean, default=True, nullable=False)
     appointment_booking_enabled = Column(Boolean, default=True, nullable=False)
+
+    # Dynamic Frontend Configuration
+    config_json = Column(JSONB, default={}, server_default='{}', nullable=False)
