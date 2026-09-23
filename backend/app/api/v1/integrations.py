@@ -404,12 +404,18 @@ async def update_calendar_settings(
     org: Organization = Depends(get_current_organization)
 ):
     integration = await IntegrationService.get_integration(db, org.id, "google_calendar")
-    if not integration:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Google Calendar integration not found"
-        )
     
+    if not integration:
+        from app.models.integration import TenantIntegration
+        integration = TenantIntegration(
+            organization_id=org.id,
+            provider="google_calendar",
+            status="disconnected",
+            encrypted_credentials="",
+            metadata_json={}
+        )
+        db.add(integration)
+        
     metadata = integration.metadata_json or {}
     metadata["business_hours_start"] = settings.business_hours_start
     metadata["business_hours_end"] = settings.business_hours_end
