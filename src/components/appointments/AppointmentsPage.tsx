@@ -66,7 +66,7 @@ export default function AppointmentsPage() {
       setAppts(mapped);
     } catch (e) {
       console.error(e);
-      addToast('Failed to fetch appointments', 'error');
+      addToast({ title: 'Failed to fetch appointments', type: 'error' });
     }
   };
 
@@ -82,11 +82,11 @@ export default function AppointmentsPage() {
         method: 'PATCH',
         token: authToken
       });
-      addToast('Appointment cancelled', 'success');
+      addToast({ title: 'Appointment cancelled', type: 'success' });
       setSelectedAppt(null);
       fetchAppointments();
     } catch (e) {
-      addToast('Failed to cancel appointment', 'error');
+      addToast({ title: 'Failed to cancel appointment', type: 'error' });
     }
   };
 
@@ -101,12 +101,12 @@ export default function AppointmentsPage() {
           attendee_email: editEmail
         })
       });
-      addToast('Attendees updated', 'success');
+      addToast({ title: 'Attendees updated', type: 'success' });
       setIsEditOpen(false);
       setSelectedAppt(null);
       fetchAppointments();
     } catch (e) {
-      addToast('Failed to update attendees', 'error');
+      addToast({ title: 'Failed to update attendees', type: 'error' });
     }
   };
 
@@ -120,10 +120,10 @@ export default function AppointmentsPage() {
           business_hours_end: businessEnd
         })
       });
-      addToast('Availability settings saved', 'success');
+      addToast({ title: 'Availability settings saved', type: 'success' });
       setIsSettingsOpen(false);
     } catch (e) {
-      addToast('Failed to save settings', 'error');
+      addToast({ title: 'Failed to save settings', type: 'error' });
     }
   };
 
