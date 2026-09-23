@@ -1,4 +1,5 @@
 import uuid
+import json
 from typing import AsyncGenerator, Dict, List, Optional, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -174,71 +175,108 @@ class RAGService:
         # 4. Stream LLM chunks
         bot_response_text = ""
         captured_lead_data = None
+        total_tokens = 0
 
-        async for chunk in llm_provider.stream_chat(
-            messages=messages_payload,
-            tools=tools_payload,
-            temperature=chatbot.temperature,
-            max_tokens=int(chatbot.max_tokens),
-            model_name=chatbot.model_name
-        ):
-            chunk_type = chunk.get("type")
+        while True:
+            tool_call_made = False
+            async for chunk in llm_provider.stream_chat(
+                messages=messages_payload,
+                tools=tools_payload,
+                temperature=chatbot.temperature,
+                max_tokens=int(chatbot.max_tokens),
+                model_name=chatbot.model_name
+            ):
+                chunk_type = chunk.get("type")
 
-            if chunk_type == "content":
-                delta = chunk.get("delta", "")
-                bot_response_text += delta
-                yield {"event": "delta", "data": delta}
+                if chunk_type == "content":
+                    delta = chunk.get("delta", "")
+                    bot_response_text += delta
+                    yield {"event": "delta", "data": delta}
 
-            elif chunk_type == "tool_call":
-                tool_name = chunk.get("tool_name")
-                args = chunk.get("arguments", {})
+                elif chunk_type == "tool_call":
+                    tool_call_made = True
+                    tool_name = chunk.get("tool_name")
+                    args = chunk.get("arguments", {})
 
-                if tool_name == "create_lead":
-                    captured_lead_data = args
-                    lead = Lead(
-                        organization_id=chatbot.organization_id,
-                        conversation_id=conversation.id,
-                        chatbot_id=chatbot.id,
-                        name=args.get("name", "Prospective Customer"),
-                        email=args.get("email"),
-                        phone=args.get("phone"),
-                        notes=args.get("notes", "Captured via Chatbot Widget"),
-                        status="new"
-                    )
-                    db.add(lead)
-                    await db.commit()
-                    yield {"event": "lead_captured", "data": {"name": lead.name, "email": lead.email}}
+                    call_id = "call_" + str(uuid.uuid4())[:8]
+                    messages_payload.append({
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [{
+                            "id": call_id,
+                            "type": "function",
+                            "function": {
+                                "name": tool_name,
+                                "arguments": json.dumps(args)
+                            }
+                        }]
+                    })
 
-                elif tool_name in (
-                    "get_calendar_availability",
-                    "create_calendar_event",
-                    "get_calendar_event",
-                    "cancel_calendar_event",
-                    "update_calendar_event"
-                ):
-                    action_result = await CalendarToolsExecutor.execute_tool(
-                        tool_name=tool_name,
-                        arguments=args,
-                        db=db,
-                        organization_id=chatbot.organization_id,
-                        conversation_id=conversation.id
-                    )
-                    if tool_name == "create_calendar_event" and action_result.get("success"):
-                        yield {"event": "appointment_booked", "data": action_result}
-                    elif tool_name == "get_calendar_availability":
-                        yield {"event": "calendar_availability", "data": action_result}
+                    action_result = {}
+
+                    if tool_name == "create_lead":
+                        captured_lead_data = args
+                        lead = Lead(
+                            organization_id=chatbot.organization_id,
+                            conversation_id=conversation.id,
+                            chatbot_id=chatbot.id,
+                            name=args.get("name", "Prospective Customer"),
+                            email=args.get("email"),
+                            phone=args.get("phone"),
+                            notes=args.get("notes", "Captured via Chatbot Widget"),
+                            status="new"
+                        )
+                        db.add(lead)
+                        await db.commit()
+                        action_result = {"success": True, "lead_id": str(lead.id)}
+                        yield {"event": "lead_captured", "data": {"name": lead.name, "email": lead.email}}
+
+                    elif tool_name in (
+                        "get_calendar_availability",
+                        "create_calendar_event",
+                        "get_calendar_event",
+                        "cancel_calendar_event",
+                        "update_calendar_event",
+                        "search_calendar_events"
+                    ):
+                        action_result = await CalendarToolsExecutor.execute_tool(
+                            tool_name=tool_name,
+                            arguments=args,
+                            db=db,
+                            organization_id=chatbot.organization_id,
+                            conversation_id=conversation.id
+                        )
+                        if tool_name == "create_calendar_event" and action_result.get("success"):
+                            yield {"event": "appointment_booked", "data": action_result}
+                        elif tool_name == "get_calendar_availability":
+                            yield {"event": "calendar_availability", "data": action_result}
+                        else:
+                            yield {"event": "calendar_action", "data": action_result}
                     else:
-                        yield {"event": "calendar_action", "data": action_result}
+                        action_result = {"success": False, "error": f"Unknown tool: {tool_name}"}
 
-            elif chunk_type == "done":
-                # 5. Persist bot reply in database
-                bot_msg = Message(
-                    organization_id=chatbot.organization_id,
-                    conversation_id=conversation.id,
-                    sender_type="bot",
-                    content=bot_response_text,
-                    tokens_used=chunk.get("total_tokens", 0)
-                )
-                db.add(bot_msg)
-                await db.commit()
-                yield {"event": "done", "data": {"message_id": str(bot_msg.id)}}
+                    messages_payload.append({
+                        "role": "tool",
+                        "tool_call_id": call_id,
+                        "name": tool_name,
+                        "content": json.dumps(action_result)
+                    })
+                    break
+
+                elif chunk_type == "done":
+                    total_tokens += chunk.get("total_tokens", 0)
+            
+            if not tool_call_made:
+                break
+
+        # 5. Persist bot reply in database
+        bot_msg = Message(
+            organization_id=chatbot.organization_id,
+            conversation_id=conversation.id,
+            sender_type="bot",
+            content=bot_response_text,
+            tokens_used=total_tokens
+        )
+        db.add(bot_msg)
+        await db.commit()
+        yield {"event": "done", "data": {"message_id": str(bot_msg.id)}}

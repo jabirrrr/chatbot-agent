@@ -104,11 +104,25 @@ class OpenRouterProvider(LLMProvider):
                     yield {"type": "done", "total_tokens": 0}
                     return
 
+                tool_call_name = ""
+                tool_call_args = ""
+                is_tool_call = False
+
                 async for line in response.aiter_lines():
                     if not line or not line.startswith("data: "):
                         continue
                     data_str = line[6:].strip()
                     if data_str == "[DONE]":
+                        if is_tool_call and tool_call_name:
+                            try:
+                                args_dict = json.loads(tool_call_args)
+                            except Exception:
+                                args_dict = {}
+                            yield {
+                                "type": "tool_call",
+                                "tool_name": tool_call_name,
+                                "arguments": args_dict
+                            }
                         yield {"type": "done", "total_tokens": 150}
                         break
 
@@ -125,14 +139,13 @@ class OpenRouterProvider(LLMProvider):
 
                         # Tool call delta
                         if "tool_calls" in delta and delta["tool_calls"]:
+                            is_tool_call = True
                             tc = delta["tool_calls"][0]
                             function = tc.get("function", {})
                             if "name" in function:
-                                yield {
-                                    "type": "tool_call",
-                                    "tool_name": function["name"],
-                                    "arguments": json.loads(function.get("arguments", "{}"))
-                                }
+                                tool_call_name = function["name"]
+                            if "arguments" in function:
+                                tool_call_args += function["arguments"]
                     except Exception:
                         continue
 
