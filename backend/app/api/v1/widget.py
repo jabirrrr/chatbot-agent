@@ -34,7 +34,15 @@ async def get_widget_config(
     Called by the embed script when initializing on the customer's website.
     Returns appearance, position, and feature toggles without exposing system prompts.
     """
-    stmt = select(Chatbot).where(Chatbot.widget_token == token, Chatbot.is_active == True)
+    try:
+        chatbot_uuid = uuid.UUID(token)
+        stmt = select(Chatbot).where(
+            (Chatbot.widget_token == token) | (Chatbot.id == chatbot_uuid),
+            Chatbot.is_active == True
+        )
+    except ValueError:
+        stmt = select(Chatbot).where(Chatbot.widget_token == token, Chatbot.is_active == True)
+        
     res = await db.execute(stmt)
     bot = res.scalar_one_or_none()
     if not bot:
@@ -59,7 +67,15 @@ async def create_or_restore_session(
     Initializes a new visitor conversation session or recovers an existing thread.
     Returns an ephemeral session token for subsequent streaming calls.
     """
-    stmt = select(Chatbot).where(Chatbot.widget_token == data.widget_token, Chatbot.is_active == True)
+    try:
+        chatbot_uuid = uuid.UUID(data.widget_token)
+        stmt = select(Chatbot).where(
+            (Chatbot.widget_token == data.widget_token) | (Chatbot.id == chatbot_uuid),
+            Chatbot.is_active == True
+        )
+    except ValueError:
+        stmt = select(Chatbot).where(Chatbot.widget_token == data.widget_token, Chatbot.is_active == True)
+        
     res = await db.execute(stmt)
     bot = res.scalar_one_or_none()
     if not bot:

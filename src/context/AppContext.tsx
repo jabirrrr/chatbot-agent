@@ -228,6 +228,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               const cfg = b.config_json || {};
               return {
                 id: b.id,
+                widgetToken: b.widget_token,
                 name: b.name,
                 status: b.is_active ? 'active' : 'draft',
                 domain: b.domain || '',

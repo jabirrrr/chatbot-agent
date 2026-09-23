@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 
 export default function DeveloperPage() {
-  const { addToast } = useApp();
+  const { chatbot, addToast } = useApp();
+  const botToken = chatbot?.widgetToken || chatbot?.id || 'bot_live_9a8b7c6d5e4f3a2b1c';
 
   const [isCopied, setIsCopied] = useState(false);
   const [activePlatform, setActivePlatform] = useState<'html' | 'react' | 'wordpress' | 'shopify' | 'webflow'>('html');
@@ -29,7 +30,7 @@ export default function DeveloperPage() {
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://chatly.ai';
   const snippet = `<script
   src="${appUrl}/widget.js"
-  data-chatly-id="bot_live_9a8b7c6d5e4f3a2b1c"
+  data-token="${botToken}"
   async
 ></script>`;
 

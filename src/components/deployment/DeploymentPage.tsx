@@ -80,13 +80,13 @@ export default function DeploymentPage() {
 
   const assistantName = chatbot?.name || 'AI Assistant';
   const targetDomain = chatbot?.domain || 'yourdomain.com';
-  const botId = chatbot?.id || 'bot_default';
+  const botToken = chatbot?.widgetToken || chatbot?.id || 'wgt_default';
   const themeColor = chatbot?.themeColor || '#2563eb';
 
   const embedScript = `<!-- ${assistantName} Embed Snippet -->
 <script
   src="https://cdn.chatly.ai/widget.js"
-  data-bot-id="${botId}"
+  data-token="${botToken}"
   data-theme-color="${themeColor}"
   async
 ></script>`;

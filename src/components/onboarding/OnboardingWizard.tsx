@@ -307,11 +307,11 @@ export default function OnboardingWizard() {
             </div>
 
             <div className="bg-slate-950 p-3.5 rounded-xl font-mono text-[11px] text-slate-200 text-left relative overflow-x-auto">
-              <code>{`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://chatly.ai'}/widget.js" data-chatly-id="bot_01" async></script>`}</code>
+              <code>{`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://chatly.ai'}/widget.js" data-token="wgt_demo_token" async></script>`}</code>
               <button
                 onClick={() => {
                   const url = typeof window !== 'undefined' ? window.location.origin : 'https://chatly.ai';
-                  navigator.clipboard?.writeText(`<script src="${url}/widget.js" data-chatly-id="bot_01" async></script>`);
+                  navigator.clipboard?.writeText(`<script src="${url}/widget.js" data-token="wgt_demo_token" async></script>`);
                   setIsCopied(true);
                   setTimeout(() => setIsCopied(false), 2000);
                 }}

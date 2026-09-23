@@ -148,6 +148,7 @@ export interface BusinessInfo {
 
 export interface ChatbotConfig {
   id: string;
+  widgetToken?: string;
   name: string;
   status: 'active' | 'draft' | 'disabled';
   domain: string;

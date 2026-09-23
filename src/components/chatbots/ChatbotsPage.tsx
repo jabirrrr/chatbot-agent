@@ -471,11 +471,11 @@ export default function ChatbotsPage() {
                 Paste this script inside the &lt;head&gt; tag of your website to activate Chatly.
               </p>
               <div className="bg-slate-950 p-3.5 rounded-xl font-mono text-[11px] text-slate-200 overflow-x-auto relative">
-                <code>{`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://chatly.ai'}/widget.js" data-chatly-id="${chatbot.id}" data-api="${API_BASE}" async></script>`}</code>
+                <code>{`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://chatly.ai'}/widget.js" data-token="${chatbot.widgetToken}" data-api="${API_BASE}" async></script>`}</code>
                 <button
                   onClick={() => {
                     const url = typeof window !== 'undefined' ? window.location.origin : 'https://chatly.ai';
-                    navigator.clipboard?.writeText(`<script src="${url}/widget.js" data-chatly-id="${chatbot.id}" data-api="${API_BASE}" async></script>`);
+                    navigator.clipboard?.writeText(`<script src="${url}/widget.js" data-token="${chatbot.widgetToken}" data-api="${API_BASE}" async></script>`);
                     setCopiedSnippet(true);
                     setTimeout(() => setCopiedSnippet(false), 2000);
                   }}
