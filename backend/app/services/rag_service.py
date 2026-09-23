@@ -49,10 +49,12 @@ class RAGService:
         Assembles dynamic system prompt with tenant business FAQs,
         semantic document chunks, and anti-hallucination guardrails.
         """
+        from datetime import datetime, timezone
         prompt_parts: List[str] = []
 
         # 1. Base persona
-        prompt_parts.append(f"ROLE & PERSONA:\n{chatbot.system_prompt}")
+        current_time = datetime.now(timezone.utc).strftime("%A, %B %d, %Y at %I:%M %p UTC")
+        prompt_parts.append(f"ROLE & PERSONA:\n{chatbot.system_prompt}\n\nSYSTEM CONTEXT:\nThe current date and time is {current_time}. When scheduling appointments, always use this current year and date as your reference point.")
 
         # 2. Strict grounding instructions
         prompt_parts.append(

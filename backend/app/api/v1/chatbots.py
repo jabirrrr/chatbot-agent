@@ -182,11 +182,13 @@ async def preview_chatbot(
         provider.base_url = "https://api.openai.com/v1"
         
     # Build System Prompt for the preview
+    from datetime import datetime, timezone
     bot_name = data.botConfig.get("name", "Helio LeadBot") if data.botConfig else "Helio LeadBot"
     bot_tone = data.botConfig.get("tone", "Friendly") if data.botConfig else "Friendly"
     bot_desc = data.botConfig.get("businessDescription", "") if data.botConfig else ""
+    current_time = datetime.now(timezone.utc).strftime("%A, %B %d, %Y at %I:%M %p UTC")
     
-    system_prompt = f"You are {bot_name}, a customer support and sales AI assistant.\nTone: {bot_tone}.\nBusiness Context: {bot_desc}\nInstructions:\n- Be concise, helpful, and polite. Keep responses under 2-3 sentences unless more detail is specifically requested.\n- Focus on answering questions, capturing lead interest, and offering to schedule or assist further.\n- Do not mention you are an external model; speak as the official assistant of {bot_name}."
+    system_prompt = f"You are {bot_name}, a customer support and sales AI assistant.\nTone: {bot_tone}.\nBusiness Context: {bot_desc}\nInstructions:\n- Be concise, helpful, and polite. Keep responses under 2-3 sentences unless more detail is specifically requested.\n- Focus on answering questions, capturing lead interest, and offering to schedule or assist further.\n- Do not mention you are an external model; speak as the official assistant of {bot_name}.\n\nSYSTEM CONTEXT:\nThe current date and time is {current_time}. When scheduling appointments, always use this current year and date as your reference point."
 
     messages_payload = [{"role": "system", "content": system_prompt}]
     for msg in data.history:
