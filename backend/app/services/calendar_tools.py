@@ -123,6 +123,20 @@ CALENDAR_TOOLS = [
                 "required": ["event_id"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_calendar_events",
+            "description": "Searches for a user's upcoming appointments by their email address. Use this to find the event_id before rescheduling or canceling.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "attendee_email": {"type": "string", "description": "The customer's email address"}
+                },
+                "required": ["attendee_email"]
+            }
+        }
     }
 ]
 
@@ -154,6 +168,8 @@ class CalendarToolsExecutor:
             return await cls.handle_cancel_event(db, organization_id, arguments)
         elif tool_name == "update_calendar_event":
             return await cls.handle_update_event(db, organization_id, arguments)
+        elif tool_name == "search_calendar_events":
+            return await cls.handle_search_events(db, organization_id, arguments)
         else:
             return {"success": False, "error": f"Unknown tool: {tool_name}"}
 
@@ -428,4 +444,43 @@ class CalendarToolsExecutor:
             "event_id": event_id,
             "event": updated_event,
             "message": "Appointment updated successfully."
+        }
+
+    @classmethod
+    async def handle_search_events(
+        cls, db: AsyncSession, organization_id: uuid.UUID, args: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Searches local database for upcoming appointments by email address.
+        """
+        email = args.get("attendee_email")
+        if not email:
+            return {"success": False, "error": "Missing attendee_email"}
+
+        stmt = select(Appointment).where(
+            Appointment.organization_id == organization_id,
+            Appointment.attendee_email == email,
+            Appointment.status == "confirmed"
+        ).order_by(Appointment.scheduled_at.desc()).limit(5)
+        
+        res = await db.execute(stmt)
+        appointments = res.scalars().all()
+
+        if not appointments:
+            return {"success": True, "events": [], "message": f"No confirmed appointments found for {email}."}
+
+        events = []
+        for appt in appointments:
+            events.append({
+                "event_id": appt.provider_event_id,
+                "start_time": appt.scheduled_at.isoformat() if appt.scheduled_at else None,
+                "attendee_name": appt.attendee_name,
+                "notes": appt.notes,
+                "meeting_link": appt.meeting_link
+            })
+
+        return {
+            "success": True,
+            "events": events,
+            "message": f"Found {len(events)} appointment(s) for {email}."
         }

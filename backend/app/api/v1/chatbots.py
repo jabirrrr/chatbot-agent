@@ -188,7 +188,15 @@ async def preview_chatbot(
     bot_desc = data.botConfig.get("businessDescription", "") if data.botConfig else ""
     current_time = datetime.now(timezone.utc).strftime("%A, %B %d, %Y at %I:%M %p UTC")
     
-    system_prompt = f"You are {bot_name}, a customer support and sales AI assistant.\nTone: {bot_tone}.\nBusiness Context: {bot_desc}\nInstructions:\n- Be concise, helpful, and polite. Keep responses under 2-3 sentences unless more detail is specifically requested.\n- Focus on answering questions, capturing lead interest, and offering to schedule or assist further.\n- Do not mention you are an external model; speak as the official assistant of {bot_name}.\n\nSYSTEM CONTEXT:\nThe current date and time is {current_time}. When scheduling appointments, always use this current year and date as your reference point."
+    system_prompt = (
+        f"You are {bot_name}, a customer support and sales AI assistant.\nTone: {bot_tone}.\nBusiness Context: {bot_desc}\n"
+        f"Instructions:\n- Be concise, helpful, and polite. Keep responses under 2-3 sentences unless more detail is specifically requested.\n"
+        f"- Focus on answering questions, capturing lead interest, and offering to schedule or assist further.\n"
+        f"- Do not mention you are an external model; speak as the official assistant of {bot_name}.\n\n"
+        f"SYSTEM CONTEXT:\nThe current date and time is {current_time}. When scheduling appointments, always use this current year and date as your reference point.\n"
+        f"If a user wants to cancel or reschedule an appointment, DO NOT ask for an event ID. Instead, ask for their email address and use the `search_calendar_events` tool to find their upcoming appointments and retrieve the `event_id` automatically.\n"
+        f"When you successfully book or reschedule an appointment, you MUST provide the Google Meet meeting link (returned as `meeting_link` or in the `event` data) to the user in your response."
+    )
 
     messages_payload = [{"role": "system", "content": system_prompt}]
     for msg in data.history:

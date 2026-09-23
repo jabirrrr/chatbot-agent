@@ -54,7 +54,13 @@ class RAGService:
 
         # 1. Base persona
         current_time = datetime.now(timezone.utc).strftime("%A, %B %d, %Y at %I:%M %p UTC")
-        prompt_parts.append(f"ROLE & PERSONA:\n{chatbot.system_prompt}\n\nSYSTEM CONTEXT:\nThe current date and time is {current_time}. When scheduling appointments, always use this current year and date as your reference point.")
+        prompt_parts.append(
+            f"ROLE & PERSONA:\n{chatbot.system_prompt}\n\n"
+            f"SYSTEM CONTEXT:\n"
+            f"The current date and time is {current_time}. When scheduling appointments, always use this current year and date as your reference point.\n"
+            f"If a user wants to cancel or reschedule an appointment, DO NOT ask for an event ID. Instead, ask for their email address and use the `search_calendar_events` tool to find their upcoming appointments and retrieve the `event_id` automatically.\n"
+            f"When you successfully book or reschedule an appointment, you MUST provide the Google Meet meeting link (returned as `meeting_link` or in the `event` data) to the user in your response."
+        )
 
         # 2. Strict grounding instructions
         prompt_parts.append(
