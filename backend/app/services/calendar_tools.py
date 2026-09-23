@@ -204,13 +204,15 @@ class CalendarToolsExecutor:
         metadata = integration.metadata_json if integration and integration.metadata_json else {}
         business_start_str = metadata.get("business_hours_start", "09:00")
         business_end_str = metadata.get("business_hours_end", "17:00")
+        business_days = metadata.get("business_days", [0, 1, 2, 3, 4])
 
         slots = await GoogleCalendarService.get_calendar_availability(
             access_token=token,
             target_date=target_date,
             duration_minutes=duration_minutes,
             business_start_str=business_start_str,
-            business_end_str=business_end_str
+            business_end_str=business_end_str,
+            business_days=business_days
         )
 
         return {

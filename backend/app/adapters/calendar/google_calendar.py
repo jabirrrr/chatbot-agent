@@ -159,7 +159,8 @@ class GoogleCalendarService:
         target_date: datetime,
         duration_minutes: int = 30,
         business_start_str: str = "09:00",
-        business_end_str: str = "17:00"
+        business_end_str: str = "17:00",
+        business_days: Optional[List[int]] = None
     ) -> List[CalendarSlot]:
         """
         Queries free/busy information or events for the day and calculates available slots.
@@ -167,6 +168,9 @@ class GoogleCalendarService:
         # Ensure UTC timezone
         if target_date.tzinfo is None:
             target_date = target_date.replace(tzinfo=timezone.utc)
+            
+        if business_days is not None and target_date.weekday() not in business_days:
+            return []
 
         start_of_day = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = target_date.replace(hour=23, minute=59, second=59, microsecond=0)

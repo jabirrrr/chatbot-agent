@@ -394,6 +394,7 @@ async def disconnect_google_calendar(
 class CalendarSettingsUpdate(BaseModel):
     business_hours_start: str = Field(..., description="E.g., '09:00'")
     business_hours_end: str = Field(..., description="E.g., '17:00'")
+    business_days: Optional[List[int]] = Field(None, description="0=Monday, 6=Sunday")
 
 
 @router.patch("/google-calendar/settings", summary="Update Calendar Settings")
@@ -419,6 +420,8 @@ async def update_calendar_settings(
     metadata = integration.metadata_json or {}
     metadata["business_hours_start"] = settings.business_hours_start
     metadata["business_hours_end"] = settings.business_hours_end
+    if settings.business_days is not None:
+        metadata["business_days"] = settings.business_days
     
     integration.metadata_json = metadata
     await db.commit()

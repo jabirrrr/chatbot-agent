@@ -43,6 +43,7 @@ export default function AppointmentsPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [businessStart, setBusinessStart] = useState('09:00');
   const [businessEnd, setBusinessEnd] = useState('17:00');
+  const [businessDays, setBusinessDays] = useState<number[]>([1, 2, 3, 4, 5]); // Mon-Fri default
   
   // Edit Attendees
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -70,9 +71,22 @@ export default function AppointmentsPage() {
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const data = await apiFetch('/api/v1/integrations/status', { token: authToken });
+      const metadata = data.integrations?.google_calendar?.metadata || {};
+      if (metadata.business_hours_start) setBusinessStart(metadata.business_hours_start);
+      if (metadata.business_hours_end) setBusinessEnd(metadata.business_hours_end);
+      if (metadata.business_days) setBusinessDays(metadata.business_days);
+    } catch (e) {
+      console.error('Failed to fetch settings', e);
+    }
+  };
+
   useEffect(() => {
     if (authToken) {
       fetchAppointments();
+      fetchSettings();
     }
   }, [authToken]);
 
@@ -117,7 +131,8 @@ export default function AppointmentsPage() {
         token: authToken,
         body: JSON.stringify({
           business_hours_start: businessStart,
-          business_hours_end: businessEnd
+          business_hours_end: businessEnd,
+          business_days: businessDays
         })
       });
       addToast({ title: 'Availability settings saved', type: 'success' });
@@ -377,32 +392,68 @@ export default function AppointmentsPage() {
               </button>
             </div>
             
-            <div className="space-y-3 text-sm">
-              <p className="text-xs text-slate-500">Configure the business hours the AI can book meetings in your Google Calendar.</p>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Start Time</label>
-                <select 
-                  value={businessStart}
-                  onChange={e => setBusinessStart(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                >
-                  <option value="08:00">08:00 AM</option>
-                  <option value="09:00">09:00 AM</option>
-                  <option value="10:00">10:00 AM</option>
-                </select>
+            <div className="space-y-4 text-sm">
+              <p className="text-xs text-slate-500">Configure the business hours and days the AI can book meetings in your Google Calendar.</p>
+              
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-slate-700">Active Days</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: 'Sun', value: 6 },
+                    { label: 'Mon', value: 0 },
+                    { label: 'Tue', value: 1 },
+                    { label: 'Wed', value: 2 },
+                    { label: 'Thu', value: 3 },
+                    { label: 'Fri', value: 4 },
+                    { label: 'Sat', value: 5 },
+                  ].map(day => (
+                    <button
+                      key={day.value}
+                      onClick={() => {
+                        if (businessDays.includes(day.value)) {
+                          setBusinessDays(businessDays.filter(d => d !== day.value));
+                        } else {
+                          setBusinessDays([...businessDays, day.value]);
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        businessDays.includes(day.value)
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {day.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">End Time</label>
-                <select 
-                  value={businessEnd}
-                  onChange={e => setBusinessEnd(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                >
-                  <option value="16:00">04:00 PM</option>
-                  <option value="17:00">05:00 PM</option>
-                  <option value="18:00">06:00 PM</option>
-                  <option value="19:00">07:00 PM</option>
-                </select>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Start Time</label>
+                  <select 
+                    value={businessStart}
+                    onChange={e => setBusinessStart(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  >
+                    <option value="08:00">08:00 AM</option>
+                    <option value="09:00">09:00 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">End Time</label>
+                  <select 
+                    value={businessEnd}
+                    onChange={e => setBusinessEnd(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  >
+                    <option value="16:00">04:00 PM</option>
+                    <option value="17:00">05:00 PM</option>
+                    <option value="18:00">06:00 PM</option>
+                    <option value="19:00">07:00 PM</option>
+                  </select>
+                </div>
               </div>
             </div>
 
