@@ -73,24 +73,42 @@
       flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
       background: #f8fafc;
     }
+    .helio-msg-wrapper {
+      display: flex; align-items: flex-end; gap: 8px; max-width: 85%;
+    }
+    .helio-msg-wrapper.bot { align-self: flex-start; }
+    .helio-msg-wrapper.visitor { align-self: flex-end; flex-direction: row-reverse; }
+    .helio-avatar {
+      width: 28px; height: 28px; border-radius: 14px; background: #e2e8f0; 
+      flex-shrink: 0; background-size: cover; background-position: center;
+    }
     .helio-msg {
-      max-width: 82%; padding: 12px 16px; border-radius: 14px; font-size: 14px; line-height: 1.45; word-break: break-word;
+      padding: 12px 16px; border-radius: 14px; font-size: 14px; line-height: 1.45; word-break: break-word;
     }
     .helio-msg-bot {
-      background: #ffffff; color: #1e293b; align-self: flex-start; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px;
+      background: #ffffff; color: #1e293b; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px;
     }
     .helio-msg-visitor {
-      background: #2563eb; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 4px;
+      background: #2563eb; color: #ffffff; border-bottom-right-radius: 4px;
     }
     .helio-lead-badge {
       align-self: center; font-size: 12px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;
       padding: 6px 12px; border-radius: 20px; font-weight: 500; display: flex; align-items: center; gap: 6px;
     }
-    .helio-typing {
-      display: inline-block; width: 6px; height: 6px; border-radius: 3px; background: #94a3b8;
-      animation: helioPulse 1s infinite alternate; margin-right: 4px;
+    .helio-typing-indicator {
+      display: flex; gap: 4px; padding: 12px 16px; background: #ffffff; border: 1px solid #e2e8f0; 
+      border-radius: 14px; border-bottom-left-radius: 4px; align-items: center; height: 44px;
     }
-    @keyframes helioPulse { 0% { opacity: 0.2; } 100% { opacity: 1; } }
+    .helio-typing-dot {
+      width: 6px; height: 6px; border-radius: 3px; background: #94a3b8;
+      animation: helioTyping 1.4s infinite ease-in-out both;
+    }
+    .helio-typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .helio-typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes helioTyping {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
 
     .helio-footer {
       padding: 14px 16px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 8px;
@@ -142,12 +160,57 @@
   const botNameEl = win.querySelector('#helio-bot-name');
 
   function appendMessage(sender, text) {
-    const el = document.createElement('div');
-    el.className = `helio-msg helio-msg-${sender}`;
-    el.textContent = text;
-    msgList.appendChild(el);
+    const wrapper = document.createElement('div');
+    wrapper.className = `helio-msg-wrapper ${sender}`;
+
+    if (sender === 'bot') {
+      const avatar = document.createElement('div');
+      avatar.className = 'helio-avatar';
+      if (config && config.avatar_url) {
+        avatar.style.backgroundImage = `url(${config.avatar_url})`;
+      } else {
+        // Fallback default bot avatar icon
+        avatar.innerHTML = `<svg viewBox="0 0 24 24" style="width:16px;height:16px;margin:6px;fill:#64748b"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5v-1H1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>`;
+      }
+      wrapper.appendChild(avatar);
+    }
+
+    const msg = document.createElement('div');
+    msg.className = `helio-msg helio-msg-${sender}`;
+    msg.textContent = text;
+    wrapper.appendChild(msg);
+
+    msgList.appendChild(wrapper);
     msgList.scrollTop = msgList.scrollHeight;
-    return el;
+    return msg; // Return the text bubble element
+  }
+
+  function appendTypingIndicator() {
+    const wrapper = document.createElement('div');
+    wrapper.className = `helio-msg-wrapper bot`;
+    wrapper.id = 'helio-typing-wrapper';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'helio-avatar';
+    if (config && config.avatar_url) {
+      avatar.style.backgroundImage = `url(${config.avatar_url})`;
+    } else {
+      avatar.innerHTML = `<svg viewBox="0 0 24 24" style="width:16px;height:16px;margin:6px;fill:#64748b"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5v-1H1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>`;
+    }
+    wrapper.appendChild(avatar);
+
+    const typing = document.createElement('div');
+    typing.className = 'helio-typing-indicator';
+    typing.innerHTML = '<div class="helio-typing-dot"></div><div class="helio-typing-dot"></div><div class="helio-typing-dot"></div>';
+    wrapper.appendChild(typing);
+
+    msgList.appendChild(wrapper);
+    msgList.scrollTop = msgList.scrollHeight;
+  }
+
+  function removeTypingIndicator() {
+    const el = msgList.querySelector('#helio-typing-wrapper');
+    if (el) el.remove();
   }
 
   function appendLeadBadge(name) {
@@ -219,10 +282,9 @@
 
     input.value = '';
     appendMessage('visitor', text);
+    appendTypingIndicator();
     isStreaming = true;
     sendBtn.disabled = true;
-
-    const botMsgEl = appendMessage('bot', '');
 
     try {
       const response = await fetch(`${API_BASE}/api/v1/widget/message`, {
@@ -232,7 +294,8 @@
       });
 
       if (!response.ok) {
-        botMsgEl.textContent = "Sorry, I am having trouble connecting right now.";
+        removeTypingIndicator();
+        appendMessage('bot', "Sorry, I am having trouble connecting right now.");
         isStreaming = false;
         sendBtn.disabled = false;
         return;
@@ -241,6 +304,7 @@
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let buffer = '';
+      let botMsgEl = null;
 
       while (true) {
         const { value, done } = await reader.read();
@@ -255,6 +319,10 @@
           try {
             const event = JSON.parse(line.substring(6));
             if (event.event === 'delta') {
+              if (!botMsgEl) {
+                removeTypingIndicator();
+                botMsgEl = appendMessage('bot', '');
+              }
               botMsgEl.textContent += event.data;
               msgList.scrollTop = msgList.scrollHeight;
             } else if (event.event === 'lead_captured') {
@@ -264,7 +332,8 @@
         }
       }
     } catch (err) {
-      botMsgEl.textContent = "Connection interrupted. Please try again.";
+      removeTypingIndicator();
+      appendMessage('bot', "Connection interrupted. Please try again.");
     } finally {
       isStreaming = false;
       sendBtn.disabled = false;

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.models.user import User
 from app.models.organization import Organization
-from app.schemas.appointment import AppointmentRead, AppointmentCreate
+from app.schemas.appointment import AppointmentRead, AppointmentCreate, AppointmentAttendeesUpdate
 from app.services.appointment_service import AppointmentService
 from app.api.deps import get_current_user, get_current_organization
 
@@ -89,6 +89,36 @@ async def cancel_appointment(
         db=db,
         organization_id=org.id,
         appointment_id=appointment_id
+    )
+    if not appt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found"
+        )
+    return AppointmentRead.model_validate(appt)
+
+
+@router.patch(
+    "/{appointment_id}/attendees",
+    response_model=AppointmentRead,
+    summary="Update appointment attendees"
+)
+async def update_appointment_attendees(
+    appointment_id: uuid.UUID,
+    data: AppointmentAttendeesUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    org: Organization = Depends(get_current_organization),
+):
+    """
+    Updates the attendee details and syncs with Google Calendar if connected.
+    """
+    appt = await AppointmentService.update_appointment_attendees(
+        db=db,
+        organization_id=org.id,
+        appointment_id=appointment_id,
+        attendee_name=data.attendee_name,
+        attendee_email=data.attendee_email
     )
     if not appt:
         raise HTTPException(

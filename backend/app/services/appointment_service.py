@@ -82,3 +82,38 @@ class AppointmentService:
         await db.commit()
         await db.refresh(appt)
         return appt
+
+    @staticmethod
+    async def update_appointment_attendees(
+        db: AsyncSession,
+        organization_id: uuid.UUID,
+        appointment_id: uuid.UUID,
+        attendee_name: str,
+        attendee_email: str
+    ) -> Optional[Appointment]:
+        stmt = select(Appointment).where(
+            Appointment.id == appointment_id,
+            Appointment.organization_id == organization_id
+        )
+        result = await db.execute(stmt)
+        appt = result.scalar_one_or_none()
+        if not appt:
+            return None
+        
+        appt.attendee_name = attendee_name
+        appt.attendee_email = attendee_email
+        await db.commit()
+        await db.refresh(appt)
+
+        # Optional: Sync with Google Calendar if provider_event_id is present
+        if appt.provider_event_id:
+            from app.services.integration_service import IntegrationService
+            from app.adapters.calendar.google_calendar import GoogleCalendarService
+            token, err = await IntegrationService.get_valid_access_token(db, organization_id, "google_calendar")
+            if token and not err:
+                patch_data = {
+                    "attendees": [{"email": attendee_email, "displayName": attendee_name}]
+                }
+                await GoogleCalendarService.update_calendar_event(token, appt.provider_event_id, patch_data)
+
+        return appt

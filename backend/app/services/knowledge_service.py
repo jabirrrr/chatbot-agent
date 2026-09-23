@@ -11,6 +11,8 @@ from app.schemas.knowledge import KnowledgeSourceCreateText, BusinessInfoCreate
 from app.services.chunking_service import ChunkingService
 from app.services.embedding_service import EmbeddingService
 from app.adapters.storage import storage_adapter
+import httpx
+from bs4 import BeautifulSoup
 
 
 class KnowledgeService:
@@ -73,6 +75,77 @@ class KnowledgeService:
             source.chunk_count = len(chunks_data)
 
             # 3. Generate embeddings & create DocumentChunk records
+            texts = [c["content"] for c in chunks_data]
+            embeddings = await EmbeddingService.batch_generate_embeddings(texts)
+
+            for chunk_meta, emb in zip(chunks_data, embeddings):
+                chunk = DocumentChunk(
+                    organization_id=org_id,
+                    source_id=source.id,
+                    chatbot_id=chatbot_id,
+                    content=chunk_meta["content"],
+                    chunk_index=chunk_meta["chunk_index"],
+                    token_count=chunk_meta["token_count"],
+                    embedding=emb
+                )
+                db.add(chunk)
+
+            source.status = "ready"
+            await db.commit()
+            await db.refresh(source)
+            return source
+
+        except Exception as e:
+            await db.rollback()
+            source.status = "failed"
+            source.error_message = str(e)
+            db.add(source)
+            await db.commit()
+            await db.refresh(source)
+            raise e
+
+    @classmethod
+    async def create_url_source(
+        cls,
+        db: AsyncSession,
+        org_id: uuid.UUID,
+        url: str,
+        chatbot_id: Optional[uuid.UUID] = None
+    ) -> KnowledgeSource:
+        """
+        Crawls a website URL, extracts text using BeautifulSoup, chunks it, and creates vector embeddings.
+        """
+        source = KnowledgeSource(
+            organization_id=org_id,
+            title=url,
+            source_type="website",
+            status="processing",
+            file_path=url
+        )
+        db.add(source)
+        await db.flush()
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(url, follow_redirects=True)
+                response.raise_for_status()
+                html = response.text
+
+            soup = BeautifulSoup(html, "html.parser")
+            
+            # Remove scripts and styles
+            for script in soup(["script", "style", "noscript", "header", "footer", "nav"]):
+                script.extract()
+                
+            raw_text = soup.get_text(separator="\n", strip=True)
+            if not raw_text:
+                raise ValueError("No extractable text found at URL.")
+                
+            source.char_count = len(raw_text)
+
+            chunks_data = ChunkingService.split_text(raw_text)
+            source.chunk_count = len(chunks_data)
+
             texts = [c["content"] for c in chunks_data]
             embeddings = await EmbeddingService.batch_generate_embeddings(texts)
 

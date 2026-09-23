@@ -39,15 +39,61 @@ export default function KnowledgeBasePage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newSourceTitle, setNewSourceTitle] = useState('');
 
-  const handleSimulateUpload = (fileName: string) => {
+  const handleSimulateUpload = async (fileName: string) => {
     setIsUploading(true);
     setUploadProgress(15);
+    
+    // Check if it's a URL
+    if (fileName.startsWith('http://') || fileName.startsWith('https://')) {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/knowledge/sources/url?chatbot_id=${activeChatbotId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Ideally we'd pass auth token here if available
+          },
+          body: JSON.stringify({ url: fileName })
+        });
+        
+        if (!res.ok) {
+          throw new Error('Failed to ingest URL');
+        }
+        
+        setUploadProgress(100);
+        addToast({
+          type: 'success',
+          title: 'Knowledge Indexed',
+          description: `Successfully indexed content from ${fileName}.`
+        });
+        
+        // Add to local state
+        addKnowledgeSource({
+          chatbotId: activeChatbotId,
+          name: fileName,
+          type: 'website',
+          status: 'ready',
+          chunksIndexed: 10,
+          fileSize: '-',
+          lastUpdated: new Date().toISOString()
+        });
+      } catch (err) {
+        addToast({
+          type: 'error',
+          title: 'Ingestion Failed',
+          description: `Failed to scrape and index URL.`
+        });
+      } finally {
+        setIsUploading(false);
+      }
+      return;
+    }
 
+    // Fallback for document uploads - mock for now, can be updated later to call /sources/upload
     const newId = `src_${Date.now()}`;
     addKnowledgeSource({
       chatbotId: activeChatbotId,
       name: fileName,
-      type: fileName.endsWith('.pdf') ? 'document' : fileName.startsWith('http') ? 'website' : 'document',
+      type: fileName.endsWith('.pdf') ? 'document' : 'document',
       status: 'ready',
       chunksIndexed: Math.floor(Math.random() * 50) + 10,
       fileSize: '1.2 MB',

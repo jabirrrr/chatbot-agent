@@ -14,6 +14,10 @@ class KnowledgeSourceCreateText(BaseModel):
     content: str
 
 
+class KnowledgeSourceCreateUrl(BaseModel):
+    url: str
+
+
 class KnowledgeSourceRead(KnowledgeSourceBase):
     id: uuid.UUID
     organization_id: uuid.UUID

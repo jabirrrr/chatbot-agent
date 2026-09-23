@@ -372,3 +372,32 @@ export async function fetchAdminHealth(token?: string | null): Promise<AdminHeal
   }
 }
 
+/**
+ * Generic API Fetch Utility
+ */
+export async function apiFetch(endpoint: string, options: { method?: string, token?: string | null, body?: string }) {
+  const headers: Record<string, string> = {
+    'Accept': 'application/json'
+  };
+  
+  if (options.token) {
+    headers['Authorization'] = `Bearer ${options.token}`;
+  }
+  
+  if (options.body) {
+    headers['Content-Type'] = 'application/json';
+  }
+  
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    method: options.method || 'GET',
+    headers,
+    body: options.body
+  });
+  
+  if (!res.ok) {
+    throw new Error(`API error: ${res.status}`);
+  }
+  
+  return res.json();
+}
+

@@ -50,7 +50,18 @@ async def get_widget_config(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Chatbot not found or inactive for this widget token."
         )
-    return PublicWidgetConfig.model_validate(bot)
+    config_data = bot.config_json or {}
+    return PublicWidgetConfig(
+        name=bot.name,
+        welcome_message=bot.welcome_message,
+        theme_color=bot.theme_color,
+        position=bot.position,
+        lead_capture_enabled=bot.lead_capture_enabled,
+        appointment_booking_enabled=bot.appointment_booking_enabled,
+        is_active=bot.is_active,
+        avatar_url=config_data.get("avatarUrl"),
+        tone=config_data.get("tone")
+    )
 
 
 @router.post(

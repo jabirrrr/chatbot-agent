@@ -14,7 +14,8 @@ from app.schemas.knowledge import (
     BusinessInfoCreate,
     BusinessInfoRead,
     SemanticSearchRequest,
-    SemanticSearchResult
+    SemanticSearchResult,
+    KnowledgeSourceCreateUrl
 )
 from app.services.knowledge_service import KnowledgeService
 from app.api.deps import get_current_user, get_current_organization
@@ -65,6 +66,31 @@ async def create_text_source(
         db=db,
         org_id=org.id,
         data=data,
+        chatbot_id=chatbot_id
+    )
+    return KnowledgeSourceRead.model_validate(source)
+
+
+@router.post(
+    "/sources/url",
+    response_model=KnowledgeSourceRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Scrape and add website URL"
+)
+async def create_url_source(
+    data: KnowledgeSourceCreateUrl,
+    chatbot_id: Optional[uuid.UUID] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    org: Organization = Depends(get_current_organization)
+):
+    """
+    Crawls a URL, extracts plain text, chunks, and creates vector embeddings.
+    """
+    source = await KnowledgeService.create_url_source(
+        db=db,
+        org_id=org.id,
+        url=data.url,
         chatbot_id=chatbot_id
     )
     return KnowledgeSourceRead.model_validate(source)

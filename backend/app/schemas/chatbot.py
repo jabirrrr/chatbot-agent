@@ -8,7 +8,7 @@ class ChatbotBase(BaseModel):
     name: str
     description: Optional[str] = None
     is_active: bool = True
-    system_prompt: Optional[str] = "You are a helpful, accurate, and polite customer support assistant for our business."
+    system_prompt: Optional[str] = "You are a helpful, accurate, and polite customer support assistant for our business. If the user wants to book an appointment, ALWAYS ask for their name and email address first before fetching calendar availability or booking."
     welcome_message: Optional[str] = "Hi there! 👋 How can I help you today?"
     fallback_message: Optional[str] = "I'm sorry, I don't have that information. Would you like me to connect you with a team member?"
     model_name: Optional[str] = "anthropic/claude-sonnet-5"
@@ -24,7 +24,7 @@ class ChatbotBase(BaseModel):
 class ChatbotCreate(BaseModel):
     name: str
     description: Optional[str] = None
-    system_prompt: Optional[str] = "You are a helpful, accurate, and polite customer support assistant for our business."
+    system_prompt: Optional[str] = "You are a helpful, accurate, and polite customer support assistant for our business. If the user wants to book an appointment, ALWAYS ask for their name and email address first before fetching calendar availability or booking."
     welcome_message: Optional[str] = "Hi there! 👋 How can I help you today?"
     fallback_message: Optional[str] = "I'm sorry, I don't have that information. Would you like me to connect you with a team member?"
     model_name: Optional[str] = "anthropic/claude-sonnet-5"
@@ -70,6 +70,8 @@ class PublicWidgetConfig(BaseModel):
     lead_capture_enabled: bool
     appointment_booking_enabled: bool
     is_active: bool
+    avatar_url: Optional[str] = None
+    tone: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

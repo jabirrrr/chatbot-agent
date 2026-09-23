@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
+import { apiFetch } from '@/lib/api';
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -31,70 +32,100 @@ interface CleanAppointment {
   meetingLink: string;
 }
 
-const mockAppointmentsList: CleanAppointment[] = [
-  {
-    id: 'appt_1',
-    visitorName: 'Priya Sharma',
-    visitorEmail: 'priya.sharma@example.com',
-    company: 'Apex Retailers',
-    dateTime: 'Tomorrow at 10:30 AM',
-    durationMinutes: 30,
-    assignedAgent: 'Mohamed (Founder)',
-    status: 'Scheduled',
-    meetingLink: 'https://meet.google.com/xyz-chatly-demo'
-  },
-  {
-    id: 'appt_2',
-    visitorName: 'Arjun Kumar',
-    visitorEmail: 'arjun.kumar@fintech.io',
-    company: 'Nova Pay',
-    dateTime: 'Sep 10, 2025 at 3:00 PM',
-    durationMinutes: 45,
-    assignedAgent: 'Mohamed (Founder)',
-    status: 'Scheduled',
-    meetingLink: 'https://meet.google.com/nov-chatly-call'
-  },
-  {
-    id: 'appt_3',
-    visitorName: 'Sneha Patel',
-    visitorEmail: 'sneha@cloudscale.com',
-    company: 'CloudScale Tech',
-    dateTime: 'Sep 5, 2025 at 11:00 AM',
-    durationMinutes: 30,
-    assignedAgent: 'Sales Specialist',
-    status: 'Completed',
-    meetingLink: 'https://meet.google.com/cld-chatly-done'
-  },
-  {
-    id: 'appt_4',
-    visitorName: 'Rahul Mehta',
-    visitorEmail: 'rahul.mehta@techcorp.in',
-    company: 'TechCorp India',
-    dateTime: 'Sep 3, 2025 at 4:00 PM',
-    durationMinutes: 30,
-    assignedAgent: 'Technical Lead',
-    status: 'Cancelled',
-    meetingLink: 'https://meet.google.com/tch-chatly-canc'
-  },
-  {
-    id: 'appt_5',
-    visitorName: 'Vikram Singh',
-    visitorEmail: 'vikram.singh@retailhub.com',
-    company: 'RetailHub',
-    dateTime: 'Sep 1, 2025 at 2:30 PM',
-    durationMinutes: 30,
-    assignedAgent: 'Sales Specialist',
-    status: 'No-show',
-    meetingLink: 'https://meet.google.com/ret-chatly-miss'
-  }
-];
-
 export default function AppointmentsPage() {
-  const { addToast } = useApp();
+  const { addToast, authToken } = useApp();
   const [viewType, setViewType] = useState<'calendar' | 'list'>('calendar');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [appts, setAppts] = useState<CleanAppointment[]>(mockAppointmentsList);
+  const [appts, setAppts] = useState<CleanAppointment[]>([]);
   const [selectedAppt, setSelectedAppt] = useState<CleanAppointment | null>(null);
+  
+  // Settings
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [businessStart, setBusinessStart] = useState('09:00');
+  const [businessEnd, setBusinessEnd] = useState('17:00');
+  
+  // Edit Attendees
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+
+  const fetchAppointments = async () => {
+    try {
+      const data = await apiFetch('/api/v1/appointments/', { token: authToken });
+      const mapped = data.items.map((item: any) => ({
+        id: item.id,
+        visitorName: item.attendee_name,
+        visitorEmail: item.attendee_email,
+        company: 'Unknown', // Not tracked in basic schema
+        dateTime: new Date(item.scheduled_at).toLocaleString(),
+        durationMinutes: item.duration_minutes,
+        assignedAgent: 'AI Assistant',
+        status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
+        meetingLink: item.meeting_link || ''
+      }));
+      setAppts(mapped);
+    } catch (e) {
+      console.error(e);
+      addToast('Failed to fetch appointments', 'error');
+    }
+  };
+
+  useEffect(() => {
+    if (authToken) {
+      fetchAppointments();
+    }
+  }, [authToken]);
+
+  const handleCancelAppointment = async (id: string) => {
+    try {
+      await apiFetch(`/api/v1/appointments/${id}/cancel`, {
+        method: 'PATCH',
+        token: authToken
+      });
+      addToast('Appointment cancelled', 'success');
+      setSelectedAppt(null);
+      fetchAppointments();
+    } catch (e) {
+      addToast('Failed to cancel appointment', 'error');
+    }
+  };
+
+  const handleUpdateAttendees = async () => {
+    if (!selectedAppt) return;
+    try {
+      await apiFetch(`/api/v1/appointments/${selectedAppt.id}/attendees`, {
+        method: 'PATCH',
+        token: authToken,
+        body: JSON.stringify({
+          attendee_name: editName,
+          attendee_email: editEmail
+        })
+      });
+      addToast('Attendees updated', 'success');
+      setIsEditOpen(false);
+      setSelectedAppt(null);
+      fetchAppointments();
+    } catch (e) {
+      addToast('Failed to update attendees', 'error');
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      await apiFetch('/api/v1/integrations/google-calendar/settings', {
+        method: 'PATCH',
+        token: authToken,
+        body: JSON.stringify({
+          business_hours_start: businessStart,
+          business_hours_end: businessEnd
+        })
+      });
+      addToast('Availability settings saved', 'success');
+      setIsSettingsOpen(false);
+    } catch (e) {
+      addToast('Failed to save settings', 'error');
+    }
+  };
 
   const filteredAppts = appts.filter(a => {
     if (statusFilter === 'all') return true;
@@ -109,8 +140,8 @@ export default function AppointmentsPage() {
         return <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full">Completed</span>;
       case 'Cancelled':
         return <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">Cancelled</span>;
-      case 'No-show':
-        return <span className="text-[11px] font-semibold text-red-700 bg-red-50 border border-red-100 px-2.5 py-0.5 rounded-full">No-show</span>;
+      default:
+        return <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">{status}</span>;
     }
   };
 
@@ -129,35 +160,19 @@ export default function AppointmentsPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Calendar / List Toggle */}
-          <div className="flex items-center p-1 bg-slate-100/90 border border-slate-200/80 rounded-xl">
-            <button
-              onClick={() => setViewType('calendar')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                viewType === 'calendar'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Calendar
-            </button>
-            <button
-              onClick={() => setViewType('list')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                viewType === 'list'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              List
-            </button>
-          </div>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-2xs"
+          >
+            <Settings className="w-4 h-4" />
+            Availability Settings
+          </button>
         </div>
       </div>
 
       {/* Filter Row */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        {(['all', 'Scheduled', 'Completed', 'Cancelled', 'No-show'] as const).map(st => (
+        {(['all', 'Scheduled', 'Completed', 'Cancelled'] as const).map(st => (
           <button
             key={st}
             onClick={() => setStatusFilter(st)}
@@ -184,7 +199,7 @@ export default function AppointmentsPage() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900">{appt.visitorName}</h3>
-                  <p className="text-xs text-slate-500">{appt.company}</p>
+                  <p className="text-xs text-slate-500">{appt.visitorEmail}</p>
                 </div>
                 {getStatusBadge(appt.status)}
               </div>
@@ -194,25 +209,23 @@ export default function AppointmentsPage() {
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
                   <span>{appt.dateTime} ({appt.durationMinutes} mins)</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Host: {appt.assignedAgent}</span>
-                </div>
               </div>
             </div>
 
             <div className="pt-2 flex items-center justify-between">
               <span className="text-[11px] text-slate-400">Google Meet</span>
-              <a
-                href={appt.meetingLink}
-                target="_blank"
-                rel="noreferrer"
-                onClick={e => e.stopPropagation()}
-                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-              >
-                <span>Join Call</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              {appt.meetingLink && (
+                <a
+                  href={appt.meetingLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  className="text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  <span>Join Call</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
             </div>
           </div>
         ))}
@@ -226,7 +239,7 @@ export default function AppointmentsPage() {
     </div>
 
       {/* Appointment Detail Modal */}
-      {selectedAppt && (
+      {selectedAppt && !isEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 animate-fade-in space-y-5">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -242,7 +255,7 @@ export default function AppointmentsPage() {
             <div className="space-y-3 text-xs">
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
                 <p className="font-semibold text-slate-900 text-sm">{selectedAppt.visitorName}</p>
-                <p className="text-slate-500">{selectedAppt.company} · {selectedAppt.visitorEmail}</p>
+                <p className="text-slate-500">{selectedAppt.visitorEmail}</p>
                 <div className="pt-1">{getStatusBadge(selectedAppt.status)}</div>
               </div>
 
@@ -251,34 +264,161 @@ export default function AppointmentsPage() {
                 <span className="font-semibold text-slate-900">{selectedAppt.dateTime}</span>
               </div>
 
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-500">Assigned Host</span>
-                <span className="font-semibold text-slate-900">{selectedAppt.assignedAgent}</span>
-              </div>
+              {selectedAppt.meetingLink && (
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">Meeting URL</span>
+                  <a href={selectedAppt.meetingLink} target="_blank" rel="noreferrer" className="text-indigo-600 font-semibold hover:underline truncate max-w-[200px]">
+                    {selectedAppt.meetingLink}
+                  </a>
+                </div>
+              )}
+            </div>
 
-              <div className="flex justify-between py-1">
-                <span className="text-slate-500">Meeting URL</span>
-                <a href={selectedAppt.meetingLink} target="_blank" rel="noreferrer" className="text-indigo-600 font-semibold hover:underline truncate max-w-[200px]">
-                  {selectedAppt.meetingLink}
-                </a>
+            <div className="flex justify-between gap-2 pt-2 border-t border-slate-100">
+              {selectedAppt.status !== 'Cancelled' ? (
+                <button
+                  onClick={() => handleCancelAppointment(selectedAppt.id)}
+                  className="px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-xl"
+                >
+                  Cancel Meeting
+                </button>
+              ) : <div />}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setEditName(selectedAppt.visitorName);
+                    setEditEmail(selectedAppt.visitorEmail);
+                    setIsEditOpen(true);
+                  }}
+                  className="px-4 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl"
+                >
+                  Edit Attendees
+                </button>
+                {selectedAppt.meetingLink && (
+                  <a
+                    href={selectedAppt.meetingLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs"
+                  >
+                    Launch Meeting
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Attendees Modal */}
+      {isEditOpen && selectedAppt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-6 animate-fade-in space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-900">Edit Attendees</h3>
+              <button
+                onClick={() => setIsEditOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Name</label>
+                <input 
+                  type="text" 
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  className="w-full text-sm p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Email</label>
+                <input 
+                  type="email" 
+                  value={editEmail}
+                  onChange={e => setEditEmail(e.target.value)}
+                  className="w-full text-sm p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
               </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
-                onClick={() => setSelectedAppt(null)}
+                onClick={() => setIsEditOpen(false)}
                 className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-xl"
               >
-                Close
+                Cancel
               </button>
-              <a
-                href={selectedAppt.meetingLink}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                onClick={handleUpdateAttendees}
                 className="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs"
               >
-                Launch Meeting
-              </a>
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-6 animate-fade-in space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-900">Availability Settings</h3>
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="space-y-3 text-sm">
+              <p className="text-xs text-slate-500">Configure the business hours the AI can book meetings in your Google Calendar.</p>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Start Time</label>
+                <select 
+                  value={businessStart}
+                  onChange={e => setBusinessStart(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                >
+                  <option value="08:00">08:00 AM</option>
+                  <option value="09:00">09:00 AM</option>
+                  <option value="10:00">10:00 AM</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">End Time</label>
+                <select 
+                  value={businessEnd}
+                  onChange={e => setBusinessEnd(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                >
+                  <option value="16:00">04:00 PM</option>
+                  <option value="17:00">05:00 PM</option>
+                  <option value="18:00">06:00 PM</option>
+                  <option value="19:00">07:00 PM</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSettings}
+                className="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs"
+              >
+                Save Settings
+              </button>
             </div>
           </div>
         </div>

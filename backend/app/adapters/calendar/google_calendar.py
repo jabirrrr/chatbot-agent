@@ -157,7 +157,9 @@ class GoogleCalendarService:
     async def get_calendar_availability(
         access_token: str,
         target_date: datetime,
-        duration_minutes: int = 30
+        duration_minutes: int = 30,
+        business_start_str: str = "09:00",
+        business_end_str: str = "17:00"
     ) -> List[CalendarSlot]:
         """
         Queries free/busy information or events for the day and calculates available slots.
@@ -168,10 +170,17 @@ class GoogleCalendarService:
 
         start_of_day = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = target_date.replace(hour=23, minute=59, second=59, microsecond=0)
+        
+        try:
+            start_hour, start_min = map(int, business_start_str.split(":"))
+            end_hour, end_min = map(int, business_end_str.split(":"))
+        except (ValueError, AttributeError):
+            start_hour, start_min = 9, 0
+            end_hour, end_min = 17, 0
 
         # In testing or mock mode, generate standard business slots
         if access_token.startswith("ya29.mock_") or settings.ENVIRONMENT == "testing":
-            base = start_of_day.replace(hour=9)
+            base = start_of_day.replace(hour=start_hour, minute=start_min)
             return [
                 CalendarSlot(
                     start_time=base + timedelta(hours=1),
@@ -182,16 +191,6 @@ class GoogleCalendarService:
                     start_time=base + timedelta(hours=2, minutes=30),
                     end_time=base + timedelta(hours=2, minutes=30 + duration_minutes),
                     label="11:30 AM - 12:00 PM"
-                ),
-                CalendarSlot(
-                    start_time=base + timedelta(hours=5),
-                    end_time=base + timedelta(hours=5, minutes=duration_minutes),
-                    label="2:00 PM - 2:30 PM"
-                ),
-                CalendarSlot(
-                    start_time=base + timedelta(hours=6, minutes=30),
-                    end_time=base + timedelta(hours=6, minutes=30 + duration_minutes),
-                    label="3:30 PM - 4:00 PM"
                 ),
             ]
 
@@ -213,9 +212,8 @@ class GoogleCalendarService:
 
                 busy_periods = resp.json().get("calendars", {}).get("primary", {}).get("busy", [])
 
-                # Calculate available 30-min slots from 9:00 AM to 5:00 PM
-                business_start = start_of_day.replace(hour=9, minute=0)
-                business_end = start_of_day.replace(hour=17, minute=0)
+                business_start = start_of_day.replace(hour=start_hour, minute=start_min)
+                business_end = start_of_day.replace(hour=end_hour, minute=end_min)
 
                 available_slots: List[CalendarSlot] = []
                 current = business_start

@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from app.core.database import get_db
 from app.core.config import settings
@@ -389,6 +389,34 @@ async def disconnect_google_calendar(
         provider="google_calendar",
         message="Google Calendar integration disconnected successfully."
     )
+
+
+class CalendarSettingsUpdate(BaseModel):
+    business_hours_start: str = Field(..., description="E.g., '09:00'")
+    business_hours_end: str = Field(..., description="E.g., '17:00'")
+
+
+@router.patch("/google-calendar/settings", summary="Update Calendar Settings")
+async def update_calendar_settings(
+    settings: CalendarSettingsUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    org: Organization = Depends(get_current_organization)
+):
+    integration = await IntegrationService.get_integration(db, org.id, "google_calendar")
+    if not integration:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Google Calendar integration not found"
+        )
+    
+    metadata = integration.metadata_json or {}
+    metadata["business_hours_start"] = settings.business_hours_start
+    metadata["business_hours_end"] = settings.business_hours_end
+    
+    integration.metadata_json = metadata
+    await db.commit()
+    return {"success": True, "settings": metadata}
 
 
 @router.get("/google-calendar/availability", summary="Get calendar availability slots")

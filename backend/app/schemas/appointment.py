@@ -24,6 +24,11 @@ class AppointmentCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class AppointmentAttendeesUpdate(BaseModel):
+    attendee_name: str
+    attendee_email: EmailStr
+
+
 class AppointmentRead(BaseModel):
     id: uuid.UUID
     organization_id: uuid.UUID
