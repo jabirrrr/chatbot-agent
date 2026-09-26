@@ -253,6 +253,11 @@ export default function BillingPage() {
 
       </div>
 
+      {/* Footer Links */}
+      <div className="pt-8 border-t border-slate-100 flex items-center justify-center gap-6 text-sm text-slate-500">
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-slate-800 transition-colors">Terms of Service</a>
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-slate-800 transition-colors">Privacy Policy</a>
+      </div>
     </div>
   );
 }

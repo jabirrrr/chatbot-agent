@@ -816,7 +816,14 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Footer Links */}
+      <div className="pt-8 border-t border-slate-100 flex items-center justify-center gap-6 text-sm text-slate-500">
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-slate-800 transition-colors">Terms of Service</a>
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-slate-800 transition-colors">Privacy Policy</a>
+      </div>
+
       {/* Invite Member Modal */}
+
       {showInviteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
           <div className="bg-white rounded-xl border border-slate-200 shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95">
