@@ -201,7 +201,8 @@ async def preview_chatbot(
         f"- Do not mention you are an external model; speak as the official assistant of {bot_name}.\n\n"
         f"SYSTEM CONTEXT:\nThe current date and time is {current_time}. When scheduling appointments, always use this current year and date as your reference point.\n"
         f"If a user wants to cancel or reschedule an appointment, DO NOT ask for an event ID. Instead, ask for their email address and use the `search_calendar_events` tool to find their upcoming appointments and retrieve the `event_id` automatically.\n"
-        f"When you successfully book or reschedule an appointment, you MUST provide the Google Meet meeting link (returned as `meeting_link` or in the `event` data) to the user in your response."
+        f"When you successfully book or reschedule an appointment, you MUST provide the Google Meet meeting link (returned as `meeting_link` or in the `event` data) to the user in your response.\n"
+        f"CRITICAL: If a tool call returns an error or `success: False`, you MUST NOT pretend it succeeded. You must truthfully inform the user that the action failed and explain why based on the error message."
     )
 
     messages_payload = [{"role": "system", "content": system_prompt}]
@@ -276,7 +277,7 @@ async def preview_chatbot(
                         arguments=args,
                         db=db,
                         organization_id=bot.organization_id,
-                        conversation_id=uuid.uuid4() # Mock conversation ID
+                        conversation_id=None # Mock conversation ID
                     )
                 else:
                     action_result = {"error": "Tool execution failed or tools are not configured."}
