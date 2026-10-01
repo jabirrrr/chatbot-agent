@@ -17,7 +17,8 @@ import {
   X,
   Mail,
   Building,
-  Plus
+  Plus,
+  LayoutGrid
 } from 'lucide-react';
 
 interface CleanAppointment {
@@ -26,6 +27,7 @@ interface CleanAppointment {
   visitorEmail: string;
   company: string;
   dateTime: string;
+  rawDate: Date;
   durationMinutes: number;
   assignedAgent: string;
   status: 'Scheduled' | 'Completed' | 'Cancelled' | 'No-show';
@@ -50,6 +52,31 @@ export default function AppointmentsPage() {
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
 
+  // Calendar State
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
+  const daysInMonth = getDaysInMonth(currentMonth);
+  const firstDay = getFirstDayOfMonth(currentMonth);
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const blanks = Array.from({ length: firstDay }, (_, i) => i);
+
+
   const fetchAppointments = async () => {
     try {
       const data = await apiFetch('/api/v1/appointments/', { token: authToken });
@@ -59,6 +86,7 @@ export default function AppointmentsPage() {
         visitorEmail: item.attendee_email,
         company: 'Unknown', // Not tracked in basic schema
         dateTime: new Date(item.scheduled_at).toLocaleString(),
+        rawDate: new Date(item.scheduled_at),
         durationMinutes: item.duration_minutes,
         assignedAgent: 'AI Assistant',
         status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
@@ -175,6 +203,27 @@ export default function AppointmentsPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            <button
+              onClick={() => setViewType('calendar')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                viewType === 'calendar' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <CalendarIcon className="w-4 h-4" />
+              Calendar
+            </button>
+            <button
+              onClick={() => setViewType('list')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                viewType === 'list' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              List
+            </button>
+          </div>
+
           <button
             onClick={() => setIsSettingsOpen(true)}
             className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-2xs"
@@ -202,9 +251,76 @@ export default function AppointmentsPage() {
         ))}
       </div>
 
-      {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredAppts.map(appt => (
+      {/* Main Content */}
+      {viewType === 'calendar' ? (
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+          {/* Calendar Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <h2 className="text-lg font-semibold text-slate-900">
+              {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+            </h2>
+            <div className="flex gap-2">
+              <button onClick={prevMonth} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button onClick={nextMonth} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Calendar Grid Header */}
+          <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+              <div key={day} className="px-2 py-3 text-center text-xs font-medium text-slate-500">
+                {day}
+              </div>
+            ))}
+          </div>
+          
+          {/* Calendar Days */}
+          <div className="grid grid-cols-7 auto-rows-[120px]">
+            {blanks.map(blank => (
+              <div key={`blank-${blank}`} className="border-b border-r border-slate-100/50 bg-slate-50/30 p-2"></div>
+            ))}
+            
+            {days.map(day => {
+              const dateStr = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toDateString();
+              const dayAppts = filteredAppts.filter(a => a.rawDate.toDateString() === dateStr);
+              const isToday = dateStr === new Date().toDateString();
+              
+              return (
+                <div key={day} className="border-b border-r border-slate-100/50 p-2 hover:bg-slate-50 transition-colors group flex flex-col">
+                  <span className={`text-xs font-medium mb-1 inline-block w-6 h-6 leading-6 text-center rounded-full group-hover:bg-indigo-50 group-hover:text-indigo-600 ${isToday ? 'bg-indigo-600 text-white group-hover:bg-indigo-600 group-hover:text-white' : 'text-slate-700'}`}>
+                    {day}
+                  </span>
+                  <div className="flex flex-col gap-1 overflow-y-auto overflow-x-hidden flex-1 scrollbar-hide">
+                    {dayAppts.map(appt => (
+                      <div 
+                        key={appt.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedAppt(appt);
+                        }}
+                        className={`text-[10px] truncate px-1.5 py-1 rounded cursor-pointer transition-colors ${
+                          appt.status === 'Scheduled' ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100' :
+                          appt.status === 'Completed' ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100' :
+                          'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200'
+                        }`}
+                        title={`${appt.visitorName} - ${appt.dateTime}`}
+                      >
+                        {appt.rawDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} {appt.visitorName}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredAppts.map(appt => (
           <div
             key={appt.id}
             onClick={() => setSelectedAppt(appt)}
@@ -250,7 +366,8 @@ export default function AppointmentsPage() {
             No appointments matching the selected status.
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
 
       {/* Appointment Detail Modal */}
