@@ -57,10 +57,6 @@ class OpenRouterProvider(LLMProvider):
         max_tokens: int = 1024,
         model_name: str = "anthropic/claude-sonnet-5"
     ) -> AsyncGenerator[Dict[str, Any], None]:
-        # Ensure model name is correct (removed invalid substitution)
-        if model_name == "anthropic/claude-sonnet-5":
-            model_name = "anthropic/claude-3.5-sonnet"
-
         # Return error message if no key is configured
         if (
             not self.api_key
