@@ -184,10 +184,17 @@ async def preview_chatbot(
         raise HTTPException(status_code=500, detail="Failed to decrypt API key.")
 
     provider = OpenRouterProvider(api_key=api_key)
-    target_model = "google/gemma-4-31b-it:free"
+    
+    # Use model from UI builder if available
+    target_model = "openrouter/free"
+    if data.botConfig and data.botConfig.get("model_name"):
+        target_model = data.botConfig.get("model_name")
+        
     if integration.provider == "openai":
         provider.base_url = "https://api.openai.com/v1"
-        target_model = "gpt-4o-mini"
+        # Only fallback if it's the default or an openrouter model
+        if target_model == "openrouter/free" or "/" in target_model:
+            target_model = "gpt-4o-mini"
         
     # Build System Prompt for the preview
     from datetime import datetime, timezone
@@ -221,6 +228,12 @@ async def preview_chatbot(
             bot_uuid = uuid.UUID(data.chatbot_id)
             bot = await db.scalar(select(Chatbot).where(Chatbot.id == bot_uuid))
             if bot:
+                # Use saved model if not overridden by UI preview config
+                if bot.model_name and (not data.botConfig or not data.botConfig.get("model_name")):
+                    if integration.provider == "openai" and "/" in bot.model_name:
+                        pass # avoid passing openrouter models to openai
+                    else:
+                        target_model = bot.model_name
                 from app.models.integration import TenantIntegration
                 calendar_integration = await db.scalar(
                     select(TenantIntegration).where(
