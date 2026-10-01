@@ -184,8 +184,10 @@ async def preview_chatbot(
         raise HTTPException(status_code=500, detail="Failed to decrypt API key.")
 
     provider = OpenRouterProvider(api_key=api_key)
+    target_model = "anthropic/claude-sonnet-5"
     if integration.provider == "openai":
         provider.base_url = "https://api.openai.com/v1"
+        target_model = "gpt-4o-mini"
         
     # Build System Prompt for the preview
     from datetime import datetime, timezone
@@ -235,7 +237,7 @@ async def preview_chatbot(
     response_text = ""
     while True:
         tool_call_made = False
-        async for chunk in provider.stream_chat(messages=messages_payload, tools=tools_payload):
+        async for chunk in provider.stream_chat(messages=messages_payload, tools=tools_payload, model_name=target_model):
             chunk_type = chunk.get("type")
 
             if chunk_type == "content":
