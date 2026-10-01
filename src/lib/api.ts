@@ -130,7 +130,9 @@ export async function fetchChatbots(token: string) {
     if (res.ok) {
       return await res.json();
     }
-    throw new Error('Failed to fetch chatbots: ' + res.status);
+    const error: any = new Error('Failed to fetch chatbots: ' + res.status);
+    error.status = res.status;
+    throw error;
   } catch (e) {
     throw e;
   }

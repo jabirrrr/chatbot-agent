@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { mockApiKeys, initialWebhookConfig } from '@/data/mockData';
+
 import { 
   Code2, 
   Copy, 
@@ -23,7 +23,7 @@ export default function DeveloperPage() {
 
   const [isCopied, setIsCopied] = useState(false);
   const [activePlatform, setActivePlatform] = useState<'html' | 'react' | 'wordpress' | 'shopify' | 'webflow'>('html');
-  const [webhookUrl, setWebhookUrl] = useState(initialWebhookConfig.url);
+  const [webhookUrl, setWebhookUrl] = useState('https://api.mycrm.com/webhooks/incoming');
   const [domains, setDomains] = useState(['northstarstudio.io', 'portal.northstarstudio.io']);
   const [newDomain, setNewDomain] = useState('');
 

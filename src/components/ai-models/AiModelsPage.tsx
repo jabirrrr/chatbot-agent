@@ -3,9 +3,7 @@
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import Badge from '@/components/common/Badge';
-import { mockAIModelLogs } from '@/data/mockData';
 import { 
-  Cpu, 
   Layers, 
   DollarSign, 
   ShieldCheck, 
@@ -227,7 +225,7 @@ export default function AiModelsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {mockAIModelLogs.map(log => (
+              {[] /* mockAIModelLogs removed */.map((log: any) => (
                 <tr key={log.id} className="hover:bg-slate-50/60">
                   <td className="py-3 px-4 font-mono text-slate-500">{log.timestamp}</td>
                   <td className="py-3 px-4 font-semibold text-slate-800">{log.chatbot}</td>

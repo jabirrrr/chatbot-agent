@@ -34,84 +34,39 @@ interface CrmLead {
   score: number;
 }
 
-const initialCrmLeads: CrmLead[] = [
-  {
-    id: 'lead_1',
-    name: 'Priya Sharma',
-    email: 'priya.sharma@example.com',
-    company: 'Apex Retailers',
-    status: 'Qualified',
-    source: 'Website Chatbot',
-    created: 'Today at 10:14 AM',
-    phone: '+91 98765 43210',
-    notes: 'Inquired about Growth plan with 5,000 monthly conversations.',
-    score: 92
-  },
-  {
-    id: 'lead_2',
-    name: 'Arjun Kumar',
-    email: 'arjun.kumar@fintech.io',
-    company: 'Nova Pay',
-    status: 'New',
-    source: 'Landing Demo',
-    created: 'Today at 9:45 AM',
-    phone: '+91 98220 11223',
-    notes: 'Scheduled live product walkthrough with sales team.',
-    score: 88
-  },
-  {
-    id: 'lead_3',
-    name: 'Sneha Patel',
-    email: 'sneha@cloudscale.com',
-    company: 'CloudScale Tech',
-    status: 'Contacted',
-    source: 'Website Chatbot',
-    created: 'Yesterday',
-    phone: '+91 97110 55443',
-    notes: 'Requested integration specifications for HubSpot and Slack.',
-    score: 84
-  },
-  {
-    id: 'lead_4',
-    name: 'Rahul Mehta',
-    email: 'rahul.mehta@techcorp.in',
-    company: 'TechCorp India',
-    status: 'Converted',
-    source: 'Website Chatbot',
-    created: 'Sep 5, 2025',
-    phone: '+91 98450 77889',
-    notes: 'Subscribed to Growth Annual plan.',
-    score: 96
-  },
-  {
-    id: 'lead_5',
-    name: 'Vikram Singh',
-    email: 'vikram.singh@retailhub.com',
-    company: 'RetailHub',
-    status: 'Contacted',
-    source: 'Product Page',
-    created: 'Sep 4, 2025',
-    phone: '+91 99230 44556',
-    notes: 'Exploring custom language model routing in Hindi and English.',
-    score: 75
-  },
-  {
-    id: 'lead_6',
-    name: 'Ananya Iyer',
-    email: 'ananya@growthlabs.io',
-    company: 'GrowthLabs Agency',
-    status: 'Disqualified',
-    source: 'Website Chatbot',
-    created: 'Sep 2, 2025',
-    phone: '+91 98880 12345',
-    notes: 'Looking for free open-source self-hosted code.',
-    score: 40
-  }
-];
-
 export default function LeadsPage() {
-  const { addToast } = useApp();
-  const [leadsList, setLeadsList] = useState<CrmLead[]>(initialCrmLeads);
+  const { addToast, authToken } = useApp();
+  const [leadsList, setLeadsList] = useState<CrmLead[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    async function fetchLeads() {
+      if (!authToken) return;
+      try {
+        setIsLoading(true);
+        const { apiFetch } = await import('@/lib/api');
+        const data = await apiFetch('/api/v1/leads/', { token: authToken });
+        const mapped = (data.items || []).map((lead: any) => ({
+          id: lead.id,
+          name: lead.name || 'Unknown',
+          email: lead.email || 'No email',
+          company: 'Unknown',
+          status: lead.status ? (lead.status.charAt(0).toUpperCase() + lead.status.slice(1)) : 'New',
+          source: lead.chatbot_id ? 'Website Chatbot' : 'Direct',
+          created: new Date(lead.created_at).toLocaleDateString(),
+          phone: lead.phone,
+          notes: lead.notes,
+          score: 50
+        }));
+        setLeadsList(mapped);
+      } catch (e) {
+        console.error('Failed to fetch leads:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchLeads();
+  }, [authToken]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedLead, setSelectedLead] = useState<CrmLead | null>(null);
@@ -250,10 +205,17 @@ export default function LeadsPage() {
                 </tr>
               ))}
 
-              {filteredLeads.length === 0 && (
+              {filteredLeads.length === 0 && !isLoading && (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-slate-400">
                     No leads found matching your search.
+                  </td>
+                </tr>
+              )}
+              {isLoading && (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
+                    Loading leads...
                   </td>
                 </tr>
               )}
