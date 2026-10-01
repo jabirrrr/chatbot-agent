@@ -426,12 +426,61 @@ async def update_calendar_settings(
     metadata = integration.metadata_json or {}
     metadata["business_hours_start"] = settings.business_hours_start
     metadata["business_hours_end"] = settings.business_hours_end
-    if settings.business_days is not None:
-        metadata["business_days"] = settings.business_days
-    
     integration.metadata_json = metadata
     await db.commit()
     return {"success": True, "settings": metadata}
+
+
+class CalcomIntegrationRequest(BaseModel):
+    api_key: str
+    event_type_id: Optional[int] = None
+
+@router.post("/calcom", summary="Connect Cal.com integration")
+async def connect_calcom(
+    data: CalcomIntegrationRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    org: Organization = Depends(get_current_organization)
+):
+    from app.adapters.calendar.calcom import CalComService
+    try:
+        # If event type ID not provided, try to fetch the default one
+        if not data.event_type_id:
+            data.event_type_id = await CalComService.get_default_event_type_id(data.api_key)
+        
+        if not data.event_type_id:
+            raise HTTPException(status_code=400, detail="Could not find any event types for this Cal.com API key.")
+            
+        await IntegrationService.save_integration(
+            db=db,
+            organization_id=org.id,
+            provider="calcom",
+            credentials={"api_key": data.api_key},
+            metadata={"event_type_id": data.event_type_id}
+        )
+        return {"success": True, "provider": "calcom", "message": "Cal.com connected successfully!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.patch("/calcom/settings", summary="Update Cal.com Settings")
+async def update_calcom_settings(
+    settings: CalcomIntegrationRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    org: Organization = Depends(get_current_organization)
+):
+    from app.adapters.calendar.calcom import CalComService
+    if not settings.event_type_id:
+        settings.event_type_id = await CalComService.get_default_event_type_id(settings.api_key)
+        
+    await IntegrationService.save_integration(
+        db=db,
+        organization_id=org.id,
+        provider="calcom",
+        credentials={"api_key": settings.api_key},
+        metadata={"event_type_id": settings.event_type_id}
+    )
+    return {"success": True}
 
 
 @router.get("/google-calendar/availability", summary="Get calendar availability slots")
