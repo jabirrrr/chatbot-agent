@@ -79,14 +79,18 @@ class CalComService:
                 "timeZone": timezone,
                 "language": "en"
             }
-            resp = await client.post(
-                f"{CalComService.BASE_URL}/bookings",
-                params={"apiKey": api_key},
-                json=payload
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data.get("booking", {})
+            try:
+                resp = await client.post(
+                    f"{CalComService.BASE_URL}/bookings",
+                    params={"apiKey": api_key},
+                    json=payload
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                return data.get("booking", {})
+            except Exception as e:
+                print(f"Error creating Cal.com booking: {e}")
+                return {}
 
     @staticmethod
     async def cancel_booking(api_key: str, booking_uid: str, reason: str = "Cancelled by AI Assistant") -> bool:
