@@ -8,7 +8,7 @@ from sqlalchemy import select, delete
 
 from app.models.integration import TenantIntegration
 from app.core.vault import encrypt_vault_secret, decrypt_vault_secret
-from app.adapters.calendar.google_calendar import GoogleCalendarService
+
 
 
 class IntegrationService:
@@ -88,9 +88,6 @@ class IntegrationService:
         try:
             creds_json = decrypt_vault_secret(integration.encrypted_credentials)
             creds = json.loads(creds_json)
-            token_to_revoke = creds.get("refresh_token") or creds.get("access_token")
-            if token_to_revoke and provider == "google_calendar":
-                await GoogleCalendarService.revoke_token(token_to_revoke)
         except Exception:
             pass
 
@@ -103,7 +100,7 @@ class IntegrationService:
     async def get_valid_access_token(
         db: AsyncSession,
         organization_id: uuid.UUID,
-        provider: str = "google_calendar"
+        provider: str
     ) -> Tuple[Optional[str], Optional[str]]:
         """
         Retrieves decrypted access token. If token is expired and refresh_token exists,
@@ -133,25 +130,6 @@ class IntegrationService:
         # Check if token is close to expiry (within 5 minutes)
         now_ts = int(time.time())
         is_expired = (now_ts - stored_at) >= (expires_in - 300)
-
-        if is_expired and refresh_token:
-            try:
-                refreshed = await GoogleCalendarService.refresh_access_token(refresh_token)
-                new_access_token = refreshed.get("access_token")
-                if new_access_token:
-                    creds["access_token"] = new_access_token
-                    creds["stored_at"] = now_ts
-                    if "expires_in" in refreshed:
-                        creds["expires_in"] = refreshed["expires_in"]
-                    
-                    integration.encrypted_credentials = encrypt_vault_secret(json.dumps(creds))
-                    integration.updated_at = datetime.now(timezone.utc)
-                    await db.commit()
-                    return new_access_token, None
-            except Exception as e:
-                integration.status = "needs_reconnect"
-                await db.commit()
-                return None, f"Token refresh failed: {str(e)}"
 
         if access_token:
             return access_token, None

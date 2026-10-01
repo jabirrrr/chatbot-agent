@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { 
   fetchIntegrationsStatus, 
-  getGoogleCalendarAuthUrl, 
-  disconnectGoogleCalendar 
+  disconnectCalcom 
 } from '@/lib/api';
 import { RotateCw, Mail } from 'lucide-react';
 
@@ -25,19 +24,16 @@ export default function IntegrationsPage() {
 
   const [integrations, setIntegrations] = useState<IntegrationCard[]>([
     {
-      id: 'gcal',
-      name: 'Google Calendar',
+      id: 'calcom',
+      name: 'Cal.com',
       desc: 'Schedule appointments automatically',
       category: 'Scheduling',
-      iconBg: 'bg-blue-50 text-blue-600',
+      iconBg: 'bg-zinc-900 text-white',
       status: 'disconnected', // dynamically fetched from backend
       logoSvg: (
         <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="4" width="18" height="18" rx="2" stroke="#2563eb" strokeWidth="2"/>
-          <path d="M16 2v4M8 2v4M3 10h18" stroke="#2563eb" strokeWidth="2"/>
-          <circle cx="8" cy="14" r="1" fill="#2563eb"/>
-          <circle cx="12" cy="14" r="1" fill="#2563eb"/>
-          <circle cx="16" cy="14" r="1" fill="#2563eb"/>
+          <path d="M4 4h16v16H4V4z" fill="currentColor"/>
+          <path d="M9 12l2 2 4-4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       )
     },
@@ -146,18 +142,16 @@ export default function IntegrationsPage() {
 
     try {
       const data = await fetchIntegrationsStatus(token);
-      if (data?.integrations?.google_calendar) {
-        const gcal = data.integrations.google_calendar;
-        const isConnected = gcal.connected && gcal.status === 'connected';
-        const accountEmail = gcal.metadata?.account_email;
+      if (data?.integrations?.calcom) {
+        const cal = data.integrations.calcom;
+        const isConnected = cal.connected && cal.status === 'connected';
 
         setIntegrations(prev => prev.map(i => {
-          if (i.id === 'gcal') {
+          if (i.id === 'calcom') {
             return {
               ...i,
               status: isConnected ? 'connected' : 'disconnected',
-              accountEmail: accountEmail || undefined,
-              desc: accountEmail ? `Connected as ${accountEmail}` : 'Schedule appointments automatically'
+              desc: isConnected ? `Connected` : 'Schedule appointments automatically'
             };
           }
           return i;
@@ -171,40 +165,12 @@ export default function IntegrationsPage() {
   useEffect(() => {
     loadStatus();
 
-    // Check for OAuth redirect response in query params
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const gcalSuccess = params.get('gcal_success');
-      const gcalError = params.get('gcal_error');
-
-      if (gcalSuccess === 'true') {
-        addToast({
-          type: 'success',
-          title: 'Google Calendar Connected',
-          description: 'Successfully authenticated Google Calendar OAuth integration.'
-        });
-        loadStatus();
-        // Clean URL
-        params.delete('gcal_success');
-        const newUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
-        window.history.replaceState({}, '', newUrl);
-      } else if (gcalError) {
-        addToast({
-          type: 'error',
-          title: 'Connection Failed',
-          description: `Google Calendar authorization failed: ${gcalError.replace(/_/g, ' ')}`
-        });
-        // Clean URL
-        params.delete('gcal_error');
-        const newUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
-        window.history.replaceState({}, '', newUrl);
-      }
-    }
+    // No OAuth redirect needed for Cal.com
   }, [authToken]);
 
   const handleToggleConnect = async (id: string, name: string, currentStatus: string) => {
-    // 1. Special Real OAuth flow for Google Calendar
-    if (id === 'gcal') {
+    // 1. Special flow for Cal.com
+    if (id === 'calcom') {
       const token = authToken || (typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null);
       if (!token) {
         addToast({
@@ -216,57 +182,41 @@ export default function IntegrationsPage() {
       }
 
       if (currentStatus === 'connected') {
-        setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'connecting' } : i));
+        setIntegrations(prev => prev.map(i => i.id === 'calcom' ? { ...i, status: 'connecting' } : i));
         try {
-          const res = await disconnectGoogleCalendar(token);
+          const res = await disconnectCalcom(token);
           if (res?.success) {
-            setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'disconnected', desc: 'Schedule appointments automatically', accountEmail: undefined } : i));
+            setIntegrations(prev => prev.map(i => i.id === 'calcom' ? { ...i, status: 'disconnected', desc: 'Schedule appointments automatically', accountEmail: undefined } : i));
             addToast({
               type: 'info',
               title: 'Disconnected',
-              description: 'Disconnected Google Calendar integration and revoked access tokens.'
+              description: 'Disconnected Cal.com integration and revoked API keys.'
             });
           } else {
-            setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'connected' } : i));
+            setIntegrations(prev => prev.map(i => i.id === 'calcom' ? { ...i, status: 'connected' } : i));
             addToast({
               type: 'error',
               title: 'Disconnect Failed',
-              description: 'Could not disconnect Google Calendar. Please try again.'
+              description: 'Could not disconnect Cal.com. Please try again.'
             });
           }
         } catch {
-          setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'connected' } : i));
+          setIntegrations(prev => prev.map(i => i.id === 'calcom' ? { ...i, status: 'connected' } : i));
           addToast({
             type: 'error',
             title: 'Error',
-            description: 'Network failure when disconnecting Google Calendar.'
+            description: 'Network failure when disconnecting Cal.com.'
           });
         }
         return;
       }
 
-      // Start OAuth flow
-      setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'connecting' } : i));
-      try {
-        const authData = await getGoogleCalendarAuthUrl(token);
-        if (authData?.auth_url) {
-          window.location.assign(authData.auth_url);
-        } else {
-          setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'disconnected' } : i));
-          addToast({
-            type: 'error',
-            title: 'Authorization Error',
-            description: authData?.error || 'Unable to initiate Google OAuth flow. Check client configuration.'
-          });
-        }
-      } catch {
-        setIntegrations(prev => prev.map(i => i.id === 'gcal' ? { ...i, status: 'disconnected' } : i));
-        addToast({
-          type: 'error',
-          title: 'Network Error',
-          description: 'Failed to request Google authorization URL.'
-        });
-      }
+      // Redirect or show toast to go to appointments settings for connecting
+      addToast({
+        type: 'info',
+        title: 'Cal.com Setup',
+        description: 'Please head over to the Appointments page and click "Availability Settings" to connect your Cal.com account.'
+      });
       return;
     }
 
@@ -333,7 +283,7 @@ export default function IntegrationsPage() {
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900">{tool.name}</h3>
                   <p className="text-xs text-slate-500 mt-1 leading-relaxed">{tool.desc}</p>
-                  {tool.id === 'gcal' && isConnected && tool.accountEmail && (
+                  {tool.id === 'calcom' && isConnected && tool.accountEmail && (
                     <div className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200/80 px-2.5 py-1.5 rounded-xl w-fit">
                       <Mail className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                       <span className="truncate">{tool.accountEmail}</span>
@@ -361,8 +311,8 @@ export default function IntegrationsPage() {
                       ? 'Disconnect' 
                       : isConnecting 
                       ? 'Connecting...' 
-                      : tool.id === 'gcal' 
-                      ? 'Connect Google Calendar' 
+                      : tool.id === 'calcom' 
+                      ? 'Setup Cal.com' 
                       : 'Connect'}
                   </span>
                 </button>

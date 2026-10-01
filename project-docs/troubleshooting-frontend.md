@@ -93,3 +93,36 @@ const [currentScreen, setCurrentScreenInternal] = useState<NavigationScreen>(() 
   return 'home';
 });
 ```
+
+### 401 Unauthorized / Network Error during URL Ingestion
+**Symptom**: 
+Toast notification 'Ingestion Failed: Failed to scrape and index URL' when trying to add a website URL source on the Knowledge Base page.
+
+**Root Cause**: 
+There were two simultaneous issues:
+1. The `fetch` request was missing the `Authorization: Bearer <token>` header, leading to a 401 Unauthorized response from the backend because the endpoint requires authentication.
+2. The `fetch` URL was hardcoded to fallback to `http://localhost:8000` (`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}`) instead of using the centralized `API_BASE`. On Vercel, if `NEXT_PUBLIC_API_URL` is undefined, this caused the browser to block the request (Mixed Content) or fail to connect to localhost, completely bypassing Next.js rewrites.
+
+**Diagnosis**: 
+Checked `KnowledgeBasePage.tsx` and found the headers object lacked the `Authorization` property, and the fetch URL used a hardcoded fallback instead of `API_BASE` from `src/lib/api.ts`.
+
+**Solution**: 
+Extracted `authToken` from `useApp()` context and appended it to the request headers. Also replaced the hardcoded URL with `API_BASE` to ensure correct proxying on Vercel.
+
+**Snippet:**
+```tsx
+// src/components/knowledge/KnowledgeBasePage.tsx
+import { API_BASE } from '@/lib/api';
+// ...
+const { addToast, knowledgeSources, addKnowledgeSource, removeKnowledgeSource, activeChatbotId, authToken } = useApp();
+
+// ...
+const res = await fetch(`${API_BASE}/api/v1/knowledge/sources/url?chatbot_id=${activeChatbotId}`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+  },
+
+},
+```

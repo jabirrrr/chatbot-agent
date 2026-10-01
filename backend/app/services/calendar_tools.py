@@ -232,40 +232,10 @@ class CalendarToolsExecutor:
                 ]
             }
 
-        token, err = await IntegrationService.get_valid_access_token(db, organization_id, "google_calendar")
-        if err or not token:
-            return {
-                "success": False,
-                "error": "Google Calendar is not connected for this business.",
-                "slots": []
-            }
-
-        integration = await IntegrationService.get_integration(db, organization_id, "google_calendar")
-        metadata = integration.metadata_json if integration and integration.metadata_json else {}
-        business_start_str = metadata.get("business_hours_start", "09:00")
-        business_end_str = metadata.get("business_hours_end", "17:00")
-        business_days = metadata.get("business_days", [0, 1, 2, 3, 4])
-
-        slots = await GoogleCalendarService.get_calendar_availability(
-            access_token=token,
-            target_date=target_date,
-            duration_minutes=duration_minutes,
-            business_start_str=business_start_str,
-            business_end_str=business_end_str,
-            business_days=business_days
-        )
-
         return {
-            "success": True,
-            "target_date": target_date_str,
-            "available_slots": [
-                {
-                    "start_time": s.start_time.isoformat(),
-                    "end_time": s.end_time.isoformat(),
-                    "label": s.label
-                }
-                for s in slots
-            ]
+            "success": False,
+            "error": "Cal.com is not connected for this business.",
+            "slots": []
         }
 
     @classmethod
@@ -353,57 +323,9 @@ class CalendarToolsExecutor:
                 "message": f"Appointment successfully scheduled with {attendee_name} via Cal.com."
             }
 
-        token, err = await IntegrationService.get_valid_access_token(db, organization_id, "google_calendar")
-        if err or not token:
-            return {
-                "success": False,
-                "error": "Google Calendar integration is not active or authorized."
-            }
-
-        # Call Google Calendar API to create event
-        booking_result = await GoogleCalendarService.create_calendar_event(
-            access_token=token,
-            start_time=start_time,
-            duration_minutes=duration_minutes,
-            attendee_name=attendee_name,
-            attendee_email=attendee_email,
-            summary=summary,
-            notes=notes
-        )
-
-        if not booking_result.success:
-            return {
-                "success": False,
-                "error": f"Failed to create Google Calendar event: {booking_result.error_message}"
-            }
-
-        # Store confirmed appointment in DB (Requirement 15: only claim booked when Google creates event)
-        appointment = Appointment(
-            organization_id=organization_id,
-            conversation_id=conversation_id,
-            lead_id=lead_id,
-            attendee_name=attendee_name,
-            attendee_email=attendee_email,
-            scheduled_at=start_time,
-            duration_minutes=duration_minutes,
-            status="scheduled",
-            meeting_link=booking_result.meeting_link,
-            provider_event_id=booking_result.event_id,
-            notes=notes
-        )
-        db.add(appointment)
-        await db.commit()
-        await db.refresh(appointment)
-
         return {
-            "success": True,
-            "appointment_id": str(appointment.id),
-            "event_id": booking_result.event_id,
-            "meeting_link": booking_result.meeting_link,
-            "scheduled_at": start_time.isoformat(),
-            "attendee_name": attendee_name,
-            "attendee_email": attendee_email,
-            "message": f"Appointment successfully scheduled with {attendee_name} for {start_time.strftime('%b %d, %Y at %I:%M %p UTC')}."
+            "success": False,
+            "error": "Cal.com is not connected or configured."
         }
 
     @classmethod
@@ -417,15 +339,7 @@ class CalendarToolsExecutor:
         if not event_id:
             return {"success": False, "error": "event_id is required"}
 
-        token, err = await IntegrationService.get_valid_access_token(db, organization_id, "google_calendar")
-        if err or not token:
-            return {"success": False, "error": "Google Calendar integration not connected"}
-
-        event_data = await GoogleCalendarService.get_calendar_event(token, event_id)
-        if not event_data:
-            return {"success": False, "error": f"Event {event_id} not found on Google Calendar"}
-
-        return {"success": True, "event": event_data}
+        return {"success": False, "error": "Event retrieval via provider is not supported yet for Cal.com"}
 
     @classmethod
     async def handle_cancel_event(
@@ -462,28 +376,7 @@ class CalendarToolsExecutor:
                 "message": "Appointment cancelled via Cal.com." if cancelled else "Failed to cancel event on Cal.com."
             }
 
-        token, err = await IntegrationService.get_valid_access_token(db, organization_id, "google_calendar")
-        if err or not token:
-            return {"success": False, "error": "Google Calendar integration not connected"}
-
-        cancelled = await GoogleCalendarService.cancel_calendar_event(token, event_id)
-
-        # Update local appointment record if it exists
-        stmt = select(Appointment).where(
-            Appointment.organization_id == organization_id,
-            Appointment.provider_event_id == event_id
-        )
-        res = await db.execute(stmt)
-        appt = res.scalar_one_or_none()
-        if appt:
-            appt.status = "cancelled"
-            await db.commit()
-
-        return {
-            "success": cancelled,
-            "event_id": event_id,
-            "message": "Appointment cancelled successfully." if cancelled else "Failed to cancel event on calendar."
-        }
+        return {"success": False, "error": "Cal.com integration not connected"}
 
     @classmethod
     async def handle_update_event(
@@ -496,49 +389,7 @@ class CalendarToolsExecutor:
         if not event_id:
             return {"success": False, "error": "event_id is required"}
 
-        token, err = await IntegrationService.get_valid_access_token(db, organization_id, "google_calendar")
-        if err or not token:
-            return {"success": False, "error": "Google Calendar integration not connected"}
-
-        patch_data: Dict[str, Any] = {}
-        if "summary" in args:
-            patch_data["summary"] = args["summary"]
-        if "notes" in args:
-            patch_data["description"] = args["notes"]
-        if "start_time" in args:
-            try:
-                st = datetime.fromisoformat(args["start_time"].replace("Z", "+00:00"))
-                # If naive, assume UTC or org tz, here we just use what it is if it has tzinfo
-                dur = int(args.get("duration_minutes", 30))
-                patch_data["start"] = {"dateTime": st.isoformat()}
-                patch_data["end"] = {"dateTime": (st + timedelta(minutes=dur)).isoformat()}
-            except Exception:
-                return {"success": False, "error": "Invalid start_time format"}
-
-        updated_event = await GoogleCalendarService.update_calendar_event(token, event_id, patch_data)
-        if not updated_event:
-            return {"success": False, "error": "Failed to update Google Calendar event"}
-
-        # Sync local appointment if present
-        stmt = select(Appointment).where(
-            Appointment.organization_id == organization_id,
-            Appointment.provider_event_id == event_id
-        )
-        res = await db.execute(stmt)
-        appt = res.scalar_one_or_none()
-        if appt:
-            if "start" in patch_data:
-                appt.scheduled_at = datetime.fromisoformat(patch_data["start"]["dateTime"])
-            if "notes" in args:
-                appt.notes = args["notes"]
-            await db.commit()
-
-        return {
-            "success": True,
-            "event_id": event_id,
-            "event": updated_event,
-            "message": "Appointment updated successfully."
-        }
+        return {"success": False, "error": "Update event not supported yet for Cal.com"}
 
     @classmethod
     async def handle_search_events(

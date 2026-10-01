@@ -26,7 +26,7 @@ describe('Chatly Frontend API & Configuration Tests', () => {
     assert.equal(constructUrl(apiBase, '/api/v1/status'), '/api/v1/status');
     assert.equal(constructUrl(apiBase, '/api/v1/auth/login'), '/api/v1/auth/login');
     assert.equal(constructUrl(apiBase, '/api/v1/integrations/status'), '/api/v1/integrations/status');
-    assert.equal(constructUrl(apiBase, '/api/v1/integrations/google-calendar/auth-url'), '/api/v1/integrations/google-calendar/auth-url');
+    assert.equal(constructUrl(apiBase, '/api/v1/integrations/status'), '/api/v1/integrations/status');
   });
 
   test('Google Calendar OAuth callback query parameter handling', () => {

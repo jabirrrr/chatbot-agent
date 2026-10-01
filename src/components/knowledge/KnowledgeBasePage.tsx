@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { API_BASE } from '@/lib/api';
 import { 
   UploadCloud, 
   FileText, 
@@ -29,7 +30,7 @@ interface SourceItem {
 }
 
 export default function KnowledgeBasePage() {
-  const { addToast, knowledgeSources, addKnowledgeSource, removeKnowledgeSource, activeChatbotId } = useApp();
+  const { addToast, knowledgeSources, addKnowledgeSource, removeKnowledgeSource, activeChatbotId, authToken } = useApp();
   const [activeTab, setActiveTab] = useState<'Documents' | 'Websites' | 'FAQs' | 'Text' | 'Notion'>('Documents');
   
   const sources = knowledgeSources.filter(s => s.chatbotId === activeChatbotId);
@@ -46,11 +47,11 @@ export default function KnowledgeBasePage() {
     // Check if it's a URL
     if (fileName.startsWith('http://') || fileName.startsWith('https://')) {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/knowledge/sources/url?chatbot_id=${activeChatbotId}`, {
+        const res = await fetch(`${API_BASE}/api/v1/knowledge/sources/url?chatbot_id=${activeChatbotId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // Ideally we'd pass auth token here if available
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
           },
           body: JSON.stringify({ url: fileName })
         });

@@ -105,15 +105,6 @@ class AppointmentService:
         await db.commit()
         await db.refresh(appt)
 
-        # Optional: Sync with Google Calendar if provider_event_id is present
-        if appt.provider_event_id:
-            from app.services.integration_service import IntegrationService
-            from app.adapters.calendar.google_calendar import GoogleCalendarService
-            token, err = await IntegrationService.get_valid_access_token(db, organization_id, "google_calendar")
-            if token and not err:
-                patch_data = {
-                    "attendees": [{"email": attendee_email, "displayName": attendee_name}]
-                }
-                await GoogleCalendarService.update_calendar_event(token, appt.provider_event_id, patch_data)
+        # Optional: Sync with Cal.com could be implemented here in the future
 
         return appt

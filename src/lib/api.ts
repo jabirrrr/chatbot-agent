@@ -202,36 +202,11 @@ export async function fetchIntegrationsStatus(token: string) {
 }
 
 /**
- * Fetch Google Calendar OAuth Authorization URL
+ * Disconnect Cal.com integration
  */
-export async function getGoogleCalendarAuthUrl(token: string) {
+export async function disconnectCalcom(token: string) {
   try {
-    const returnUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const queryParam = returnUrl ? `?return_url=${encodeURIComponent(returnUrl)}` : '';
-    const res = await fetch(`${API_BASE}/api/v1/integrations/google-calendar/auth-url${queryParam}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      return data;
-    }
-    return { error: data.detail || `Failed to initiate authorization (HTTP ${res.status})` };
-  } catch (err: any) {
-    console.error('Failed to get Google Calendar auth URL:', err);
-    return { error: err?.message || 'Network connection failed' };
-  }
-}
-
-/**
- * Disconnect Google Calendar integration
- */
-export async function disconnectGoogleCalendar(token: string) {
-  try {
-    const res = await fetch(`${API_BASE}/api/v1/integrations/google-calendar/disconnect`, {
+    const res = await fetch(`${API_BASE}/api/v1/integrations/calcom/disconnect`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -244,7 +219,7 @@ export async function disconnectGoogleCalendar(token: string) {
     }
     return { success: false, error: data.detail || 'Failed to disconnect integration' };
   } catch (err: any) {
-    console.error('Failed to disconnect Google Calendar:', err);
+    console.error('Failed to disconnect Cal.com:', err);
     return { success: false, error: err?.message || 'Network connection failed' };
   }
 }
