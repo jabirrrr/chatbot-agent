@@ -184,7 +184,7 @@ async def preview_chatbot(
         raise HTTPException(status_code=500, detail="Failed to decrypt API key.")
 
     provider = OpenRouterProvider(api_key=api_key)
-    target_model = "anthropic/claude-sonnet-5"
+    target_model = "google/gemma-4-31b-it:free"
     if integration.provider == "openai":
         provider.base_url = "https://api.openai.com/v1"
         target_model = "gpt-4o-mini"
