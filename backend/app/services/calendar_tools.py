@@ -181,7 +181,11 @@ class CalendarToolsExecutor:
         args: Dict[str, Any]
     ) -> Dict[str, Any]:
         target_date_str = args.get("target_date")
-        duration_minutes = args.get("duration_minutes", 30)
+        raw_duration = args.get("duration_minutes")
+        try:
+            duration_minutes = int(raw_duration) if raw_duration is not None else 30
+        except (ValueError, TypeError):
+            duration_minutes = 30
 
         if not target_date_str:
             return {"success": False, "error": "target_date is required"}
@@ -212,7 +216,7 @@ class CalendarToolsExecutor:
         calcom = await IntegrationService.get_integration(db, organization_id, "calcom")
         if calcom and calcom.credentials_json and calcom.credentials_json.get("api_key"):
             api_key = calcom.credentials_json["api_key"]
-            event_type_id = calcom.metadata_json.get("event_type_id")
+            event_type_id = calcom.metadata_json.get("event_type_id") if calcom.metadata_json else None
             from app.adapters.calendar.calcom import CalComService
             
             end_date_str = (target_date + timedelta(days=1)).strftime("%Y-%m-%d")
@@ -250,7 +254,11 @@ class CalendarToolsExecutor:
         attendee_name = args.get("attendee_name")
         attendee_email = args.get("attendee_email")
         start_time_str = args.get("start_time")
-        duration_minutes = int(args.get("duration_minutes", 30))
+        raw_duration = args.get("duration_minutes")
+        try:
+            duration_minutes = int(raw_duration) if raw_duration is not None else 30
+        except (ValueError, TypeError):
+            duration_minutes = 30
         summary = args.get("summary")
         notes = args.get("notes")
 
@@ -281,7 +289,7 @@ class CalendarToolsExecutor:
         calcom = await IntegrationService.get_integration(db, organization_id, "calcom")
         if calcom and calcom.credentials_json and calcom.credentials_json.get("api_key"):
             api_key = calcom.credentials_json["api_key"]
-            event_type_id = calcom.metadata_json.get("event_type_id")
+            event_type_id = calcom.metadata_json.get("event_type_id") if calcom.metadata_json else None
             from app.adapters.calendar.calcom import CalComService
             
             booking = await CalComService.create_booking(
