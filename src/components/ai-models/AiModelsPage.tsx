@@ -11,7 +11,8 @@ import {
   AlertCircle, 
   Sliders, 
   RefreshCw,
-  Sparkles
+  Sparkles,
+  Cpu
 } from 'lucide-react';
 
 export default function AiModelsPage() {

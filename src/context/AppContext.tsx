@@ -445,34 +445,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateChatbot = (updates: Partial<ChatbotConfig>) => {
-    setDraftChatbot(prev => ({ ...prev, ...updates }));
+    setDraftChatbot(prev => prev ? ({ ...prev, ...updates }) : null);
   };
 
   const saveDraft = async () => {
+    if (!draftChatbot) return;
+    const botToSave = draftChatbot;
     // 1. Update the local chatbots list so switching active bot remembers the saved state
-    setChatbotsList(prev => prev.map(bot => bot.id === activeChatbotId ? draftChatbot : bot));
+    setChatbotsList(prev => prev.map(bot => bot.id === activeChatbotId ? botToSave : bot));
     
     // 2. Push to backend API
     if (authToken) {
       const { updateChatbot: updateChatbotApi } = await import('@/lib/api');
       const payload: any = {};
-      if (draftChatbot.name) payload.name = draftChatbot.name;
-      if (draftChatbot.description) payload.description = draftChatbot.description;
-      if (draftChatbot.welcomeMessage) payload.welcome_message = draftChatbot.welcomeMessage;
-      if (draftChatbot.themeColor) payload.theme_color = draftChatbot.themeColor;
-      if (draftChatbot.position) payload.position = draftChatbot.position;
-      if (draftChatbot.status) payload.is_active = draftChatbot.status === 'active';
+      if (botToSave.name) payload.name = botToSave.name;
+      if (botToSave.description) payload.description = botToSave.description;
+      if (botToSave.welcomeMessage) payload.welcome_message = botToSave.welcomeMessage;
+      if (botToSave.themeColor) payload.theme_color = botToSave.themeColor;
+      if (botToSave.position) payload.position = botToSave.position;
+      if (botToSave.status) payload.is_active = botToSave.status === 'active';
       
       payload.config_json = {
-        tone: draftChatbot.tone,
-        avatarUrl: draftChatbot.avatarUrl,
-        launcherStyle: draftChatbot.launcherStyle,
-        suggestedQuestions: draftChatbot.suggestedQuestions,
-        leadFields: draftChatbot.leadFields,
-        fallbackBehavior: draftChatbot.fallbackBehavior,
-        monthlyBudgetUsd: draftChatbot.monthlyBudgetUsd,
-        currentCostUsd: draftChatbot.currentCostUsd,
-        primaryGoals: draftChatbot.primaryGoals
+        tone: botToSave.tone,
+        avatarUrl: botToSave.avatarUrl,
+        launcherStyle: botToSave.launcherStyle,
+        suggestedQuestions: botToSave.suggestedQuestions,
+        leadFields: botToSave.leadFields,
+        fallbackBehavior: botToSave.fallbackBehavior,
+        monthlyBudgetUsd: botToSave.monthlyBudgetUsd,
+        currentCostUsd: botToSave.currentCostUsd,
+        primaryGoals: botToSave.primaryGoals
       };
       
       await updateChatbotApi(authToken, activeChatbotId, payload);
@@ -509,9 +511,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const confirmNavigation = (action: 'save' | 'discard') => {
     if (action === 'save') {
-      // Must use draftChatbot as value to save
-      setChatbotsList(prev => prev.map(bot => bot.id === activeChatbotId ? draftChatbot : bot));
-      addToast({ type: 'success', title: 'Saved', description: 'Changes saved before navigating.' });
+      if (draftChatbot) {
+        const botToSave = draftChatbot;
+        // Must use draftChatbot as value to save
+        setChatbotsList(prev => prev.map(bot => bot.id === activeChatbotId ? botToSave : bot));
+        addToast({ type: 'success', title: 'Saved', description: 'Changes saved before navigating.' });
+      }
     } else {
       setDraftChatbot(savedChatbot);
     }
@@ -841,6 +846,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addVisitorMessage = async (text: string) => {
     const targetBotId = activeChatbotId;
     const currentBot = chatbotsList.find(b => b.id === targetBotId) || draftChatbot;
+    if (!currentBot) return;
     const visitorMsg: ChatMessage = {
       id: `wm_${Date.now()}`,
       sender: 'visitor',
