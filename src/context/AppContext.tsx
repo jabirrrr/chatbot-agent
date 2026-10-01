@@ -124,18 +124,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   const [authToken, setAuthToken] = useState<string | null>(null);
   
-  const [chatbotsList, setChatbotsList] = useState<ChatbotConfig[]>(mockChatbotsList);
-  const [activeChatbotIdInternal, setActiveChatbotIdInternal] = useState<string>(mockChatbotsList[0].id);
+  const [chatbotsList, setChatbotsList] = useState<ChatbotConfig[]>([]);
+  const [activeChatbotIdInternal, setActiveChatbotIdInternal] = useState<string>('');
   const activeChatbotId = activeChatbotIdInternal;
   
   const [pendingNavigation, setPendingNavigation] = useState<{ type: 'screen' | 'chatbot' | 'custom'; target: string; onConfirm?: () => void } | null>(null);
   
-  const savedChatbot = chatbotsList.find(b => b.id === activeChatbotId) || chatbotsList[0];
-  const [draftChatbot, setDraftChatbot] = useState<ChatbotConfig>(savedChatbot);
+  const savedChatbot = chatbotsList.find(b => b.id === activeChatbotId) || (chatbotsList.length > 0 ? chatbotsList[0] : null);
+  const [draftChatbot, setDraftChatbot] = useState<ChatbotConfig | null>(savedChatbot);
   
   // Update draft when active bot changes
   useEffect(() => {
-    setDraftChatbot(chatbotsList.find(b => b.id === activeChatbotId) || chatbotsList[0]);
+    setDraftChatbot(chatbotsList.find(b => b.id === activeChatbotId) || (chatbotsList.length > 0 ? chatbotsList[0] : null));
   }, [activeChatbotId]); // Intentionally not including chatbotsList here so saving doesn't reset draft
 
   const isDirty = JSON.stringify(draftChatbot) !== JSON.stringify(savedChatbot);
@@ -318,11 +318,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
           }
         } else {
-          // No token found, reset to mock state (e.g. after logout)
-          setChatbotsList(mockChatbotsList);
-          const defaultBot = mockChatbotsList[0];
-          setDraftChatbot(defaultBot);
-          setActiveChatbotIdInternal(defaultBot.id);
+          // No token found, clear state (e.g. after logout)
+          setChatbotsList([]);
+          setDraftChatbot(null);
+          setActiveChatbotIdInternal('');
         }
       } catch (e: any) {
         console.warn('Backend init error, continuing with cached/default state:', e);
@@ -954,7 +953,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setPendingNavigation,
         confirmNavigation,
         cancelNavigation,
-        chatbot: draftChatbot,
+        chatbot: draftChatbot || initialChatbot,
         updateChatbot,
         saveDraft,
         discardDraft,

@@ -56,11 +56,13 @@ async def get_system_status(db: AsyncSession = Depends(get_db)):
     ))
 
     # 3. Redis Cache & Broker
+    from app.services.admin_health_service import check_redis
+    redis_health = await check_redis()
     components.append(ComponentHealth(
         name="Redis Cache & Task Broker",
-        status="operational",
-        latency_ms=0.8,
-        description="Redis 7 in-memory cache and Celery background queue"
+        status="operational" if redis_health.status == "healthy" else ("outage" if redis_health.status == "down" else "degraded"),
+        latency_ms=redis_health.latency_ms or 0.0,
+        description=redis_health.details or "Redis 7 in-memory cache and Celery background queue"
     ))
 
     # 4. OpenRouter Gateway

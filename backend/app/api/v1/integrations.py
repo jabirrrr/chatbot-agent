@@ -95,6 +95,12 @@ async def google_dev_account_picker(
     Renders a simulated Google Account Picker for development and demo environments.
     Allows selecting a test Google account or typing a custom email to complete the OAuth 2.0 flow.
     """
+    if settings.ENVIRONMENT != "development" and settings.ENVIRONMENT != "testing":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Development picker is disabled in production environments"
+        )
+        
     cb_url = redirect_uri or settings.GOOGLE_REDIRECT_URI
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
