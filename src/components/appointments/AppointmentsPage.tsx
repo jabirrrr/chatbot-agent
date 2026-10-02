@@ -41,10 +41,7 @@ export default function AppointmentsPage() {
   const [appts, setAppts] = useState<CleanAppointment[]>([]);
   const [selectedAppt, setSelectedAppt] = useState<CleanAppointment | null>(null);
   
-  // Settings
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [calcomApiKey, setCalcomApiKey] = useState('');
-  const [calcomEventTypeId, setCalcomEventTypeId] = useState('');
+
   
   // Edit Attendees
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -98,24 +95,11 @@ export default function AppointmentsPage() {
     }
   };
 
-  const fetchSettings = async () => {
-    try {
-      const data = await apiFetch('/api/v1/integrations/status', { token: authToken });
-      const calcom = data.integrations?.calcom;
-      if (calcom?.connected) {
-        if (calcom.metadata?.event_type_id) {
-          setCalcomEventTypeId(calcom.metadata.event_type_id.toString());
-        }
-      }
-    } catch (e) {
-      console.error('Failed to fetch settings', e);
-    }
-  };
+
 
   useEffect(() => {
     if (authToken) {
       fetchAppointments();
-      fetchSettings();
     }
   }, [authToken]);
 
@@ -153,30 +137,6 @@ export default function AppointmentsPage() {
     }
   };
 
-  const handleSaveSettings = async () => {
-    try {
-      if (!calcomApiKey && !calcomEventTypeId) {
-        setIsSettingsOpen(false);
-        return;
-      }
-      
-      const payload: any = { api_key: calcomApiKey };
-      if (calcomEventTypeId) {
-        payload.event_type_id = parseInt(calcomEventTypeId, 10);
-      }
-      
-      await apiFetch('/api/v1/integrations/calcom', {
-        method: 'POST',
-        token: authToken,
-        body: JSON.stringify(payload)
-      });
-      addToast({ title: 'Cal.com settings saved successfully', type: 'success' });
-      setIsSettingsOpen(false);
-      fetchSettings();
-    } catch (e: any) {
-      addToast({ title: e.message || 'Failed to connect Cal.com', type: 'error' });
-    }
-  };
 
   const filteredAppts = appts.filter(a => {
     if (statusFilter === 'all') return true;
@@ -232,14 +192,7 @@ export default function AppointmentsPage() {
             </button>
           </div>
 
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-2xs"
-          >
-            <Settings className="w-4 h-4" />
-            Availability Settings
-          </button>
-        </div>
+
       </div>
 
       {/* Filter Row */}
@@ -497,68 +450,6 @@ export default function AppointmentsPage() {
                 className="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs"
               >
                 Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Settings Modal */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-6 animate-fade-in space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-900">Availability Settings</h3>
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            
-              <div className="space-y-4 text-sm">
-              <p className="text-xs text-slate-500">Configure your Cal.com integration so the AI can securely book appointments on your behalf.</p>
-              
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Cal.com API Key</label>
-                  <input 
-                    type="password"
-                    placeholder="cal_..."
-                    value={calcomApiKey}
-                    onChange={e => setCalcomApiKey(e.target.value)}
-                    className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">Found in your Cal.com Settings &gt; Security &gt; API Keys.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Event Type ID (Optional)</label>
-                  <input 
-                    type="number"
-                    placeholder="e.g. 12345"
-                    value={calcomEventTypeId}
-                    onChange={e => setCalcomEventTypeId(e.target.value)}
-                    className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">If left blank, the system will auto-select your first active event type.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-xl"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveSettings}
-                className="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs"
-              >
-                Save Settings
               </button>
             </div>
           </div>

@@ -238,7 +238,7 @@ async def preview_chatbot(
                 calendar_integration = await db.scalar(
                     select(TenantIntegration).where(
                         TenantIntegration.organization_id == bot.organization_id,
-                        TenantIntegration.provider == "google_calendar"
+                        TenantIntegration.provider.in_(["google_calendar", "calcom"])
                     )
                 )
                 if calendar_integration and calendar_integration.status == "connected":

@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { 
   fetchIntegrationsStatus, 
-  disconnectCalcom 
+  disconnectCalcom,
+  apiFetch
 } from '@/lib/api';
-import { RotateCw, Mail } from 'lucide-react';
+import { RotateCw, Mail, X } from 'lucide-react';
 
 interface IntegrationCard {
   id: string;
@@ -21,6 +22,10 @@ interface IntegrationCard {
 
 export default function IntegrationsPage() {
   const { addToast, authToken } = useApp();
+  
+  const [isCalcomModalOpen, setIsCalcomModalOpen] = useState(false);
+  const [calcomApiKey, setCalcomApiKey] = useState('');
+  const [calcomEventTypeId, setCalcomEventTypeId] = useState('');
 
   const [integrations, setIntegrations] = useState<IntegrationCard[]>([
     {
@@ -211,12 +216,7 @@ export default function IntegrationsPage() {
         return;
       }
 
-      // Redirect or show toast to go to appointments settings for connecting
-      addToast({
-        type: 'info',
-        title: 'Cal.com Setup',
-        description: 'Please head over to the Appointments page and click "Availability Settings" to connect your Cal.com account.'
-      });
+      setIsCalcomModalOpen(true);
       return;
     }
 
@@ -241,6 +241,35 @@ export default function IntegrationsPage() {
         description: `Successfully authenticated ${name} integration.`
       });
     }, 900);
+  };
+
+  const handleSaveCalcomSettings = async () => {
+    try {
+      if (!calcomApiKey && !calcomEventTypeId) {
+        setIsCalcomModalOpen(false);
+        return;
+      }
+      
+      const payload: any = { api_key: calcomApiKey };
+      if (calcomEventTypeId) {
+        payload.event_type_id = parseInt(calcomEventTypeId, 10);
+      }
+      
+      await apiFetch('/api/v1/integrations/calcom', {
+        method: 'POST',
+        token: authToken,
+        body: JSON.stringify(payload)
+      });
+      addToast({ title: 'Cal.com connected successfully', type: 'success' });
+      setIsCalcomModalOpen(false);
+      setIntegrations(prev => prev.map(i => i.id === 'calcom' ? { ...i, status: 'connected' } : i));
+      
+      // Clear inputs
+      setCalcomApiKey('');
+      setCalcomEventTypeId('');
+    } catch (e: any) {
+      addToast({ title: e.message || 'Failed to connect Cal.com', type: 'error' });
+    }
   };
 
   return (
@@ -344,6 +373,70 @@ export default function IntegrationsPage() {
           Copy Webhook URL
         </button>
       </div>
+      
+      {/* Cal.com Settings Modal */}
+      {isCalcomModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-900">Connect Cal.com</h3>
+              <button
+                onClick={() => setIsCalcomModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4">
+              <div className="space-y-4 text-sm">
+              <p className="text-xs text-slate-500">Configure your Cal.com integration so the AI can securely book appointments on your behalf.</p>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Cal.com API Key</label>
+                  <input 
+                    type="password"
+                    placeholder="cal_..."
+                    value={calcomApiKey}
+                    onChange={e => setCalcomApiKey(e.target.value)}
+                    className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Found in your Cal.com Settings &gt; Security &gt; API Keys.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Event Type ID (Optional)</label>
+                  <input 
+                    type="number"
+                    placeholder="e.g. 12345"
+                    value={calcomEventTypeId}
+                    onChange={e => setCalcomEventTypeId(e.target.value)}
+                    className="w-full p-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">If left blank, the system will auto-select your first active event type.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 mt-4">
+              <button
+                onClick={() => setIsCalcomModalOpen(false)}
+                className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveCalcomSettings}
+                className="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs"
+              >
+                Connect
+              </button>
+            </div>
+          </div>
+        </div>
+        </div>
+      )}
     </div>
   );
 }
