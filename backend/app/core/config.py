@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = "sk-or-v1-mock-test-key"
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     OPENAI_API_KEY: str = "sk-mock-openai-key"
+    GROQ_API_KEY: Optional[str] = None
 
     # Google OAuth & Calendar Integration
     GOOGLE_CLIENT_ID: str = ""

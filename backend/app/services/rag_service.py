@@ -125,18 +125,30 @@ class RAGService:
                 integration = await get_integration_by_provider(db, "openai")
             if not integration or not integration.is_active:
                 integration = await get_integration_by_provider(db, "groq")
-            
+            provider_name = "openrouter"
             api_key = None
             if integration and integration.is_active and integration.encrypted_credentials:
                 try:
                     api_key = decrypt_vault_secret(integration.encrypted_credentials)
+                    provider_name = integration.provider
                 except Exception as e:
                     print(f"Error decrypting integration key: {e}")
+            else:
+                from app.core.config import settings
+                if settings.OPENROUTER_API_KEY and settings.OPENROUTER_API_KEY != "sk-or-v1-mock-test-key":
+                    api_key = settings.OPENROUTER_API_KEY
+                    provider_name = "openrouter"
+                elif settings.GROQ_API_KEY:
+                    api_key = settings.GROQ_API_KEY
+                    provider_name = "groq"
+                elif settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "sk-mock-openai-key":
+                    api_key = settings.OPENAI_API_KEY
+                    provider_name = "openai"
             
             llm_provider = OpenRouterProvider(api_key=api_key)
-            if integration and integration.provider == "openai":
+            if provider_name == "openai":
                 llm_provider.base_url = "https://api.openai.com/v1"
-            elif integration and integration.provider == "groq":
+            elif provider_name == "groq":
                 llm_provider.base_url = "https://api.groq.com/openai/v1"
 
         # 1. Save visitor message to database

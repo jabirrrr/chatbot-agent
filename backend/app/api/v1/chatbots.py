@@ -179,13 +179,30 @@ async def preview_chatbot(
     if not integration or not integration.is_active:
         integration = await get_integration_by_provider(db, "groq")
 
-    if not integration or not integration.is_active or not integration.encrypted_credentials:
-        raise HTTPException(status_code=400, detail="No active OpenRouter, OpenAI, or Groq integration found in Admin Panel.")
-
-    try:
-        api_key = decrypt_vault_secret(integration.encrypted_credentials)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to decrypt API key.")
+    # Fallback to environment variables if no DB integration is active
+    api_key = None
+    provider_name = "openrouter"
+    
+    if integration and integration.is_active and integration.encrypted_credentials:
+        try:
+            api_key = decrypt_vault_secret(integration.encrypted_credentials)
+            provider_name = integration.provider
+        except Exception as e:
+            raise HTTPException(status_code=500, detail="Failed to decrypt API key.")
+    else:
+        from app.core.config import settings
+        # Attempt to pull from environment
+        if settings.OPENROUTER_API_KEY and settings.OPENROUTER_API_KEY != "sk-or-v1-mock-test-key":
+            api_key = settings.OPENROUTER_API_KEY
+            provider_name = "openrouter"
+        elif settings.GROQ_API_KEY:
+            api_key = settings.GROQ_API_KEY
+            provider_name = "groq"
+        elif settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "sk-mock-openai-key":
+            api_key = settings.OPENAI_API_KEY
+            provider_name = "openai"
+        else:
+            raise HTTPException(status_code=400, detail="No active OpenRouter, OpenAI, or Groq integration found in Admin Panel or environment variables.")
 
     provider = OpenRouterProvider(api_key=api_key)
     
@@ -194,13 +211,13 @@ async def preview_chatbot(
     if data.botConfig and data.botConfig.get("model_name"):
         target_model = data.botConfig.get("model_name")
         
-    if integration.provider == "openai":
+    if provider_name == "openai":
         provider.base_url = "https://api.openai.com/v1"
         # Only fallback if it's the default or an openrouter model
         if target_model == "openrouter/free" or "/" in target_model:
             target_model = "gpt-4o-mini"
             
-    elif integration.provider == "groq":
+    elif provider_name == "groq":
         provider.base_url = "https://api.groq.com/openai/v1"
         if target_model == "openrouter/free" or "/" in target_model:
             target_model = "llama3-70b-8192"
@@ -317,4 +334,4 @@ async def preview_chatbot(
         if not tool_call_made:
             break
 
-    return {"reply": response_text.strip(), "live": True, "provider": integration.provider}
+    return {"reply": response_text.strip(), "live": True, "provider": provider_name}
