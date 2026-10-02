@@ -123,6 +123,8 @@ class RAGService:
             integration = await get_integration_by_provider(db, "openrouter")
             if not integration or not integration.is_active:
                 integration = await get_integration_by_provider(db, "openai")
+            if not integration or not integration.is_active:
+                integration = await get_integration_by_provider(db, "groq")
             
             api_key = None
             if integration and integration.is_active and integration.encrypted_credentials:
@@ -134,6 +136,8 @@ class RAGService:
             llm_provider = OpenRouterProvider(api_key=api_key)
             if integration and integration.provider == "openai":
                 llm_provider.base_url = "https://api.openai.com/v1"
+            elif integration and integration.provider == "groq":
+                llm_provider.base_url = "https://api.groq.com/openai/v1"
 
         # 1. Save visitor message to database
         visitor_msg = Message(

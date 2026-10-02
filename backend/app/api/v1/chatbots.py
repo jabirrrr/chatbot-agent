@@ -174,9 +174,13 @@ async def preview_chatbot(
     # Check OpenAI if openrouter is not set
     if not integration or not integration.is_active:
         integration = await get_integration_by_provider(db, "openai")
+        
+    # Check Groq if OpenAI is not set
+    if not integration or not integration.is_active:
+        integration = await get_integration_by_provider(db, "groq")
 
     if not integration or not integration.is_active or not integration.encrypted_credentials:
-        raise HTTPException(status_code=400, detail="No active OpenRouter or OpenAI integration found in Admin Panel.")
+        raise HTTPException(status_code=400, detail="No active OpenRouter, OpenAI, or Groq integration found in Admin Panel.")
 
     try:
         api_key = decrypt_vault_secret(integration.encrypted_credentials)
@@ -195,6 +199,11 @@ async def preview_chatbot(
         # Only fallback if it's the default or an openrouter model
         if target_model == "openrouter/free" or "/" in target_model:
             target_model = "gpt-4o-mini"
+            
+    elif integration.provider == "groq":
+        provider.base_url = "https://api.groq.com/openai/v1"
+        if target_model == "openrouter/free" or "/" in target_model:
+            target_model = "llama3-70b-8192"
         
     # Build System Prompt for the preview
     from datetime import datetime, timezone
