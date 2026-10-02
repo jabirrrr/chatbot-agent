@@ -191,8 +191,7 @@ export default function AppointmentsPage() {
               List
             </button>
           </div>
-
-
+        </div>
       </div>
 
       {/* Filter Row */}
