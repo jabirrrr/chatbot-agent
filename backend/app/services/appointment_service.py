@@ -69,6 +69,9 @@ class AppointmentService:
         organization_id: uuid.UUID,
         appointment_id: uuid.UUID
     ) -> Optional[Appointment]:
+        from app.services.integration_service import IntegrationService
+        from app.adapters.calendar.calcom import CalComService
+
         stmt = select(Appointment).where(
             Appointment.id == appointment_id,
             Appointment.organization_id == organization_id
@@ -77,6 +80,16 @@ class AppointmentService:
         appt = result.scalar_one_or_none()
         if not appt:
             return None
+
+        # Try to cancel in Cal.com if provider_event_id exists
+        if appt.provider_event_id:
+            calcom = await IntegrationService.get_integration(db, organization_id, "calcom")
+            if calcom and calcom.credentials_json and calcom.credentials_json.get("api_key"):
+                api_key = calcom.credentials_json["api_key"]
+                try:
+                    await CalComService.cancel_booking(api_key, appt.provider_event_id, "Cancelled via Dashboard")
+                except Exception as e:
+                    print(f"Failed to cancel on Cal.com: {e}")
 
         appt.status = "cancelled"
         await db.commit()

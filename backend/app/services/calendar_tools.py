@@ -394,10 +394,72 @@ class CalendarToolsExecutor:
         args: Dict[str, Any]
     ) -> Dict[str, Any]:
         event_id = args.get("event_id")
+        start_time_str = args.get("start_time")
         if not event_id:
             return {"success": False, "error": "event_id is required"}
+        if not start_time_str:
+            return {"success": False, "error": "start_time is required to reschedule"}
 
-        return {"success": False, "error": "Update event not supported yet for Cal.com"}
+        # Get organization for timezone
+        stmt = select(Organization).where(Organization.id == organization_id)
+        res = await db.execute(stmt)
+        org = res.scalar_one_or_none()
+        org_tz_str = org.timezone if org and org.timezone else "America/Chicago"
+        try:
+            org_tz = zoneinfo.ZoneInfo(org_tz_str)
+        except Exception:
+            org_tz = timezone.utc
+
+        try:
+            start_time = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=org_tz)
+        except Exception:
+            return {"success": False, "error": "Invalid start_time format. Use ISO 8601 string."}
+
+        # Check Cal.com first
+        calcom = await IntegrationService.get_integration(db, organization_id, "calcom")
+        if calcom and calcom.credentials_json and calcom.credentials_json.get("api_key"):
+            api_key = calcom.credentials_json["api_key"]
+            from app.adapters.calendar.calcom import CalComService
+            
+            booking = await CalComService.reschedule_booking(
+                api_key=api_key, 
+                booking_uid=event_id,
+                new_start_time=start_time.isoformat()
+            )
+            
+            if not booking:
+                return {"success": False, "error": "Failed to reschedule booking in Cal.com"}
+                
+            # Update local appointment
+            stmt = select(Appointment).where(
+                Appointment.organization_id == organization_id,
+                Appointment.provider_event_id == event_id
+            )
+            res = await db.execute(stmt)
+            appt = res.scalar_one_or_none()
+            if appt:
+                appt.scheduled_at = start_time
+                new_uid = str(booking.get("uid"))
+                if new_uid and new_uid != "None":
+                    appt.provider_event_id = new_uid
+                    event_id = new_uid
+                
+                # Rescheduled meeting link might change
+                if booking.get("metadata") and booking.get("metadata").get("videoCallUrl"):
+                    appt.meeting_link = booking.get("metadata").get("videoCallUrl")
+                    
+                await db.commit()
+                
+            return {
+                "success": True,
+                "event_id": event_id,
+                "scheduled_at": start_time.isoformat(),
+                "message": "Appointment successfully rescheduled via Cal.com."
+            }
+
+        return {"success": False, "error": "Cal.com is not connected or configured."}
 
     @classmethod
     async def handle_search_events(
@@ -413,7 +475,7 @@ class CalendarToolsExecutor:
         stmt = select(Appointment).where(
             Appointment.organization_id == organization_id,
             Appointment.attendee_email == email,
-            Appointment.status == "confirmed"
+            Appointment.status == "scheduled"
         ).order_by(Appointment.scheduled_at.desc()).limit(5)
         
         res = await db.execute(stmt)
