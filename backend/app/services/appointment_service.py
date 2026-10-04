@@ -84,8 +84,18 @@ class AppointmentService:
         # Try to cancel in Cal.com if provider_event_id exists
         if appt.provider_event_id:
             calcom = await IntegrationService.get_integration(db, organization_id, "calcom")
-            if calcom and calcom.credentials_json and calcom.credentials_json.get("api_key"):
-                api_key = calcom.credentials_json["api_key"]
+            api_key = None
+            if calcom and calcom.encrypted_credentials:
+                from app.core.vault import decrypt_vault_secret
+                import json
+                try:
+                    creds_json = decrypt_vault_secret(calcom.encrypted_credentials)
+                    creds = json.loads(creds_json)
+                    api_key = creds.get("api_key")
+                except Exception:
+                    pass
+            
+            if api_key:
                 try:
                     await CalComService.cancel_booking(api_key, appt.provider_event_id, "Cancelled via Dashboard")
                 except Exception as e:

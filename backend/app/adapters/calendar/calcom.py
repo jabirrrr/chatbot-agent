@@ -6,10 +6,10 @@ class CalComService:
     BASE_URL = "https://api.cal.com/v2"
 
     @staticmethod
-    def _get_headers(api_key: str) -> Dict[str, str]:
+    def _get_headers(api_key: str, api_version: str = "2024-08-14") -> Dict[str, str]:
         return {
             "Authorization": f"Bearer {api_key}",
-            "cal-api-version": "2024-08-13",
+            "cal-api-version": api_version,
             "Content-Type": "application/json"
         }
 
@@ -19,13 +19,20 @@ class CalComService:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 f"{CalComService.BASE_URL}/event-types",
-                headers=CalComService._get_headers(api_key)
+                headers=CalComService._get_headers(api_key, "2024-08-14")
             )
             if resp.status_code != 200:
                 print(f"Cal.com Error get_event_types: {resp.text}")
                 return []
             data = resp.json()
-            return data.get("data", [])
+            # Extract eventTypes from eventTypeGroups
+            res_data = data.get("data", {})
+            if isinstance(res_data, dict) and "eventTypeGroups" in res_data:
+                all_events = []
+                for group in res_data.get("eventTypeGroups", []):
+                    all_events.extend(group.get("eventTypes", []))
+                return all_events
+            return res_data if isinstance(res_data, list) else []
 
     @staticmethod
     async def get_default_event_type_id(api_key: str) -> Optional[int]:
@@ -47,7 +54,7 @@ class CalComService:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 f"{CalComService.BASE_URL}/slots",
-                headers=CalComService._get_headers(api_key),
+                headers=CalComService._get_headers(api_key, "2024-09-04"),
                 params={
                     "eventTypeId": event_type_id,
                     "start": start_date,
@@ -68,10 +75,12 @@ class CalComService:
             if isinstance(slots_data, dict):
                 for date_key, daily_slots in slots_data.items():
                     for slot in daily_slots:
-                        available_slots.append({
-                            "start": slot.get("time"),
-                            "attendees": slot.get("attendees", 0)
-                        })
+                        slot_time = slot.get("start") or slot.get("time")
+                        if slot_time:
+                            available_slots.append({
+                                "start": slot_time,
+                                "attendees": slot.get("attendees", 0)
+                            })
             return available_slots
 
     @staticmethod
@@ -137,7 +146,7 @@ class CalComService:
             }
             resp = await client.post(
                 f"{CalComService.BASE_URL}/bookings/{booking_uid}/reschedule",
-                headers=CalComService._get_headers(api_key),
+                headers=CalComService._get_headers(api_key, "2024-08-13"),
                 json=payload
             )
             if resp.status_code not in [200, 201]:

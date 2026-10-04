@@ -214,10 +214,22 @@ class CalendarToolsExecutor:
 
         # Check Cal.com first
         calcom = await IntegrationService.get_integration(db, organization_id, "calcom")
-        if calcom and calcom.credentials_json and calcom.credentials_json.get("api_key"):
-            api_key = calcom.credentials_json["api_key"]
-            event_type_id = calcom.metadata_json.get("event_type_id") if calcom.metadata_json else None
+        api_key = None
+        if calcom and calcom.encrypted_credentials:
+            from app.core.vault import decrypt_vault_secret
+            import json
+            try:
+                creds_json = decrypt_vault_secret(calcom.encrypted_credentials)
+                creds = json.loads(creds_json)
+                api_key = creds.get("api_key")
+            except Exception:
+                pass
+                
+        if api_key:
             from app.adapters.calendar.calcom import CalComService
+            event_type_id = calcom.metadata_json.get("event_type_id") if calcom.metadata_json else None
+            if not event_type_id:
+                event_type_id = await CalComService.get_default_event_type_id(api_key)
             
             end_date_str = (target_date + timedelta(days=1)).strftime("%Y-%m-%d")
             target_date_str = target_date.strftime("%Y-%m-%d")
@@ -287,10 +299,22 @@ class CalendarToolsExecutor:
 
         # Check Cal.com first
         calcom = await IntegrationService.get_integration(db, organization_id, "calcom")
-        if calcom and calcom.credentials_json and calcom.credentials_json.get("api_key"):
-            api_key = calcom.credentials_json["api_key"]
-            event_type_id = calcom.metadata_json.get("event_type_id") if calcom.metadata_json else None
+        api_key = None
+        if calcom and calcom.encrypted_credentials:
+            from app.core.vault import decrypt_vault_secret
+            import json
+            try:
+                creds_json = decrypt_vault_secret(calcom.encrypted_credentials)
+                creds = json.loads(creds_json)
+                api_key = creds.get("api_key")
+            except Exception:
+                pass
+                
+        if api_key:
             from app.adapters.calendar.calcom import CalComService
+            event_type_id = calcom.metadata_json.get("event_type_id") if calcom.metadata_json else None
+            if not event_type_id:
+                event_type_id = await CalComService.get_default_event_type_id(api_key)
             
             booking = await CalComService.create_booking(
                 api_key=api_key, 
@@ -362,8 +386,18 @@ class CalendarToolsExecutor:
 
         # Check Cal.com first
         calcom = await IntegrationService.get_integration(db, organization_id, "calcom")
-        if calcom and calcom.credentials_json and calcom.credentials_json.get("api_key"):
-            api_key = calcom.credentials_json["api_key"]
+        api_key = None
+        if calcom and calcom.encrypted_credentials:
+            from app.core.vault import decrypt_vault_secret
+            import json
+            try:
+                creds_json = decrypt_vault_secret(calcom.encrypted_credentials)
+                creds = json.loads(creds_json)
+                api_key = creds.get("api_key")
+            except Exception:
+                pass
+                
+        if api_key:
             from app.adapters.calendar.calcom import CalComService
             
             cancelled = await CalComService.cancel_booking(api_key, event_id)
@@ -419,8 +453,18 @@ class CalendarToolsExecutor:
 
         # Check Cal.com first
         calcom = await IntegrationService.get_integration(db, organization_id, "calcom")
-        if calcom and calcom.credentials_json and calcom.credentials_json.get("api_key"):
-            api_key = calcom.credentials_json["api_key"]
+        api_key = None
+        if calcom and calcom.encrypted_credentials:
+            from app.core.vault import decrypt_vault_secret
+            import json
+            try:
+                creds_json = decrypt_vault_secret(calcom.encrypted_credentials)
+                creds = json.loads(creds_json)
+                api_key = creds.get("api_key")
+            except Exception:
+                pass
+                
+        if api_key:
             from app.adapters.calendar.calcom import CalComService
             
             booking = await CalComService.reschedule_booking(
