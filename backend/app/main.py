@@ -51,12 +51,35 @@ async def health_check():
     """
     Standard liveness probe for Kubernetes and Docker orchestrators.
     """
+    from sqlalchemy import text
+    from app.core.database import engine
+    import redis.asyncio as aioredis
+    
+    db_status = "disconnected"
+    redis_status = "disconnected"
+    
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+            db_status = "connected"
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}")
+        
+    try:
+        redis_client = aioredis.from_url(settings.REDIS_URL)
+        if await redis_client.ping():
+            redis_status = "connected"
+        await redis_client.close()
+    except Exception as e:
+        logger.error(f"Redis health check failed: {e}")
+
     return {
-        "status": "healthy",
+        "status": "healthy" if db_status == "connected" and redis_status == "connected" else "unhealthy",
+        "database": db_status,
+        "redis": redis_status,
         "service": settings.APP_NAME,
         "environment": settings.ENVIRONMENT
     }
-
 
 @app.get("/api/v1/health", tags=["Health"])
 async def api_health():
