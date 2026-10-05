@@ -99,10 +99,8 @@ class OpenRouterProvider(LLMProvider):
                     print(f"[OpenRouter Error] Status: {response.status_code}, Body: {error_body.decode('utf-8')}")
                     
                     if response.status_code in (401, 402, 403):
-                        yield {"type": "content", "delta": f"⚠️ API Error (Status {response.status_code}). API key invalid or out of credits. Falling back to offline Mock AI for demonstration...\n\n"}
-                        mock_provider = MockLLMProvider()
-                        async for chunk in mock_provider.stream_chat(messages, tools, temperature, max_tokens, model_name):
-                            yield chunk
+                        yield {"type": "content", "delta": f"⚠️ API Error (Status {response.status_code}). Please check your API key and billing on the provider's dashboard."}
+                        yield {"type": "done", "total_tokens": 0}
                         return
 
                     # Return error on upstream API failure

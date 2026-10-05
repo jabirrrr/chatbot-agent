@@ -16,7 +16,7 @@ class CalComService:
     @staticmethod
     async def get_event_types(api_key: str) -> List[Dict[str, Any]]:
         """Fetch all event types for the given API key."""
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.get(
                 f"{CalComService.BASE_URL}/event-types",
                 headers=CalComService._get_headers(api_key, "2024-08-14")
@@ -51,7 +51,7 @@ class CalComService:
         Fetch available slots. 
         start_date and end_date should be YYYY-MM-DD.
         """
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.get(
                 f"{CalComService.BASE_URL}/slots",
                 headers=CalComService._get_headers(api_key, "2024-09-04"),
@@ -89,7 +89,7 @@ class CalComService:
         Create a booking.
         start_time should be ISO 8601 UTC, e.g., 2023-05-24T13:00:00.000Z
         """
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             payload = {
                 "eventTypeId": int(event_type_id),
                 "start": start_time.replace("+00:00", "Z"),
@@ -101,6 +101,7 @@ class CalComService:
                 "timeZone": timezone,
                 "language": "en"
             }
+            print(f"[DEBUG] create_booking payload: {payload}")
             try:
                 resp = await client.post(
                     f"{CalComService.BASE_URL}/bookings",
@@ -114,7 +115,7 @@ class CalComService:
                 # v2 usually wraps response in `data`
                 return data.get("data", {})
             except Exception as e:
-                print(f"Error creating Cal.com booking: {e}")
+                print(f"Error creating Cal.com booking: {repr(e)}")
                 return {}
 
     @staticmethod
@@ -123,7 +124,7 @@ class CalComService:
         Cancel a booking. booking_uid is returned when created.
         v2 endpoint: POST /v2/bookings/:bookingUid/cancel
         """
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
                 f"{CalComService.BASE_URL}/bookings/{booking_uid}/cancel",
                 headers=CalComService._get_headers(api_key),
@@ -140,7 +141,7 @@ class CalComService:
         Reschedule a booking.
         v2 endpoint: POST /v2/bookings/:bookingUid/reschedule
         """
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             payload = {
                 "start": new_start_time.replace("+00:00", "Z")
             }

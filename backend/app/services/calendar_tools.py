@@ -233,7 +233,11 @@ class CalendarToolsExecutor:
             
             end_date_str = (target_date + timedelta(days=1)).strftime("%Y-%m-%d")
             target_date_str = target_date.strftime("%Y-%m-%d")
+            print(f"[DEBUG] Fetching availability: event_type_id={event_type_id}, target_date={target_date_str}")
             slots = await CalComService.get_availability(api_key, event_type_id, target_date_str, end_date_str)
+            
+            if not slots:
+                print("[DEBUG] No slots returned from CalComService.get_availability")
             
             return {
                 "success": True,
@@ -248,6 +252,7 @@ class CalendarToolsExecutor:
                 ]
             }
 
+        print("[DEBUG] No api_key decrypted!")
         return {
             "success": False,
             "error": "Cal.com is not connected for this business.",

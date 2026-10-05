@@ -58,10 +58,10 @@ No requirement may be modified, deprecated, or removed without an approved entry
 | **REQ-LEAD-01** | Lead Profile & Detail Sidebar | P0 | M4 | `app.api.v1.leads`, `LeadsPage.tsx` | `TEST-LEAD-001` | **PASSED** |
 | **REQ-LEAD-02** | Lead Pipeline Table & Search | P0 | M4 | `app.api.v1.leads`, `LeadsPage.tsx` | `TEST-LEAD-002` | **PASSED** |
 | **REQ-LEAD-03** | Lead Export to CSV | P0 | M4 | `app.api.v1.leads.export`, `LeadsPage.tsx` | `TEST-LEAD-003` | **PASSED** |
-| **REQ-APPT-01** | Calendar Provider Abstraction & Google OAuth | P0 | M5 | `app.adapters.calendar.provider`, `app.api.v1.appointments` | `TEST-APPT-001` | **PASSED** |
-| **REQ-APPT-02** | In-Widget Slot Selection & Booking | P0 | M5 | `app.services.appointment_service`, `AppointmentsPage.tsx` | `TEST-APPT-002` | **PASSED** |
-| **REQ-APPT-03** | Appointment List in Dashboard | P0 | M5 | `app.api.v1.appointments`, `AppointmentsPage.tsx` | `TEST-APPT-003` | **PASSED** |
-| **REQ-APPT-04** | Calendar Failure Graceful Degradation | P0 | M5 | `app.adapters.calendar.provider`, `AppointmentService` | `TEST-APPT-004` | **PASSED** |
+| **REQ-APPT-01** | Calendar Provider Abstraction & Google OAuth | P0 | M5 | `app.adapters.calendar.provider`, `app.api.v1.appointments` | `TEST-APPT-001` | **PASSED (calcom-validation-report.md)** |
+| **REQ-APPT-02** | In-Widget Slot Selection & Booking | P0 | M5 | `app.services.appointment_service`, `AppointmentsPage.tsx` | `TEST-APPT-002` | **PASSED (calcom-validation-report.md)** |
+| **REQ-APPT-03** | Appointment List in Dashboard | P0 | M5 | `app.api.v1.appointments`, `AppointmentsPage.tsx` | `TEST-APPT-003` | **PASSED (calcom-validation-report.md)** |
+| **REQ-APPT-04** | Calendar Failure Graceful Degradation | P0 | M5 | `app.adapters.calendar.provider`, `AppointmentService` | `TEST-APPT-004` | **PASSED (calcom-validation-report.md)** |
 | **REQ-ANALYTICS-01**| Executive Overview Dashboard | P0 | M4 | `app.api.v1.analytics.overview`, `AnalyticsCommandCenter.tsx` | `TEST-ANA-001` | **PASSED** |
 | **REQ-ANALYTICS-02**| Conversation Volume & Heatmaps | P1 | M6 | `app.services.analytics_service`, `AnalyticsPage.tsx` | `TEST-ANA-002` | **PASSED** |
 | **REQ-ANALYTICS-03**| Lead Conversion Funnels | P1 | M6 | `app.services.analytics_service`, `AnalyticsPage.tsx` | `TEST-ANA-003` | **PASSED** |
