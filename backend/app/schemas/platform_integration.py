@@ -8,6 +8,7 @@ class ProviderEnum(str, Enum):
     openrouter = "openrouter"
     openai = "openai"
     stripe = "stripe"
+    groq = "groq"
 
 class PlatformIntegrationBase(BaseModel):
     name: str
