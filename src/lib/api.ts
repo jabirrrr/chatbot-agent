@@ -475,9 +475,12 @@ export async function fetchAppointments(token: string) {
 /**
  * Fetch Knowledge Sources for active organization
  */
-export async function fetchKnowledgeSources(token: string) {
+export async function fetchKnowledgeSources(token: string, chatbotId?: string) {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/knowledge/sources`, {
+    const url = chatbotId 
+      ? `${API_BASE}/api/v1/knowledge/sources?chatbot_id=${chatbotId}` 
+      : `${API_BASE}/api/v1/knowledge/sources`;
+    const res = await fetch(url, {
       method: 'GET',
       headers: { 
         'Accept': 'application/json',

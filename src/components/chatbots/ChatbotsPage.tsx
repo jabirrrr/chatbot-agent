@@ -280,7 +280,14 @@ export default function ChatbotsPage() {
               </div>
               <div className="text-[10px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
                 <span className={`w-1.5 h-1.5 rounded-full ${bot.status === 'active' ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
-                {bot.status === 'active' ? 'Online' : 'Draft'}
+                {(() => {
+                  let t = 'Custom';
+                  if (bot.templateType === 'lead_capture') t = 'Lead Capture';
+                  if (bot.templateType === 'appointment') t = 'Appointment';
+                  if (bot.templateType === 'knowledge') t = 'Knowledge';
+                  const s = bot.status === 'active' ? 'Online' : 'Draft';
+                  return `${t} • ${s}`;
+                })()}
               </div>
             </div>
           </button>

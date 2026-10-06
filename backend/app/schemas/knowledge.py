@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 class KnowledgeSourceBase(BaseModel):
     title: str
+    chatbot_id: Optional[uuid.UUID] = None
     source_type: str = "text"
 
 
@@ -21,6 +22,7 @@ class KnowledgeSourceCreateUrl(BaseModel):
 class KnowledgeSourceRead(KnowledgeSourceBase):
     id: uuid.UUID
     organization_id: uuid.UUID
+    chatbot_id: Optional[uuid.UUID] = None
     status: str
     error_message: Optional[str] = None
     char_count: int

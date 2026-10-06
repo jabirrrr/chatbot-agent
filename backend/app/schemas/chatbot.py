@@ -8,6 +8,7 @@ class ChatbotBase(BaseModel):
     name: str
     description: Optional[str] = None
     is_active: bool = True
+    template_type: Optional[str] = None
     system_prompt: Optional[str] = "You are a helpful, accurate, and polite customer support assistant for our business. If the user wants to book an appointment, ALWAYS ask for their name and email address first before fetching calendar availability or booking."
     welcome_message: Optional[str] = "Hi there! 👋 How can I help you today?"
     fallback_message: Optional[str] = "I'm sorry, I don't have that information. Would you like me to connect you with a team member?"
@@ -24,6 +25,7 @@ class ChatbotBase(BaseModel):
 class ChatbotCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    template_type: Optional[str] = None
     system_prompt: Optional[str] = "You are a helpful, accurate, and polite customer support assistant for our business. If the user wants to book an appointment, ALWAYS ask for their name and email address first before fetching calendar availability or booking."
     welcome_message: Optional[str] = "Hi there! 👋 How can I help you today?"
     fallback_message: Optional[str] = "I'm sorry, I don't have that information. Would you like me to connect you with a team member?"
@@ -40,6 +42,7 @@ class ChatbotUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
+    template_type: Optional[str] = None
     system_prompt: Optional[str] = None
     welcome_message: Optional[str] = None
     fallback_message: Optional[str] = None

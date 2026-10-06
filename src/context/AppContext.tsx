@@ -87,7 +87,7 @@ interface AppContextType {
   discardDraft: () => void;
   isDirty: boolean;
   chatbotsList: ChatbotConfig[];
-  createNewChatbot: () => void;
+  createNewChatbot: (name?: string, templateType?: string) => Promise<string | null>;
   deleteChatbot: (id: string) => Promise<void>;
   leads: Lead[];
   addLead: (lead: Omit<Lead, 'id' | 'lastActivity'>) => void;
@@ -295,11 +295,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 if (fetchedKSources && fetchedKSources.length > 0) {
                   setKnowledgeSources(fetchedKSources.map((ks: any) => ({
                     id: ks.id,
-                    chatbotId: '',
-                    name: ks.filename || ks.url || 'Source',
+                    chatbotId: ks.chatbot_id || '',
+                    name: ks.filename || ks.url || ks.title || 'Source',
                     type: ks.source_type || 'document',
                     status: ks.status === 'ready' ? 'ready' : (ks.status === 'failed' ? 'failed' : 'processing'),
-                    chunksIndexed: ks.chunks_indexed || 0,
+                    chunksIndexed: ks.chunks_indexed || ks.chunk_count || 0,
                     fileSize: ks.source_type === 'website' ? 'Web Page' : 'Unknown',
                     lastUpdated: new Date(ks.updated_at || Date.now()).toLocaleDateString(),
                     category: 'General'
@@ -316,6 +316,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   widgetToken: b.widget_token,
                   name: b.name,
                   status: b.is_active ? 'active' : 'draft',
+                  templateType: b.template_type,
                   domain: b.domain || '',
                   tone: cfg.tone || 'Friendly',
                   description: b.description || '',
@@ -622,26 +623,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPendingNavigation(null);
   };
 
-  const createNewChatbot = async () => {
+  const createNewChatbot = async (name?: string, templateType?: string): Promise<string | null> => {
     let newId = `bot_${Date.now()}`;
-    let newName = 'New Custom Chatbot';
+    let newName = name || 'New Custom Chatbot';
     
     // Create on backend if authenticated
     if (authToken) {
       try {
         const { API_BASE } = await import('@/lib/api');
+        
+        let primaryGoals = {
+          answerQuestions: true,
+          captureLeads: templateType === 'lead_capture' || templateType === 'appointment',
+          scheduleAppointments: templateType === 'appointment',
+          transferToHuman: true
+        };
+
         const createRes = await fetch(`${API_BASE}/api/v1/chatbots/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-          body: JSON.stringify({ name: newName, description: 'A new chatbot assistant', theme_color: '#2563eb' })
+          body: JSON.stringify({ 
+            name: newName, 
+            description: 'A new chatbot assistant', 
+            theme_color: '#2563eb',
+            template_type: templateType || 'custom',
+            config_json: {
+                primaryGoals
+            }
+          })
         });
         if (createRes.ok) {
           const b = await createRes.json();
           newId = b.id;
           newName = b.name;
+        } else {
+            return null; // Handle failure upstream
         }
       } catch (err) {
         console.error('Failed to create new chatbot on backend:', err);
+        return null;
       }
     }
 
@@ -649,9 +669,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...defaultChatbot,
       id: newId,
       name: newName,
+      templateType: templateType || 'custom',
       status: 'draft',
       conversationsCount: 0,
       lastUpdated: 'Just now',
+      primaryGoals: {
+          answerQuestions: true,
+          captureLeads: templateType === 'lead_capture' || templateType === 'appointment',
+          scheduleAppointments: templateType === 'appointment',
+          transferToHuman: true
+      }
     };
     setChatbotsList(prev => [...prev, newBot]);
     setActiveChatbotIdInternal(newId);
@@ -663,6 +690,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       title: 'Chatbot Created',
       description: 'A new chatbot profile has been initialized.'
     });
+    return newId;
   };
 
   const deleteChatbot = async (id: string) => {

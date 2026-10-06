@@ -240,6 +240,48 @@ async def preview_chatbot(
         f"CRITICAL: If a tool call returns an error or `success: False`, you MUST NOT pretend it succeeded. You must truthfully inform the user that the action failed and explain why based on the error message."
     )
 
+    tools_payload = None
+    bot = None
+    if data.chatbot_id:
+        try:
+            bot_uuid = uuid.UUID(data.chatbot_id)
+            bot = await db.scalar(select(Chatbot).where(Chatbot.id == bot_uuid))
+        except ValueError:
+            pass
+
+    if bot:
+        # Fetch RAG chunks
+        from app.services.knowledge_service import KnowledgeService
+        chunks = await KnowledgeService.semantic_search(
+            db=db,
+            org_id=bot.organization_id,
+            query=data.message,
+            top_k=4,
+            chatbot_id=bot.id
+        )
+        if chunks:
+            system_prompt += "\n\nRELEVANT KNOWLEDGE CONTEXT:\n"
+            for idx, c in enumerate(chunks, 1):
+                system_prompt += f"[{idx}] {c['content']}\n"
+        else:
+            system_prompt += "\n\nRELEVANT KNOWLEDGE CONTEXT:\nNo relevant documents found for this specific query.\n"
+
+        # Use saved model if not overridden by UI preview config
+        if bot.model_name and (not data.botConfig or not data.botConfig.get("model_name")):
+            if integration.provider == "openai" and "/" in bot.model_name:
+                pass # avoid passing openrouter models to openai
+            else:
+                target_model = bot.model_name
+        from app.models.integration import TenantIntegration
+        calendar_integration = await db.scalar(
+            select(TenantIntegration).where(
+                TenantIntegration.organization_id == bot.organization_id,
+                TenantIntegration.provider.in_(["google_calendar", "calcom"])
+            )
+        )
+        if calendar_integration and calendar_integration.status == "connected":
+            tools_payload = CALENDAR_TOOLS + [LEAD_CAPTURE_TOOL]
+
     messages_payload = [{"role": "system", "content": system_prompt}]
     for msg in data.history:
         messages_payload.append({
@@ -248,29 +290,6 @@ async def preview_chatbot(
         })
     messages_payload.append({"role": "user", "content": data.message})
 
-    tools_payload = None
-    if data.chatbot_id:
-        try:
-            bot_uuid = uuid.UUID(data.chatbot_id)
-            bot = await db.scalar(select(Chatbot).where(Chatbot.id == bot_uuid))
-            if bot:
-                # Use saved model if not overridden by UI preview config
-                if bot.model_name and (not data.botConfig or not data.botConfig.get("model_name")):
-                    if integration.provider == "openai" and "/" in bot.model_name:
-                        pass # avoid passing openrouter models to openai
-                    else:
-                        target_model = bot.model_name
-                from app.models.integration import TenantIntegration
-                calendar_integration = await db.scalar(
-                    select(TenantIntegration).where(
-                        TenantIntegration.organization_id == bot.organization_id,
-                        TenantIntegration.provider.in_(["google_calendar", "calcom"])
-                    )
-                )
-                if calendar_integration and calendar_integration.status == "connected":
-                    tools_payload = CALENDAR_TOOLS + [LEAD_CAPTURE_TOOL]
-        except ValueError:
-            bot = None
 
     # Call LLM
     response_text = ""

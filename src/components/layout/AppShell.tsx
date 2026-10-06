@@ -46,14 +46,24 @@ export default function AppShell() {
     confirmNavigation,
     cancelNavigation,
     initializationError,
-    authToken
+    authToken,
+    createNewChatbot
   } = useApp();
 
   const [newBotName, setNewBotName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('lead_gen');
 
-  const handleCreateBotFromModal = (e: React.FormEvent) => {
+  const handleCreateBotFromModal = async (e: React.FormEvent) => {
     e.preventDefault();
+    const newId = await createNewChatbot(newBotName, selectedTemplate);
+    if (!newId) {
+       addToast({
+         type: 'error',
+         title: 'Creation Failed',
+         description: 'Could not create chatbot.'
+       });
+       return;
+    }
     setShowNewChatbotModal(false);
     addToast({
       type: 'success',

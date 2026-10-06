@@ -110,17 +110,6 @@ export default function OnboardingWizard() {
         if (authToken) {
           const { fetchUserOrganizations, updateOrganization, fetchChatbots, API_BASE } = await import('@/lib/api');
           
-          // 1. Ensure a chatbot exists for the builder first (transactional safety)
-          let targetBotId = '';
-          try {
-            const existingBots = await fetchChatbots(authToken);
-            if (existingBots && existingBots.length > 0) {
-              targetBotId = existingBots[0].id;
-            }
-          } catch (e) {
-            console.warn('Failed to fetch existing chatbots during completion', e);
-          }
-
           const botPayload = {
             name: chatbot.name || companyName || 'My Assistant',
             description: chatbot.description || 'Customer Support & Sales',
@@ -138,27 +127,32 @@ export default function OnboardingWizard() {
             }
           };
 
+          const targetBotId = chatbot.id;
+          
           if (!targetBotId) {
-            // Create the first chatbot using the collected onboarding data
-            const createRes = await fetch(`${API_BASE}/api/v1/chatbots/`, {
-              method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${authToken}` 
-              },
-              body: JSON.stringify(botPayload)
-            });
-            
-            if (createRes.ok) {
-              const newBot = await createRes.json();
-              targetBotId = newBot.id;
-            } else {
-              throw new Error('Failed to create initial chatbot');
+             throw new Error("No active chatbot found for onboarding.");
+          }
+
+          // Update the existing chatbot with the onboarding data
+          const { updateChatbot: updateChatbotApi } = await import('@/lib/api');
+          await updateChatbotApi(authToken, targetBotId, botPayload);
+
+          // Ingest Knowledge if provided
+          if (websiteUrl && websiteUrl.trim() !== '') {
+            try {
+              await fetch(`${API_BASE}/api/v1/knowledge/sources/url?chatbot_id=${targetBotId}`, {
+                method: 'POST',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${authToken}` 
+                },
+                body: JSON.stringify({
+                  url: websiteUrl
+                })
+              });
+            } catch (kErr) {
+              console.warn('Failed to ingest knowledge during onboarding', kErr);
             }
-          } else {
-            // Update the existing chatbot with the onboarding data
-            const { updateChatbot: updateChatbotApi } = await import('@/lib/api');
-            await updateChatbotApi(authToken, targetBotId, botPayload);
           }
 
           // 2. Mark onboarding as complete on the organization only after chatbot is secure

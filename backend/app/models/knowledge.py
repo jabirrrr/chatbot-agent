@@ -13,6 +13,12 @@ class KnowledgeSource(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
     __tablename__ = "knowledge_sources"
 
     title = Column(String(255), nullable=False)
+    chatbot_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("chatbots.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True
+    )
     source_type = Column(String(50), default="text", nullable=False)  # 'file', 'text', 'faq', 'website'
     status = Column(String(50), default="pending", nullable=False)   # 'pending', 'processing', 'ready', 'failed'
     error_message = Column(Text, nullable=True)

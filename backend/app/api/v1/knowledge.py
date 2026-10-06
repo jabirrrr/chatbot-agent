@@ -29,18 +29,23 @@ router = APIRouter(prefix="/knowledge", tags=["Knowledge Base"])
     summary="List organization knowledge sources"
 )
 async def list_sources(
+    chatbot_id: Optional[uuid.UUID] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     org: Organization = Depends(get_current_organization)
 ):
     """
-    Returns all ingested knowledge sources for the active organization.
+    Returns ingested knowledge sources for the active organization.
+    If chatbot_id is provided, filters to that chatbot.
     """
     stmt = (
         select(KnowledgeSource)
         .where(KnowledgeSource.organization_id == org.id)
-        .order_by(KnowledgeSource.created_at.desc())
     )
+    if chatbot_id:
+        stmt = stmt.where(KnowledgeSource.chatbot_id == chatbot_id)
+    stmt = stmt.order_by(KnowledgeSource.created_at.desc())
+    
     result = await db.execute(stmt)
     sources = list(result.scalars().all())
     return [KnowledgeSourceRead.model_validate(s) for s in sources]

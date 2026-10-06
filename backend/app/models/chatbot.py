@@ -15,6 +15,8 @@ class Chatbot(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
+    template_type = Column(String(50), nullable=True)
+
 
     # Prompt Engineering & Tone
     system_prompt = Column(

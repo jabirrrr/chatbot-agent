@@ -61,6 +61,7 @@ class KnowledgeService:
         # 1. Create KnowledgeSource record
         source = KnowledgeSource(
             organization_id=org_id,
+            chatbot_id=chatbot_id,
             title=data.title,
             source_type="text",
             status="processing",
@@ -117,6 +118,7 @@ class KnowledgeService:
         """
         source = KnowledgeSource(
             organization_id=org_id,
+            chatbot_id=chatbot_id,
             title=url,
             source_type="website",
             status="processing",
@@ -193,6 +195,7 @@ class KnowledgeService:
 
         source = KnowledgeSource(
             organization_id=org_id,
+            chatbot_id=chatbot_id,
             title=filename,
             source_type="file",
             status="processing",
