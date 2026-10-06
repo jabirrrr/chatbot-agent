@@ -20,6 +20,8 @@ export default function OnboardingWizard() {
   const { chatbot, updateChatbot, setCurrentScreen, addToast, authToken } = useApp();
 
   const [step, setStep] = useState(1);
+  const [highestCompletedStep, setHighestCompletedStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   // Step 1 Form
@@ -45,62 +47,92 @@ export default function OnboardingWizard() {
     { num: 4, label: 'Deploy' },
   ];
 
-  const handleContinue = () => {
-    setErrorMsg('');
+  const isStepAccessible = (targetStep: number) => {
+    return targetStep <= highestCompletedStep + 1;
+  };
 
-    // Validation for step 1
-    if (step === 1) {
+  const validateStep = (s: number): boolean => {
+    setErrorMsg('');
+    if (s === 1) {
       if (!accountName.trim() || !companyName.trim()) {
         setErrorMsg('Please enter both your name and business name to continue.');
-        return;
+        return false;
       }
     }
-
-    // Validation for step 2
-    if (step === 2) {
+    if (s === 2) {
       if (!websiteUrl.trim() && !uploadedDocName) {
         setErrorMsg('Please provide a website URL or upload a document to proceed.');
-        return;
+        return false;
       }
     }
-
-    // Validation for step 3
-    if (step === 3) {
+    if (s === 3) {
       if (!welcomeGreeting.trim()) {
         setErrorMsg('Please provide a welcome greeting for your chatbot.');
-        return;
+        return false;
       }
+    }
+    return true;
+  };
+
+  const completeCurrentStep = () => {
+    if (step === 3) {
       updateChatbot({ themeColor: selectedColor, welcomeMessage: welcomeGreeting });
     }
+    setHighestCompletedStep(prev => Math.max(prev, step));
+  };
+
+  const handleStepClick = (targetStep: number) => {
+    if (targetStep === step) return;
+    if (!isStepAccessible(targetStep)) return;
+
+    if (targetStep > step) {
+      const isValid = validateStep(step);
+      if (!isValid) return;
+      completeCurrentStep();
+    } else {
+      setErrorMsg('');
+    }
+    setStep(targetStep);
+  };
+
+  const handleContinue = async () => {
+    if (isSubmitting) return;
+    const isValid = validateStep(step);
+    if (!isValid) return;
+
+    completeCurrentStep();
 
     if (step < 4) {
       setStep(prev => prev + 1);
     } else {
-      // Completed onboarding
-      if (authToken) {
-        import('@/lib/api').then(({ fetchUserOrganizations, updateOrganization }) => {
-          fetchUserOrganizations(authToken).then(orgs => {
-            if (orgs && orgs.length > 0) {
-              updateOrganization(authToken, orgs[0].id, { onboarding_completed: true }).catch(err => {
-                console.error('Failed to save onboarding state:', err);
-              });
-            }
-          });
+      setIsSubmitting(true);
+      try {
+        if (authToken) {
+          const { fetchUserOrganizations, updateOrganization } = await import('@/lib/api');
+          const orgs = await fetchUserOrganizations(authToken);
+          if (orgs && orgs.length > 0) {
+            await updateOrganization(authToken, orgs[0].id, { onboarding_completed: true });
+          }
+        }
+        
+        addToast({
+          type: 'success',
+          title: 'Setup Complete!',
+          description: 'Welcome to Chatly. Your AI assistant is ready.'
         });
+        setCurrentScreen('home');
+      } catch (err) {
+        console.error('Failed to save onboarding state:', err);
+        setErrorMsg('Failed to complete setup. Please try again.');
+      } finally {
+        setIsSubmitting(false);
       }
-      
-      addToast({
-        type: 'success',
-        title: 'Setup Complete!',
-        description: 'Welcome to Chatly. Your AI assistant is ready.'
-      });
-      setCurrentScreen('home');
     }
   };
 
   const handleBack = () => {
-    setErrorMsg('');
     if (step > 1) {
+      setErrorMsg('');
       setStep(prev => prev - 1);
     }
   };
@@ -129,36 +161,51 @@ export default function OnboardingWizard() {
           <div className="absolute top-4 left-6 right-6 h-0.5 bg-slate-200 -z-0"></div>
 
           {stepsList.map(s => {
-            const isCompleted = step > s.num;
+            const isCompleted = s.num <= highestCompletedStep;
             const isCurrent = step === s.num;
+            const isAccessible = s.num <= highestCompletedStep + 1;
+            const isLocked = !isAccessible;
 
             return (
               <div key={s.num} className="flex flex-col items-center relative z-10">
                 {/* Step Circle */}
-                <div
+                <button
+                  type="button"
+                  onClick={() => handleStepClick(s.num)}
+                  disabled={isLocked}
+                  aria-label={`Go to ${s.label} step`}
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
-                    isCompleted
-                      ? 'bg-emerald-500 text-white shadow-xs ring-4 ring-white'
-                      : isCurrent
-                      ? 'bg-indigo-600 text-white shadow-xs ring-4 ring-white'
-                      : 'bg-white border-2 border-slate-300 text-slate-400 ring-4 ring-white'
+                    isCurrent
+                      ? 'bg-indigo-600 text-white shadow-xs ring-4 ring-white cursor-default'
+                      : isCompleted
+                      ? 'bg-emerald-500 text-white shadow-xs ring-4 ring-white cursor-pointer hover:bg-emerald-600'
+                      : isLocked
+                      ? 'bg-slate-100 border-2 border-slate-200 text-slate-400 ring-4 ring-white cursor-not-allowed opacity-60'
+                      : 'bg-white border-2 border-slate-300 text-slate-600 ring-4 ring-white cursor-pointer hover:border-indigo-400 hover:text-indigo-600'
                   }`}
                 >
-                  {isCompleted ? (
+                  {isCompleted && !isCurrent ? (
                     <Check className="w-4 h-4 stroke-[3]" />
                   ) : (
                     <span>{s.num}</span>
                   )}
-                </div>
+                </button>
 
                 {/* Step Label */}
-                <span
-                  className={`text-[11px] mt-2 font-medium tracking-tight whitespace-nowrap ${
-                    isCurrent ? 'text-slate-900 font-semibold' : 'text-slate-400'
+                <button
+                  type="button"
+                  onClick={() => handleStepClick(s.num)}
+                  disabled={isLocked}
+                  className={`text-[11px] mt-2 tracking-tight whitespace-nowrap focus:outline-none transition-colors ${
+                    isCurrent 
+                      ? 'text-slate-900 font-semibold' 
+                      : isLocked 
+                      ? 'text-slate-400 cursor-not-allowed opacity-60' 
+                      : 'text-slate-600 font-medium cursor-pointer hover:text-slate-900'
                   }`}
                 >
                   {s.label}
-                </span>
+                </button>
               </div>
             );
           })}
@@ -381,6 +428,7 @@ export default function OnboardingWizard() {
 
           <button
             type="button"
+            disabled={isSubmitting}
             onClick={handleContinue}
             style={{
               display: 'inline-flex',
@@ -388,10 +436,12 @@ export default function OnboardingWizard() {
               whiteSpace: 'nowrap',
               gap: '0.5rem'
             }}
-            className="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-xs font-medium transition-all btn-press shadow-xs cursor-pointer select-none"
+            className={`px-5 py-2.5 rounded-xl text-xs font-medium transition-all btn-press shadow-xs select-none ${
+              isSubmitting ? 'bg-slate-700 text-slate-300 cursor-not-allowed' : 'bg-slate-900 hover:bg-black text-white cursor-pointer'
+            }`}
           >
-            <span>{step === 1 ? 'Get Started' : step === 4 ? 'Complete Setup' : 'Continue'}</span>
-            <span className="shrink-0 leading-none">→</span>
+            <span>{isSubmitting ? 'Saving...' : step === 1 ? 'Get Started' : step === 4 ? 'Complete Setup' : 'Continue'}</span>
+            {!isSubmitting && <span className="shrink-0 leading-none">→</span>}
           </button>
         </div>
 
