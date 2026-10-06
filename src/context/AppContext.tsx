@@ -12,7 +12,8 @@ import {
   KnowledgeSource, 
   FAQItem, 
   BusinessInfo, 
-  ChatMessage 
+  ChatMessage,
+  User
 } from '@/types';
 
 const defaultChatbot: ChatbotConfig = {
@@ -70,6 +71,8 @@ interface AppContextType {
   toggleSidebar: () => void;
   authToken: string | null;
   setAuthToken: (token: string | null) => void;
+  currentUser: User | null;
+  setCurrentUser: (user: User | null) => void;
   
   // Data State
   activeChatbotId: string;
@@ -157,6 +160,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   
   const [chatbotsList, setChatbotsList] = useState<ChatbotConfig[]>([]);
   const [activeChatbotIdInternal, setActiveChatbotIdInternal] = useState<string>('');
@@ -229,7 +233,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function initData() {
       try {
-        const { API_BASE, fetchChatbots, fetchKnowledgeSources, fetchUserOrganizations } = await import('@/lib/api');
+        const { API_BASE, fetchChatbots, fetchKnowledgeSources, fetchUserOrganizations, fetchCurrentUser } = await import('@/lib/api');
         
         let tokenToUse = authToken;
         if (!tokenToUse && typeof window !== 'undefined') {
@@ -245,17 +249,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           let fetchSuccess = false;
           let onboardingCompleted = false;
           try {
-            const orgs = await fetchUserOrganizations(tokenToUse);
+            const [orgs, fetchedBots, user] = await Promise.all([
+              fetchUserOrganizations(tokenToUse),
+              fetchChatbots(tokenToUse),
+              fetchCurrentUser(tokenToUse)
+            ]);
+            
+            if (user) {
+              setCurrentUser(user);
+            }
+            
             if (orgs && orgs.length > 0) {
               onboardingCompleted = orgs[0].onboarding_completed;
             }
-            bots = await fetchChatbots(tokenToUse);
+            bots = fetchedBots || [];
             fetchSuccess = true;
           } catch (fetchErr: any) {
             if (fetchErr.status === 401 || fetchErr.status === 403) {
               console.warn('Initial token rejected, clearing credentials...', fetchErr);
               tokenToUse = null;
               setAuthToken(null);
+              setCurrentUser(null);
               if (typeof window !== 'undefined') {
                 localStorage.removeItem('helio_auth_token');
               }
@@ -994,7 +1008,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isSidebarCollapsed,
         toggleSidebar,
         authToken,
-        setAuthToken,
+        setAuthToken: (token) => {
+          setAuthToken(token);
+          if (!token) setCurrentUser(null);
+        },
+        currentUser,
+        setCurrentUser,
         activeChatbotId,
         setActiveChatbotId,
         pendingNavigation,

@@ -17,6 +17,15 @@ export type NavigationScreen =
   | 'landing'
   | 'status';
 
+export interface User {
+  id: string;
+  email: string;
+  full_name?: string;
+  avatar_url?: string;
+  is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+}
 
 export type LeadStatus = 'new' | 'qualified' | 'contacted' | 'booked' | 'won' | 'lost';
 

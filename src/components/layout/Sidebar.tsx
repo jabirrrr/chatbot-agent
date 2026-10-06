@@ -37,8 +37,19 @@ export default function Sidebar() {
     isSidebarCollapsed, toggleSidebar, 
     conversations, leads, 
     isDirty, discardDraft,
-    setAuthToken
+    setAuthToken,
+    currentUser
   } = useApp();
+
+  const getUserDisplayName = () => {
+    if (!currentUser) return 'User';
+    if (currentUser.full_name) return currentUser.full_name;
+    if (currentUser.email) return currentUser.email.split('@')[0];
+    return 'User';
+  };
+
+  const displayName = getUserDisplayName();
+  const initial = displayName.charAt(0).toUpperCase();
 
   const unreadCount = conversations.filter(c => c.isUnread).length;
   const newLeadsCount = leads.filter(l => l.status === 'new').length;
@@ -198,11 +209,11 @@ export default function Sidebar() {
           }`}
         >
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-700 to-slate-900 text-white flex items-center justify-center font-medium text-xs shrink-0 shadow-xs">
-            A
+            {initial}
           </div>
           {!isSidebarCollapsed && (
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-slate-800 truncate">Acme Store</p>
+              <p className="text-xs font-semibold text-slate-800 truncate">{displayName}</p>
               <p className="text-[11px] text-slate-400">Free Plan</p>
             </div>
           )}

@@ -225,6 +225,29 @@ export async function disconnectCalcom(token: string) {
 }
 
 /**
+ * Fetch the authenticated user's profile
+ */
+export async function fetchCurrentUser(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/auth/me`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch (err) {
+    console.warn('Failed to fetch current user:', err);
+    return null;
+  }
+}
+
+/**
  * Fetch all organizations the user belongs to
  */
 export async function fetchUserOrganizations(token: string) {
