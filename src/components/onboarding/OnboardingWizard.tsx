@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export default function OnboardingWizard() {
-  const { chatbot, updateChatbot, setCurrentScreen, addToast, authToken } = useApp();
+  const { chatbot, updateChatbot, setCurrentScreen, addToast, authToken, chatbotsList, setActiveChatbotId, saveDraft, discardDraft } = useApp();
 
   const [step, setStep] = useState(1);
   const [highestCompletedStep, setHighestCompletedStep] = useState(0);
@@ -108,10 +108,69 @@ export default function OnboardingWizard() {
       setIsSubmitting(true);
       try {
         if (authToken) {
-          const { fetchUserOrganizations, updateOrganization } = await import('@/lib/api');
+          const { fetchUserOrganizations, updateOrganization, fetchChatbots, API_BASE } = await import('@/lib/api');
+          
+          // 1. Ensure a chatbot exists for the builder first (transactional safety)
+          let targetBotId = '';
+          try {
+            const existingBots = await fetchChatbots(authToken);
+            if (existingBots && existingBots.length > 0) {
+              targetBotId = existingBots[0].id;
+            }
+          } catch (e) {
+            console.warn('Failed to fetch existing chatbots during completion', e);
+          }
+
+          const botPayload = {
+            name: chatbot.name || companyName || 'My Assistant',
+            description: chatbot.description || 'Customer Support & Sales',
+            theme_color: chatbot.themeColor || selectedColor || '#2563eb',
+            welcome_message: chatbot.welcomeMessage || welcomeGreeting,
+            is_active: true,
+            config_json: {
+              tone: chatbot.tone || 'Friendly',
+              avatarUrl: chatbot.avatarUrl,
+              launcherStyle: chatbot.launcherStyle || 'pill',
+              suggestedQuestions: chatbot.suggestedQuestions,
+              leadFields: chatbot.leadFields,
+              fallbackBehavior: chatbot.fallbackBehavior || 'human_help',
+              primaryGoals: chatbot.primaryGoals,
+            }
+          };
+
+          if (!targetBotId) {
+            // Create the first chatbot using the collected onboarding data
+            const createRes = await fetch(`${API_BASE}/api/v1/chatbots/`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${authToken}` 
+              },
+              body: JSON.stringify(botPayload)
+            });
+            
+            if (createRes.ok) {
+              const newBot = await createRes.json();
+              targetBotId = newBot.id;
+            } else {
+              throw new Error('Failed to create initial chatbot');
+            }
+          } else {
+            // Update the existing chatbot with the onboarding data
+            const { updateChatbot: updateChatbotApi } = await import('@/lib/api');
+            await updateChatbotApi(authToken, targetBotId, botPayload);
+          }
+
+          // 2. Mark onboarding as complete on the organization only after chatbot is secure
           const orgs = await fetchUserOrganizations(authToken);
           if (orgs && orgs.length > 0) {
             await updateOrganization(authToken, orgs[0].id, { onboarding_completed: true });
+          }
+
+          // 3. Set active chatbot for the builder and bypass dirty draft modal
+          discardDraft();
+          if (targetBotId) {
+            setActiveChatbotId(targetBotId);
           }
         }
         
@@ -120,10 +179,12 @@ export default function OnboardingWizard() {
           title: 'Setup Complete!',
           description: 'Welcome to Chatly. Your AI assistant is ready.'
         });
-        setCurrentScreen('home');
+        
+        // Navigate explicitly to the chatbot builder
+        setCurrentScreen('chatbots');
       } catch (err) {
         console.error('Failed to save onboarding state:', err);
-        setErrorMsg('Failed to complete setup. Please try again.');
+        setErrorMsg('We couldn\'t finish setting up your chatbot. Please try again.');
       } finally {
         setIsSubmitting(false);
       }
