@@ -69,24 +69,33 @@ def normalize_database_url_and_connect_args(raw_url: str) -> tuple[str, dict]:
 database_url_clean, connect_args = normalize_database_url_and_connect_args(settings.DATABASE_ASYNC_URL)
 
 
-# Check if running in a serverless function environment (e.g. Vercel)
-is_serverless = bool(os.environ.get("VERCEL")) or settings.ENVIRONMENT == "production"
+# Detect Environment
+is_vercel = bool(os.environ.get("VERCEL"))
+is_render = bool(os.environ.get("RENDER"))
+is_production = settings.ENVIRONMENT == "production"
 
-# In serverless environments, use conservative pool size to avoid connection exhaustion
-pool_size = 2 if is_serverless else getattr(settings, "DB_POOL_SIZE", 5)
-max_overflow = 5 if is_serverless else getattr(settings, "DB_MAX_OVERFLOW", 10)
+# Engine arguments
+engine_args = {
+    "echo": False,
+    "future": True,
+    "pool_pre_ping": True,
+    "connect_args": connect_args,
+    "pool_timeout": getattr(settings, "DB_POOL_TIMEOUT", 30)
+}
+
+if is_vercel:
+    # Serverless environments (like AWS Lambda, Vercel Functions) should use NullPool 
+    # to avoid zombie connections when the instance is frozen/destroyed.
+    from sqlalchemy.pool import NullPool
+    engine_args["poolclass"] = NullPool
+else:
+    # PaaS environments (like Render Web Services, Docker) are long-running containers.
+    # They handle high concurrency on a single instance, requiring a robust connection pool.
+    engine_args["pool_size"] = getattr(settings, "DB_POOL_SIZE", 20)
+    engine_args["max_overflow"] = getattr(settings, "DB_MAX_OVERFLOW", 10)
 
 # Create Async Engine
-engine = create_async_engine(
-    database_url_clean,
-    echo=False,
-    future=True,
-    pool_pre_ping=True,
-    pool_size=pool_size,
-    max_overflow=max_overflow,
-    pool_timeout=getattr(settings, "DB_POOL_TIMEOUT", 30),
-    connect_args=connect_args
-)
+engine = create_async_engine(database_url_clean, **engine_args)
 
 # Async Session Factory
 AsyncSessionLocal = async_sessionmaker(

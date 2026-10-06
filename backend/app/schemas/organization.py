@@ -41,6 +41,7 @@ class OrgUpdate(BaseModel):
     website: Optional[str] = None
     industry: Optional[str] = None
     timezone: Optional[str] = None
+    onboarding_completed: Optional[bool] = None
 
     @field_validator("timezone")
     @classmethod
@@ -52,6 +53,7 @@ class OrgRead(OrgBase):
     id: uuid.UUID
     slug: str
     subscription_status: str
+    onboarding_completed: bool
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

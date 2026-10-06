@@ -7,15 +7,14 @@ from app.services.calendar_tools import CalendarToolsExecutor
 
 async def test_create_event():
     async with AsyncSessionLocal() as db:
-        from sqlalchemy import select
-        result = await db.execute(select(Organization).limit(1))
-        org = result.scalar_one_or_none()
+        # Create a completely new isolated organization
+        org_name = f"Test_Calendar_Org_{uuid.uuid4().hex[:6]}"
+        org = Organization(name=org_name, slug=org_name.lower(), timezone="UTC")
+        db.add(org)
+        await db.commit()
+        await db.refresh(org)
         
-        if not org:
-            print("❌ No organization found in the database.")
-            return
-
-        print(f"✅ Found Organization: {org.name} ({org.id})")
+        print(f"✅ Created isolated Organization: {org.name} ({org.id})")
         
         # Inject mock Google Calendar integration for testing
         from app.services.integration_service import IntegrationService
@@ -23,7 +22,7 @@ async def test_create_event():
             db=db,
             organization_id=org.id,
             provider="google_calendar",
-            credentials={"access_token": "ya29.mock_test_token", "expires_in": 3600},
+            credentials={"refresh_token": "1//mock_refresh_token_test"},
             metadata={"account_email": "test@example.com"}
         )
         print("✅ Injected mock Google Calendar credentials.")

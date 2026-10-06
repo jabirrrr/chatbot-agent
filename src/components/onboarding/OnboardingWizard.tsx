@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export default function OnboardingWizard() {
-  const { chatbot, updateChatbot, setCurrentScreen, addToast } = useApp();
+  const { chatbot, updateChatbot, setCurrentScreen, addToast, authToken } = useApp();
 
   const [step, setStep] = useState(1);
   const [errorMsg, setErrorMsg] = useState('');
@@ -77,6 +77,18 @@ export default function OnboardingWizard() {
       setStep(prev => prev + 1);
     } else {
       // Completed onboarding
+      if (authToken) {
+        import('@/lib/api').then(({ fetchUserOrganizations, updateOrganization }) => {
+          fetchUserOrganizations(authToken).then(orgs => {
+            if (orgs && orgs.length > 0) {
+              updateOrganization(authToken, orgs[0].id, { onboarding_completed: true }).catch(err => {
+                console.error('Failed to save onboarding state:', err);
+              });
+            }
+          });
+        });
+      }
+      
       addToast({
         type: 'success',
         title: 'Setup Complete!',

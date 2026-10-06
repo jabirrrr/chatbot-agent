@@ -42,3 +42,24 @@ except Exception as e:
     print(f"Error creating Cal.com booking: {e}")
     return {}
 ```
+
+## Symptom
+The frontend throws a `TypeError: Failed to fetch` when logging in or navigating to the Admin Dashboard integrations page. The true HTTP 500 error is masked because the browser blocks the response.
+
+## Root Cause
+1. **Database Enum Mismatch**: The PostgreSQL `platform_integrations` table contained a row with `provider = 'groq'`, but the Python backend's `ProviderEnum` (in `app/schemas/platform_integration.py`) only defined `openai`, `openrouter`, and `stripe`. This caused SQLAlchemy to crash with a `LookupError` during deserialization.
+2. **Missing CORS Headers on Exception**: Because the error occurred deep inside the service layer and bubbled up to the global `ExceptionMiddleware`, Starlette's `CORSMiddleware` (which was outside the exception handler) failed to append `Access-Control-Allow-Origin` headers to the 500 response. This caused the browser to fail the CORS preflight/response check, throwing a generic `Failed to fetch` error that hid the true 500 status.
+
+## Diagnosis
+The `Failed to fetch` error locally indicated a network issue, but curling the production backend from PowerShell explicitly returned a `500 Internal Server Error` without CORS headers. A local test script executing `get_integrations(db)` isolated the `LookupError: 'groq' is not among the defined enum values`.
+
+## Solution
+Updated the `ProviderEnum` to include `groq` to match the database values.
+
+```python
+class ProviderEnum(str, Enum):
+    openrouter = "openrouter"
+    openai = "openai"
+    stripe = "stripe"
+    groq = "groq"
+```

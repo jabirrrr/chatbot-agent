@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { API_BASE } from '@/lib/api';
+import { API_BASE, fetchChatPreview } from '@/lib/api';
 import { 
   Bot, 
   Send, 
@@ -163,49 +163,27 @@ export default function ChatbotsPage() {
     };
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          history: updatedHistory,
-          botConfig: {
-            name: bot.name || assistantName,
-            tone: bot.tone || tone,
-            businessDescription: bot.description || businessDescription,
-            primaryGoals: bot.primaryGoals || goals
-          }
-        })
-      });
+      const data = await fetchChatPreview(
+        text,
+        updatedHistory,
+        {
+          name: bot.name || assistantName,
+          tone: bot.tone || tone,
+          businessDescription: bot.description || businessDescription,
+          primaryGoals: bot.primaryGoals || goals
+        },
+        bot.id
+      );
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.reply) {
-          appendBotReply(data.reply);
-          return;
-        }
+      if (data.reply) {
+        appendBotReply(data.reply);
+      } else {
+        appendBotReply("Sorry, no response from the server.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching live LLM response in preview:', err);
+      appendBotReply(`Error: ${err.message}`);
     }
-
-    // Dynamic smart fallback if API call cannot reach upstream
-    setTimeout(() => {
-      const bName = bot.name || assistantName;
-      const bDesc = bot.description || businessDescription;
-      let reply = `Thank you for contacting ${bName}! We specialize in ${bDesc.slice(0, 70)}... How can I assist you with your inquiry?`;
-      const lower = text.toLowerCase();
-      if (lower.includes('product') || lower.includes('item')) {
-        reply = "We offer a wide collection of verified products and artisanal crafts with express shipping across India! Would you like details on a specific category?";
-      } else if (lower.includes('price') || lower.includes('cost') || lower.includes('discount')) {
-        reply = "Our products start from ₹499 with free shipping on all orders above ₹999. Would you like a special discount code?";
-      } else if (lower.includes('appointment') || lower.includes('schedule') || lower.includes('book')) {
-        reply = "You can book a personal consultation with our team right here. What day and time works best for you?";
-      } else if (lower.includes('human') || lower.includes('agent') || lower.includes('person')) {
-        reply = "Transferring to a specialist now. One moment while I alert our team!";
-      }
-      appendBotReply(reply);
-    }, 600);
   };
 
   const handleSaveDraft = () => {

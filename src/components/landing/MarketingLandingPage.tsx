@@ -95,7 +95,7 @@ export default function MarketingLandingPage() {
             onClick={() => setCurrentScreen('home')}
             className="text-sm font-medium text-slate-600 hover:text-slate-900 px-3 py-1.5 transition-colors"
           >
-            Dashboard
+            Log in
           </button>
           <button
             onClick={() => setCurrentScreen('onboarding')}

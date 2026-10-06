@@ -30,42 +30,7 @@ import {
   Zap
 } from 'lucide-react';
 
-const chartData = [
-  { date: 'Sep 1', conversations: 42 },
-  { date: 'Sep 2', conversations: 78 },
-  { date: 'Sep 3', conversations: 65 },
-  { date: 'Sep 4', conversations: 110 },
-  { date: 'Sep 5', conversations: 152 },
-  { date: 'Sep 6', conversations: 128 },
-  { date: 'Sep 7', conversations: 140 },
-];
-
-const recentConvs = [
-  {
-    name: 'Priya Sharma',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
-    query: 'What are your pricing plans?',
-    time: '2m ago'
-  },
-  {
-    name: 'Arjun Kumar',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-    query: 'Can I schedule a demo?',
-    time: '10m ago'
-  },
-  {
-    name: 'Sneha Patel',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
-    query: 'Do you offer support?',
-    time: '25m ago'
-  },
-  {
-    name: 'Karthik R',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-    query: 'I want to know about integra...',
-    time: '1h ago'
-  }
-];
+// Dynamic data will be fetched in the component
 
 function CountUpNumber({ end, decimals = 0, suffix = '', prefix = '', duration = 800 }: { end: number; decimals?: number; suffix?: string; prefix?: string; duration?: number }) {
   const [val, setVal] = useState(0);
@@ -96,9 +61,69 @@ function CountUpNumber({ end, decimals = 0, suffix = '', prefix = '', duration =
   return <span>{prefix}{formatted}{suffix}</span>;
 }
 
+import { apiFetch } from '@/lib/api';
+
 export default function AnalyticsCommandCenter() {
-  const { setCurrentScreen, setIsWidgetOpen, isEmptyStateDemo, setIsEmptyStateDemo } = useApp();
-  const [selectedDateRange, setSelectedDateRange] = useState('Sep 1, 2025 - Sep 8, 2025');
+  const { setCurrentScreen, setIsWidgetOpen, isEmptyStateDemo, setIsEmptyStateDemo, authToken } = useApp();
+  const [selectedDateRange, setSelectedDateRange] = useState('Last 7 Days');
+
+  const [metrics, setMetrics] = useState({
+    conversations: 0,
+    leads: 0,
+    appointments: 0,
+    resolutionRate: 0,
+  });
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [recentConvs, setRecentConvs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    async function loadDashboardData() {
+      if (!authToken) return;
+      try {
+        const [overviewRes, usageRes, convsRes, apptsRes] = await Promise.all([
+          apiFetch('/api/v1/analytics/overview', { token: authToken }),
+          apiFetch('/api/v1/analytics/usage', { token: authToken }),
+          apiFetch('/api/v1/conversations/', { token: authToken }),
+          apiFetch('/api/v1/appointments/', { token: authToken })
+        ]);
+
+        const totalConvs = overviewRes?.total_conversations || 0;
+        const handedOff = overviewRes?.handed_off_conversations || 0;
+        const resolution = totalConvs > 0 ? ((totalConvs - handedOff) / totalConvs) * 100 : 100;
+
+        setMetrics({
+          conversations: totalConvs,
+          leads: overviewRes?.total_leads || 0,
+          appointments: apptsRes?.items?.length || 0,
+          resolutionRate: resolution,
+        });
+
+        if (usageRes?.daily_trend) {
+          setChartData(usageRes.daily_trend.map((d: any) => ({
+            date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+            conversations: d.total_conversations
+          })));
+        }
+
+        if (convsRes?.items) {
+          setRecentConvs(convsRes.items.slice(0, 4).map((c: any) => ({
+            name: c.visitor_name || 'Anonymous User',
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
+            query: c.last_message || 'Started a conversation',
+            time: new Date(c.updated_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+          })));
+        }
+
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadDashboardData();
+  }, [authToken]);
 
   if (isEmptyStateDemo) {
     return (
@@ -171,7 +196,7 @@ export default function AnalyticsCommandCenter() {
           <p className="text-xs font-medium text-slate-500">Total Conversations</p>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-bold text-slate-900 tracking-tight">
-              <CountUpNumber end={1248} />
+              <CountUpNumber end={metrics.conversations} />
             </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 12%</span>
@@ -184,7 +209,7 @@ export default function AnalyticsCommandCenter() {
           <p className="text-xs font-medium text-slate-500">Leads Captured</p>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-bold text-slate-900 tracking-tight">
-              <CountUpNumber end={320} />
+              <CountUpNumber end={metrics.leads} />
             </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 28%</span>
@@ -197,7 +222,7 @@ export default function AnalyticsCommandCenter() {
           <p className="text-xs font-medium text-slate-500">Appointments</p>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-bold text-slate-900 tracking-tight">
-              <CountUpNumber end={48} />
+              <CountUpNumber end={metrics.appointments} />
             </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 33%</span>
@@ -213,7 +238,7 @@ export default function AnalyticsCommandCenter() {
           </div>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-bold text-slate-900 tracking-tight">
-              <CountUpNumber end={92.4} decimals={1} suffix="%" />
+              <CountUpNumber end={metrics.resolutionRate} decimals={1} suffix="%" />
             </span>
             <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <span>↑ 6%</span>
@@ -298,8 +323,8 @@ export default function AnalyticsCommandCenter() {
             </button>
           </div>
 
-          <div className="divide-y divide-slate-100 py-1 flex-1">
-            {recentConvs.map((conv, idx) => (
+          <div className="divide-y divide-slate-100 py-1 flex-1 min-h-[220px] overflow-y-auto pr-1">
+            {recentConvs.length > 0 ? recentConvs.map((conv, idx) => (
               <div 
                 key={idx} 
                 onClick={() => setCurrentScreen('conversations')}
@@ -321,7 +346,11 @@ export default function AnalyticsCommandCenter() {
                   {conv.time}
                 </span>
               </div>
-            ))}
+            )) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-xs text-slate-400">No conversations yet.</p>
+              </div>
+            )}
           </div>
 
           <div className="pt-3 border-t border-slate-100">

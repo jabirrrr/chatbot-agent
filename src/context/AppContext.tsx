@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { fetchChatPreview } from '@/lib/api';
 import { 
   NavigationScreen, 
   ChatbotConfig, 
@@ -13,13 +14,46 @@ import {
   BusinessInfo, 
   ChatMessage 
 } from '@/types';
-import { 
-  initialChatbot, 
-  mockChatbotsList, 
-  mockKnowledgeSources, 
-  mockFaqs, 
-  initialBusinessInfo 
-} from '@/data/mockData';
+
+const defaultChatbot: ChatbotConfig = {
+  id: 'bot_default',
+  name: 'New Chatbot',
+  status: 'draft',
+  domain: '',
+  conversationsCount: 0,
+  lastUpdated: 'Just now',
+  themeColor: '#2563eb',
+  welcomeMessage: "👋 Hi there! How can we help you today?",
+  tone: 'Friendly',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
+  position: 'bottom-right',
+  launcherStyle: 'pill',
+  suggestedQuestions: [],
+  leadFields: ['name', 'email'],
+  fallbackBehavior: 'human_help',
+  monthlyBudgetUsd: 0,
+  currentCostUsd: 0,
+  description: '',
+  primaryGoals: {
+    answerQuestions: true,
+    captureLeads: true,
+    scheduleAppointments: true,
+    transferToHuman: true
+  }
+};
+
+const defaultBusinessInfo: BusinessInfo = {
+  companyName: '',
+  website: '',
+  industry: '',
+  description: '',
+  services: [],
+  pricingGuidance: '',
+  address: '',
+  hours: '',
+  email: '',
+  phone: ''
+};
 
 export interface ToastMessage {
   id: string;
@@ -118,7 +152,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return screen as NavigationScreen;
       }
     }
-    return 'home';
+    return 'landing';
   });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
@@ -151,7 +185,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem('helio_knowledge_sources');
       if (saved) return JSON.parse(saved);
     }
-    return mockKnowledgeSources;
+    return [];
   });
   
   const [faqs, setFaqs] = useState<FAQItem[]>(() => {
@@ -159,7 +193,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem('helio_faqs');
       if (saved) return JSON.parse(saved);
     }
-    return mockFaqs;
+    return [];
   });
   
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(() => {
@@ -167,7 +201,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem('helio_business_info');
       if (saved) return JSON.parse(saved);
     }
-    return initialBusinessInfo;
+    return defaultBusinessInfo;
   });
 
   useEffect(() => {
@@ -195,7 +229,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function initData() {
       try {
-        const { API_BASE, fetchChatbots } = await import('@/lib/api');
+        const { API_BASE, fetchChatbots, fetchKnowledgeSources, fetchUserOrganizations } = await import('@/lib/api');
         
         let tokenToUse = authToken;
         if (!tokenToUse && typeof window !== 'undefined') {
@@ -209,7 +243,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (tokenToUse) {
           let bots: any[] = [];
           let fetchSuccess = false;
+          let onboardingCompleted = false;
           try {
+            const orgs = await fetchUserOrganizations(tokenToUse);
+            if (orgs && orgs.length > 0) {
+              onboardingCompleted = orgs[0].onboarding_completed;
+            }
             bots = await fetchChatbots(tokenToUse);
             fetchSuccess = true;
           } catch (fetchErr: any) {
@@ -221,12 +260,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem('helio_auth_token');
               }
             } else {
-              console.error('Failed to fetch chatbots, backend might be down:', fetchErr);
+              console.error('Failed to fetch data, backend might be down:', fetchErr);
             }
           }
 
           if (fetchSuccess) {
+            // Routing logic based on onboarding state
+            setCurrentScreenInternal(prev => {
+              if (onboardingCompleted) {
+                if (prev === 'landing' || prev === 'onboarding') return 'home';
+                return prev;
+              } else {
+                return 'onboarding';
+              }
+            });
+
             if (bots && bots.length > 0) {
+              try {
+                const fetchedKSources = await fetchKnowledgeSources(tokenToUse as string);
+                if (fetchedKSources && fetchedKSources.length > 0) {
+                  setKnowledgeSources(fetchedKSources.map((ks: any) => ({
+                    id: ks.id,
+                    chatbotId: '',
+                    name: ks.filename || ks.url || 'Source',
+                    type: ks.source_type || 'document',
+                    status: ks.status === 'ready' ? 'ready' : (ks.status === 'failed' ? 'failed' : 'processing'),
+                    chunksIndexed: ks.chunks_indexed || 0,
+                    fileSize: ks.source_type === 'website' ? 'Web Page' : 'Unknown',
+                    lastUpdated: new Date(ks.updated_at || Date.now()).toLocaleDateString(),
+                    category: 'General'
+                  })));
+                }
+              } catch (e) {
+                console.warn('Could not fetch knowledge sources:', e);
+              }
+
               const mappedBots: ChatbotConfig[] = bots.map((b: any) => {
                 const cfg = b.config_json || {};
                 return {
@@ -402,7 +470,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isWidgetOffline, setIsWidgetOffline] = useState(false);
   const [isWidgetError, setIsWidgetError] = useState(false);
   const [widgetMessages, setWidgetMessages] = useState<ChatMessage[]>(() => {
-    return getInitialBotMessages(initialChatbot.id, initialChatbot.welcomeMessage);
+    return getInitialBotMessages(defaultChatbot.id, defaultChatbot.welcomeMessage);
   });
 
   // Switch conversation whenever activeChatbotId changes
@@ -564,7 +632,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     const newBot: ChatbotConfig = {
-      ...initialChatbot,
+      ...defaultChatbot,
       id: newId,
       name: newName,
       status: 'draft',
@@ -896,52 +964,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          history: updatedHistory,
-          apiKey: llmKey,
-          provider: llmProvider || 'OpenAI',
-          botConfig: {
-            name: currentBot.name,
-            tone: currentBot.tone,
-            businessDescription: currentBot.description || businessInfo.description,
-          },
-          chatbot_id: targetBotId
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.reply) {
-          appendAiResponse(data.reply, data.source || undefined);
-          return;
-        }
+      const data = await fetchChatPreview(
+        text,
+        updatedHistory,
+        {
+          name: currentBot.name,
+          tone: currentBot.tone,
+          businessDescription: currentBot.description || businessInfo.description,
+        },
+        targetBotId
+      );
+      
+      if (data.reply) {
+        appendAiResponse(data.reply, undefined);
       } else {
-        console.warn('LLM API returned non-ok status, using local fallback');
+        appendAiResponse("Sorry, I didn't get a response from the server.", undefined);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to call LLM API', err);
+      appendAiResponse(`Sorry, I encountered an error: ${err.message}`, undefined);
     }
-
-    // Fallback: Simulated AI response with grounding
-    setTimeout(() => {
-      let reply = `Thanks for asking! At ${currentBot.name || 'our studio'}, we specialize in custom web architectures, high-ROI paid acquisition, and brand design. Would you like to check our pricing packages or speak with an agent?`;
-      const refSource = '2026 Agency Services & Retainer Guide.pdf';
-
-      const lower = text.toLowerCase();
-      if (lower.includes('price') || lower.includes('cost') || lower.includes('budget') || lower.includes('how much')) {
-        reply = "Our monthly marketing retainers start at $3,500/month. For custom Next.js web design and development, projects typically range from $8,000 to $35,000 depending on scope and integrations. Would you like to book a 30-min discovery call?";
-      } else if (lower.includes('book') || lower.includes('schedule') || lower.includes('call') || lower.includes('meeting') || lower.includes('demo')) {
-        reply = "I'd be glad to arrange that! I have discovery slots open tomorrow at 2:00 PM CST and Thursday at 10:30 AM CST. Which time works best for you?";
-      } else if (lower.includes('human') || lower.includes('person') || lower.includes('agent') || lower.includes('operator')) {
-        reply = "I've alerted our client success team. An operator will join this chat thread shortly, or you can drop your email address and we'll reply directly!";
-      }
-
-      appendAiResponse(reply, refSource);
-    }, 1000);
   };
 
   return (
@@ -959,7 +1001,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setPendingNavigation,
         confirmNavigation,
         cancelNavigation,
-        chatbot: draftChatbot || initialChatbot,
+        chatbot: draftChatbot || defaultChatbot,
         updateChatbot,
         saveDraft,
         discardDraft,

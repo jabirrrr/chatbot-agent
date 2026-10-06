@@ -62,6 +62,51 @@ async def get_integrations_status(
     statuses = await IntegrationService.get_all_statuses(db=db, organization_id=org.id)
     return IntegrationStatusResponse(integrations=statuses)
 
+@router.get("/google/auth-url", response_model=AuthUrlResponse, summary="Get Google OAuth URL")
+async def get_google_auth_url(
+    state: str = Query(..., description="State parameter for OAuth"),
+):
+    from app.adapters.calendar.google_calendar import GoogleCalendarService
+    url = GoogleCalendarService.get_authorization_url(state)
+    return AuthUrlResponse(auth_url=url, provider="google")
+
+class GoogleCodeExchangeRequest(BaseModel):
+    code: str
+
+@router.post("/google/exchange", summary="Exchange Google Auth Code")
+async def exchange_google_code(
+    data: GoogleCodeExchangeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    org: Organization = Depends(get_current_organization)
+):
+    try:
+        tokens = await GoogleCalendarService.exchange_code(data.code)
+        # Note: integration_service.save_integration automatically handles VAULT_SECRET_KEY encryption
+        await IntegrationService.save_integration(
+            db=db,
+            organization_id=org.id,
+            provider="google_calendar",
+            credentials={"refresh_token": tokens.get("refresh_token")},
+            metadata={"account_email": tokens.get("account_email")}
+        )
+        return {"success": True, "provider": "google_calendar"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/google/disconnect", response_model=DisconnectResponse, summary="Disconnect Google Calendar")
+async def disconnect_google(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    org: Organization = Depends(get_current_organization)
+):
+    await IntegrationService.disconnect_integration(db=db, organization_id=org.id, provider="google_calendar")
+    return DisconnectResponse(
+        success=True,
+        provider="google_calendar",
+        message="Google Calendar integration disconnected successfully."
+    )
+
 
 @router.post("/calcom/disconnect", response_model=DisconnectResponse, summary="Disconnect Cal.com")
 async def disconnect_calcom(

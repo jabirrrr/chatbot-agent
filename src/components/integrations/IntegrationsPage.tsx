@@ -5,6 +5,9 @@ import { useApp } from '@/context/AppContext';
 import { 
   fetchIntegrationsStatus, 
   disconnectCalcom,
+  fetchGoogleAuthUrl,
+  exchangeGoogleCode,
+  disconnectGoogle,
   apiFetch
 } from '@/lib/api';
 import { RotateCw, Mail, X } from 'lucide-react';
@@ -28,6 +31,20 @@ export default function IntegrationsPage() {
   const [calcomEventTypeId, setCalcomEventTypeId] = useState('');
 
   const [integrations, setIntegrations] = useState<IntegrationCard[]>([
+    {
+      id: 'google',
+      name: 'Google Calendar',
+      desc: 'Book meetings in Google Meet',
+      category: 'Scheduling',
+      iconBg: 'bg-blue-50 text-blue-600',
+      status: 'disconnected',
+      logoSvg: (
+        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+          <path d="M4 11.2V20h5v-5h6v5h5v-8.8L12 4z" fill="#4285F4"/>
+          <path d="M12 4l-8 7.2v-1.1L12 2.9l8 7.2v1.1z" fill="#34A853"/>
+        </svg>
+      )
+    },
     {
       id: 'calcom',
       name: 'Cal.com',
@@ -147,27 +164,56 @@ export default function IntegrationsPage() {
 
     try {
       const data = await fetchIntegrationsStatus(token);
-      if (data?.integrations?.calcom) {
-        const cal = data.integrations.calcom;
-        const isConnected = cal.connected && cal.status === 'connected';
-
-        setIntegrations(prev => prev.map(i => {
-          if (i.id === 'calcom') {
-            return {
-              ...i,
-              status: isConnected ? 'connected' : 'disconnected',
-              desc: isConnected ? `Connected` : 'Schedule appointments automatically'
-            };
-          }
-          return i;
-        }));
-      }
+      setIntegrations(prev => prev.map(i => {
+        if (i.id === 'calcom' && data?.integrations?.calcom) {
+          const cal = data.integrations.calcom;
+          const isConnected = cal.connected && cal.status === 'connected';
+          return {
+            ...i,
+            status: isConnected ? 'connected' : 'disconnected',
+            desc: isConnected ? `Connected` : 'Schedule appointments automatically'
+          };
+        }
+        if (i.id === 'google' && data?.integrations?.google) {
+          const google = data.integrations.google;
+          const isConnected = google.connected && google.status === 'connected';
+          return {
+            ...i,
+            status: isConnected ? 'connected' : 'disconnected',
+            accountEmail: google.metadata?.account_email,
+            desc: isConnected ? `Connected as ${google.metadata?.account_email || 'Google'}` : 'Book meetings in Google Meet'
+          };
+        }
+        return i;
+      }));
     } catch (e) {
       console.warn('Could not load integrations status:', e);
     }
   };
 
   useEffect(() => {
+    // Process OAuth callback if exists
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      if (code && state === 'helio_google_oauth') {
+        const token = authToken || localStorage.getItem('helio_auth_token');
+        if (token) {
+          exchangeGoogleCode(token, code).then(() => {
+            addToast({ type: 'success', title: 'Google Calendar Connected', description: 'Your calendar is now linked.' });
+            window.history.replaceState({}, document.title, window.location.pathname);
+            loadStatus(token);
+          }).catch(err => {
+            addToast({ type: 'error', title: 'Connection Failed', description: err.message });
+            window.history.replaceState({}, document.title, window.location.pathname);
+            loadStatus(token);
+          });
+          return; // Skip initial load as exchange will trigger it
+        }
+      }
+    }
+
     loadStatus();
 
     // No OAuth redirect needed for Cal.com
@@ -217,6 +263,45 @@ export default function IntegrationsPage() {
       }
 
       setIsCalcomModalOpen(true);
+      return;
+    }
+    
+    // 2. Flow for Google
+    if (id === 'google') {
+      const token = authToken || (typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null);
+      if (!token) {
+        addToast({ type: 'error', title: 'Authentication Required', description: 'Please log in to manage integrations.' });
+        return;
+      }
+      if (currentStatus === 'connected') {
+        setIntegrations(prev => prev.map(i => i.id === 'google' ? { ...i, status: 'connecting' } : i));
+        try {
+          const res = await disconnectGoogle(token);
+          if (res?.success) {
+            setIntegrations(prev => prev.map(i => i.id === 'google' ? { ...i, status: 'disconnected', desc: 'Book meetings in Google Meet', accountEmail: undefined } : i));
+            addToast({ type: 'info', title: 'Disconnected', description: 'Disconnected Google Calendar.' });
+          } else {
+            throw new Error('Failed to disconnect');
+          }
+        } catch {
+          setIntegrations(prev => prev.map(i => i.id === 'google' ? { ...i, status: 'connected' } : i));
+          addToast({ type: 'error', title: 'Error', description: 'Network failure when disconnecting Google.' });
+        }
+        return;
+      }
+      
+      setIntegrations(prev => prev.map(i => i.id === 'google' ? { ...i, status: 'connecting' } : i));
+      try {
+        const data = await fetchGoogleAuthUrl(token, 'helio_google_oauth');
+        if (data?.auth_url) {
+          window.location.assign(data.auth_url);
+        } else {
+          throw new Error('Failed to obtain Auth URL');
+        }
+      } catch (err: any) {
+        setIntegrations(prev => prev.map(i => i.id === 'google' ? { ...i, status: 'disconnected' } : i));
+        addToast({ type: 'error', title: 'Error', description: err.message });
+      }
       return;
     }
 

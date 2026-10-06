@@ -276,7 +276,7 @@ export async function fetchOrganization(token: string, orgId: string) {
 export async function updateOrganization(
   token: string,
   orgId: string,
-  data: { name?: string; website?: string; industry?: string; timezone?: string }
+  data: { name?: string; website?: string; industry?: string; timezone?: string; onboarding_completed?: boolean }
 ) {
   try {
     const res = await fetch(`${API_BASE}/api/v1/organizations/${orgId}`, {
@@ -378,3 +378,258 @@ export async function apiFetch(endpoint: string, options: { method?: string, tok
   return res.json();
 }
 
+
+/**
+ * Fetch Leads for active organization
+ */
+export async function fetchLeads(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/leads/`, {
+      method: 'GET',
+      headers: { 
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return { items: [], total: 0 };
+  } catch (err) {
+    console.error('Failed to fetch leads:', err);
+    return { items: [], total: 0 };
+  }
+}
+
+/**
+ * Fetch Conversations for active organization
+ */
+export async function fetchConversations(token: string, chatbotId?: string) {
+  try {
+    const url = chatbotId ? `${API_BASE}/api/v1/conversations/?chatbot_id=${chatbotId}` : `${API_BASE}/api/v1/conversations/`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { 
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return { items: [], total: 0 };
+  } catch (err) {
+    console.error('Failed to fetch conversations:', err);
+    return { items: [], total: 0 };
+  }
+}
+
+/**
+ * Fetch Appointments for active organization
+ */
+export async function fetchAppointments(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/appointments/`, {
+      method: 'GET',
+      headers: { 
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return { items: [], total: 0 };
+  } catch (err) {
+    console.error('Failed to fetch appointments:', err);
+    return { items: [], total: 0 };
+  }
+}
+
+/**
+ * Fetch Knowledge Sources for active organization
+ */
+export async function fetchKnowledgeSources(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/knowledge/sources`, {
+      method: 'GET',
+      headers: { 
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return [];
+  } catch (err) {
+    console.error('Failed to fetch knowledge sources:', err);
+    return [];
+  }
+}
+
+/**
+ * Fetch Business Info (FAQs) for active organization
+ */
+export async function fetchBusinessInfo(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/knowledge/business-info`, {
+      method: 'GET',
+      headers: { 
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return [];
+  } catch (err) {
+    console.error('Failed to fetch business info:', err);
+    return [];
+  }
+}
+
+/**
+ * Fetch Analytics Overview
+ */
+export async function fetchAnalyticsOverview(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/analytics/overview`, {
+      method: 'GET',
+      headers: { 
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to fetch analytics overview:', err);
+    return null;
+  }
+}
+
+/**
+ * Fetch Analytics Usage & Trends
+ */
+export async function fetchAnalyticsUsage(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/analytics/usage`, {
+      method: 'GET',
+      headers: { 
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to fetch analytics usage:', err);
+    return null;
+  }
+}
+
+/**
+ * Fetch Analytics Knowledge Gaps (Top Questions)
+ */
+export async function fetchAnalyticsGaps(token: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/analytics/gaps`, {
+      method: 'GET',
+      headers: { 
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to fetch analytics gaps:', err);
+    return null;
+  }
+}
+
+/**
+ * Get Google Calendar OAuth URL
+ */
+export async function fetchGoogleAuthUrl(token: string, state: string) {
+  const res = await fetch(`${API_BASE}/api/v1/integrations/google/auth-url?state=${encodeURIComponent(state)}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (res.ok) return await res.json();
+  throw new Error('Failed to get Google Auth URL');
+}
+
+/**
+ * Exchange Google OAuth code
+ */
+export async function exchangeGoogleCode(token: string, code: string) {
+  const res = await fetch(`${API_BASE}/api/v1/integrations/google/exchange`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ code })
+  });
+  if (res.ok) return await res.json();
+  throw new Error('Failed to exchange Google code');
+}
+
+/**
+ * Disconnect Google Calendar
+ */
+export async function disconnectGoogle(token: string) {
+  const res = await fetch(`${API_BASE}/api/v1/integrations/google/disconnect`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (res.ok) return await res.json();
+  throw new Error('Failed to disconnect Google Calendar');
+}
+/**
+ * Fetch Chat Preview from backend directly (bypasses Vercel proxy)
+ */
+export async function fetchChatPreview(message: string, history: any[], botConfig: any, chatbot_id?: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/chatbots/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, history, botConfig, chatbot_id })
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        reply: data.reply.trim(),
+        live: data.live,
+        provider: data.provider
+      };
+    } else {
+      const rawErr = await res.text();
+      let errorMsg = rawErr;
+      try {
+        const parsed = JSON.parse(rawErr);
+        errorMsg = parsed.detail || parsed.error?.message || rawErr;
+      } catch {}
+      throw new Error(errorMsg);
+    }
+  } catch (err: any) {
+    throw new Error(err?.message || 'Connection failed');
+  }
+}

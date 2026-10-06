@@ -109,12 +109,6 @@ export default function AppShell() {
   if (currentScreen === 'onboarding') {
     return (
       <div className="min-h-screen bg-[#fafbfc] font-sans antialiased text-slate-900 flex flex-col justify-center relative">
-        <button
-          onClick={() => setCurrentScreen('home')}
-          className="absolute top-6 right-6 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors shadow-2xs"
-        >
-          Exit to Dashboard
-        </button>
         <OnboardingWizard />
         <ToastContainer />
       </div>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
+import { fetchChatPreview } from '@/lib/api';
 import { 
   Palette, 
   Send, 
@@ -72,47 +73,27 @@ export default function AppearanceStudio() {
     setInteractiveMessages(prev => [...prev, { sender: 'visitor', text }]);
     setPreviewMsg('');
 
-    let llmKey: string | null = null;
-    let llmProvider: string | null = null;
-    if (typeof window !== 'undefined') {
-      llmKey = localStorage.getItem('helio_llm_key');
-      llmProvider = localStorage.getItem('helio_llm_provider');
-    }
-
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          history: interactiveMessages,
-          apiKey: llmKey,
-          provider: llmProvider || 'OpenAI',
-          botConfig: {
-            name: chatbot.name,
-            tone: chatbot.tone,
-            businessDescription: chatbot.description || 'Our business provides exceptional customer service and support.',
-          }
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.reply) {
-          setInteractiveMessages(prev => [...prev, { sender: 'bot', text: data.reply }]);
-          return;
-        }
+      const data = await fetchChatPreview(
+        text,
+        interactiveMessages,
+        {
+          name: chatbot.name,
+          tone: chatbot.tone,
+          businessDescription: chatbot.description || 'Our business provides exceptional customer service and support.',
+        },
+        chatbot.id
+      );
+      
+      if (data.reply) {
+        setInteractiveMessages(prev => [...prev, { sender: 'bot', text: data.reply }]);
+      } else {
+        setInteractiveMessages(prev => [...prev, { sender: 'bot', text: "Sorry, no response from the server." }]);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching chat in AppearanceStudio:', err);
+      setInteractiveMessages(prev => [...prev, { sender: 'bot', text: `Error: ${err.message}` }]);
     }
-
-    setTimeout(() => {
-      setInteractiveMessages(prev => [
-        ...prev,
-        { sender: 'bot', text: 'Thanks for reaching out! A specialist will answer shortly.' }
-      ]);
-    }, 600);
   };
 
   const paletteSwatches = [

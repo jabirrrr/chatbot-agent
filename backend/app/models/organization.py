@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Boolean
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.models.base import UUIDPrimaryKeyMixin, TimestampMixin
@@ -17,6 +17,7 @@ class Organization(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     industry = Column(String(100), nullable=True)
     timezone = Column(String(100), default="America/Chicago", nullable=False)
     subscription_status = Column(String(50), default="free", nullable=False)
+    onboarding_completed = Column(Boolean, default=False, server_default="false", nullable=False)
 
     # Relationships
     members = relationship(

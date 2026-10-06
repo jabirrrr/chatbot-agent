@@ -252,10 +252,45 @@ class CalendarToolsExecutor:
                 ]
             }
 
-        print("[DEBUG] No api_key decrypted!")
+        # Fallback to Google Calendar
+        google_cal = await IntegrationService.get_integration(db, organization_id, "google_calendar")
+        if google_cal and google_cal.encrypted_credentials:
+            from app.core.vault import decrypt_vault_secret
+            import json
+            try:
+                creds_json = decrypt_vault_secret(google_cal.encrypted_credentials)
+                creds = json.loads(creds_json)
+                refresh_token = creds.get("refresh_token")
+                
+                from app.adapters.calendar.google_calendar import GoogleCalendarService
+                token_data = await GoogleCalendarService.refresh_access_token(refresh_token)
+                access_token = token_data.get("access_token")
+                
+                slots = await GoogleCalendarService.get_calendar_availability(
+                    access_token=access_token,
+                    target_date=target_date,
+                    duration_minutes=duration_minutes
+                )
+                
+                return {
+                    "success": True,
+                    "target_date": target_date_str,
+                    "available_slots": [
+                        {
+                            "start_time": s.start_time.isoformat(),
+                            "end_time": s.end_time.isoformat(),
+                            "label": s.label
+                        } for s in slots
+                    ]
+                }
+            except Exception as e:
+                print(f"[DEBUG] Google Calendar error in get_availability: {e}")
+                pass
+
+        print("[DEBUG] No calendar integration found (Cal.com or Google)")
         return {
             "success": False,
-            "error": "Cal.com is not connected for this business.",
+            "error": "No calendar integration is connected for this business.",
             "slots": []
         }
 
@@ -360,9 +395,66 @@ class CalendarToolsExecutor:
                 "message": f"Appointment successfully scheduled with {attendee_name} via Cal.com."
             }
 
+        # Fallback to Google Calendar
+        google_cal = await IntegrationService.get_integration(db, organization_id, "google_calendar")
+        if google_cal and google_cal.encrypted_credentials:
+            from app.core.vault import decrypt_vault_secret
+            import json
+            try:
+                creds_json = decrypt_vault_secret(google_cal.encrypted_credentials)
+                creds = json.loads(creds_json)
+                refresh_token = creds.get("refresh_token")
+                
+                from app.adapters.calendar.google_calendar import GoogleCalendarService
+                token_data = await GoogleCalendarService.refresh_access_token(refresh_token)
+                access_token = token_data.get("access_token")
+                
+                booking = await GoogleCalendarService.create_calendar_event(
+                    access_token=access_token,
+                    start_time=start_time,
+                    duration_minutes=duration_minutes,
+                    attendee_name=attendee_name,
+                    attendee_email=attendee_email,
+                    summary=summary,
+                    notes=notes
+                )
+                
+                if not booking or not booking.success:
+                    return {"success": False, "error": "Failed to create event in Google Calendar"}
+                    
+                appointment = Appointment(
+                    organization_id=organization_id,
+                    conversation_id=conversation_id,
+                    lead_id=lead_id,
+                    attendee_name=attendee_name,
+                    attendee_email=attendee_email,
+                    scheduled_at=start_time,
+                    duration_minutes=duration_minutes,
+                    status="scheduled",
+                    meeting_link=booking.meeting_link,
+                    provider_event_id=booking.event_id,
+                    notes=notes
+                )
+                db.add(appointment)
+                await db.commit()
+                
+                return {
+                    "success": True,
+                    "appointment_id": str(appointment.id),
+                    "event_id": booking.event_id,
+                    "meeting_link": appointment.meeting_link,
+                    "scheduled_at": start_time.isoformat(),
+                    "attendee_name": attendee_name,
+                    "attendee_email": attendee_email,
+                    "message": f"Appointment successfully scheduled with {attendee_name} via Google Calendar."
+                }
+            except Exception as e:
+                print(f"[DEBUG] Google Calendar error in create_event: {e}")
+                pass
+
         return {
             "success": False,
-            "error": "Cal.com is not connected or configured."
+            "error": "No calendar integration is connected or configured."
         }
 
     @classmethod
