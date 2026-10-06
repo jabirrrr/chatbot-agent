@@ -7,16 +7,10 @@ import {
   Play, 
   Check, 
   Send, 
-  ArrowRight,
-  ShieldCheck,
   Zap,
   Bot,
-  MessageSquare,
   Users,
-  Calendar,
-  Layers,
-  ChevronRight,
-  ArrowUpRight
+  Calendar
 } from 'lucide-react';
 
 export default function MarketingLandingPage() {
@@ -83,10 +77,20 @@ export default function MarketingLandingPage() {
           </div>
 
           <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
-            <button onClick={() => setCurrentScreen('chatbots')} className="hover:text-slate-900 transition-colors">Product</button>
-            <button onClick={() => setCurrentScreen('billing')} className="hover:text-slate-900 transition-colors">Pricing</button>
-            <button onClick={() => setCurrentScreen('knowledge')} className="hover:text-slate-900 transition-colors">Resources</button>
-            <button onClick={() => setCurrentScreen('integrations')} className="hover:text-slate-900 transition-colors">Integrations</button>
+            <a 
+              href="#pricing" 
+              onClick={(e) => {
+                const target = document.getElementById('pricing');
+                if (target) {
+                  e.preventDefault();
+                  target.scrollIntoView({ behavior: 'smooth' });
+                  window.history.pushState(null, '', '#pricing');
+                }
+              }}
+              className="hover:text-slate-900 transition-colors"
+            >
+              Pricing
+            </a>
           </nav>
         </div>
 
@@ -324,6 +328,129 @@ export default function MarketingLandingPage() {
           </div>
         </div>
       </section>
+      {/* Pricing Section */}
+      <section id="pricing" className="bg-[#fafbfc] border-t border-slate-100 py-20 px-6 sm:px-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900">
+              Simple plans for businesses of every size
+            </h2>
+            <p className="text-slate-600 text-sm">
+              Start free. Upgrade when you need more conversations and advanced integrations.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
+            {/* Starter Plan */}
+            <div className="bg-white rounded-2xl p-8 border border-slate-200/80 shadow-xs flex flex-col">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-slate-900">Starter</h3>
+                <p className="text-sm text-slate-500 mt-1">For small businesses</p>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl font-bold tracking-tight text-slate-900">₹999</span>
+                <span className="text-slate-500 text-sm font-medium">/mo</span>
+              </div>
+              <ul className="space-y-4 mb-8 flex-1">
+                <li className="flex items-start gap-3 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span>1,000 conversations</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span>Basic features</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span>Email support</span>
+                </li>
+              </ul>
+              <button 
+                onClick={() => setCurrentScreen('onboarding')}
+                className="w-full py-2.5 px-4 rounded-xl font-medium text-sm border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Get Started
+              </button>
+            </div>
+
+            {/* Growth Plan (Popular) */}
+            <div className="bg-white rounded-2xl p-8 border-2 border-indigo-600 shadow-md relative flex flex-col scale-100 md:scale-105 z-10">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider py-1 px-3 rounded-full">
+                Most Popular
+              </div>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-slate-900">Growth</h3>
+                <p className="text-sm text-slate-500 mt-1">For growing businesses</p>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl font-bold tracking-tight text-slate-900">₹2,499</span>
+                <span className="text-slate-500 text-sm font-medium">/mo</span>
+              </div>
+              <ul className="space-y-4 mb-8 flex-1">
+                <li className="flex items-start gap-3 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span>5,000 conversations</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span>Integrations (CRM, Calendar)</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span>Advanced analytics</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span>Priority support</span>
+                </li>
+              </ul>
+              <button 
+                onClick={() => setCurrentScreen('onboarding')}
+                className="w-full py-2.5 px-4 rounded-xl font-medium text-sm bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
+              >
+                Get Started
+              </button>
+            </div>
+
+            {/* Business Plan */}
+            <div className="bg-white rounded-2xl p-8 border border-slate-200/80 shadow-xs flex flex-col">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-slate-900">Business</h3>
+                <p className="text-sm text-slate-500 mt-1">For high volume</p>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl font-bold tracking-tight text-slate-900">₹4,999</span>
+                <span className="text-slate-500 text-sm font-medium">/mo</span>
+              </div>
+              <ul className="space-y-4 mb-8 flex-1">
+                <li className="flex items-start gap-3 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span>20,000 conversations</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span>Custom integrations</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span>Dedicated support</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span>SLA</span>
+                </li>
+              </ul>
+              <button 
+                onClick={() => setCurrentScreen('onboarding')}
+                className="w-full py-2.5 px-4 rounded-xl font-medium text-sm border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Get Started
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
       {/* Bottom CTA Banner */}
       <section className="bg-slate-900 text-white py-16 px-6 sm:px-10">
