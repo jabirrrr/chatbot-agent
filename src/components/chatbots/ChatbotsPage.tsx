@@ -294,7 +294,7 @@ export default function ChatbotsPage() {
         ))}
 
         <button
-          onClick={createNewChatbot}
+          onClick={() => createNewChatbot()}
           className="flex items-center justify-center gap-2 p-2.5 pr-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/50 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all text-slate-500 group"
         >
           <div className="w-8 h-8 rounded-full bg-slate-200 group-hover:bg-indigo-200 flex items-center justify-center shrink-0 transition-colors">

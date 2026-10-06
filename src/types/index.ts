@@ -159,6 +159,7 @@ export interface ChatbotConfig {
   id: string;
   widgetToken?: string;
   name: string;
+  templateType?: string;
   status: 'active' | 'draft' | 'disabled';
   domain: string;
   description?: string;
