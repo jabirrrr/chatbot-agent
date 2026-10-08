@@ -18,7 +18,6 @@ import {
 export default function AppearanceStudio() {
   const { chatbot, updateChatbot, addToast, isDirty, saveDraft } = useApp();
 
-  const [appearanceTab, setAppearanceTab] = useState<'Style' | 'Colors' | 'Position' | 'Messages'>('Style');
   const [bubbleStyle, setBubbleStyle] = useState<'Modern' | 'Minimal' | 'Rounded' | 'Classic'>('Modern');
   const [primaryColor, setPrimaryColor] = useState(chatbot.themeColor || '#6366f1');
   const [welcomeMsg, setWelcomeMsg] = useState(
@@ -156,23 +155,6 @@ export default function AppearanceStudio() {
         </div>
       </div>
 
-      {/* Sub-tabs (Style, Colors, Position, Messages) */}
-      <div className="flex items-center gap-1 border-b border-slate-200/80 pb-px">
-        {(['Style', 'Colors', 'Position', 'Messages'] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setAppearanceTab(tab)}
-            className={`px-4 py-2 text-xs font-medium transition-all relative ${
-              appearanceTab === tab
-                ? 'text-indigo-600 font-semibold border-b-2 border-indigo-600 -mb-px'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
       {/* 2-Column Split: Controls on Left, Live Preview on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
@@ -181,8 +163,8 @@ export default function AppearanceStudio() {
           
           {/* Section: Chat Bubble Style */}
           <div className="space-y-3">
-            <label className="text-xs font-semibold text-slate-900 block">
-              Chat Bubble Style
+            <label className="text-sm font-semibold text-slate-900 block">
+              Widget Style
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {(['Modern', 'Minimal', 'Rounded', 'Classic'] as const).map(style => (
@@ -203,9 +185,9 @@ export default function AppearanceStudio() {
           </div>
 
           {/* Section: Primary Color */}
-          <div className="space-y-3 pt-2 border-t border-slate-100">
-            <label className="text-xs font-semibold text-slate-900 block">
-              Primary Color
+          <div className="space-y-3 pt-4 border-t border-slate-100">
+            <label className="text-sm font-semibold text-slate-900 block">
+              Colors & Branding
             </label>
             
             <div className="flex items-center gap-3">
@@ -245,10 +227,10 @@ export default function AppearanceStudio() {
           </div>
 
           {/* Section: Welcome Message */}
-          <div className="space-y-2 pt-2 border-t border-slate-100">
+          <div className="space-y-2 pt-4 border-t border-slate-100">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-900">
-                Welcome Message
+              <label className="text-sm font-semibold text-slate-900">
+                Messages & Greeting
               </label>
               <span className="text-[11px] text-slate-400">
                 {welcomeMsg.length}/100
@@ -264,9 +246,9 @@ export default function AppearanceStudio() {
           </div>
 
           {/* Section: Widget Position */}
-          <div className="space-y-3 pt-2 border-t border-slate-100">
-            <label className="text-xs font-semibold text-slate-900 block">
-              Widget Screen Position
+          <div className="space-y-3 pt-4 border-t border-slate-100">
+            <label className="text-sm font-semibold text-slate-900 block">
+              Widget Position
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
