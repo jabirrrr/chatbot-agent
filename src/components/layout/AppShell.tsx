@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
@@ -18,7 +18,6 @@ import ConversationsInbox from '@/components/conversations/ConversationsInbox';
 import LeadsPage from '@/components/leads/LeadsPage';
 import AppointmentsPage from '@/components/appointments/AppointmentsPage';
 import AnalyticsPage from '@/components/analytics/AnalyticsPage';
-import AiModelsPage from '@/components/ai-models/AiModelsPage';
 import DeveloperPage from '@/components/developer/DeveloperPage';
 import IntegrationsPage from '@/components/integrations/IntegrationsPage';
 import DeploymentPage from '@/components/deployment/DeploymentPage';
@@ -49,6 +48,12 @@ export default function AppShell() {
     authToken,
     createNewChatbot
   } = useApp();
+
+  useEffect(() => {
+    if (currentScreen === 'ai-models') {
+      setCurrentScreen('settings');
+    }
+  }, [currentScreen, setCurrentScreen]);
 
   const [newBotName, setNewBotName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('lead_gen');
@@ -149,7 +154,6 @@ export default function AppShell() {
           {currentScreen === 'analytics' && <AnalyticsPage />}
           {currentScreen === 'integrations' && <IntegrationsPage />}
           {currentScreen === 'deployment' && <DeploymentPage />}
-          {currentScreen === 'ai-models' && <AiModelsPage />}
           {currentScreen === 'developer' && <DeveloperPage />}
           {currentScreen === 'billing' && <BillingPage />}
           {currentScreen === 'settings' && <SettingsPage />}
