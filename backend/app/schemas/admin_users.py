@@ -21,3 +21,8 @@ class AdminUsersResponse(BaseModel):
     page: int
     size: int
     pages: int
+
+class AdminUserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    platform_role: Optional[str] = None
+    is_active: Optional[bool] = None

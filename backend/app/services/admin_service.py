@@ -12,8 +12,9 @@ from app.models.conversation import Conversation
 from app.models.ai_usage import AIUsageRecord
 from app.models.organization_member import OrganizationMember
 from app.schemas.admin_overview import AdminOverviewResponse
-from app.schemas.admin_users import AdminUsersResponse, AdminUserItem
+from app.schemas.admin_users import AdminUsersResponse, AdminUserItem, AdminUserUpdate
 from app.schemas.admin_analytics import AdminAnalyticsResponse, AnalyticsInterval, AnalyticsTimeseriesPoint
+import uuid
 
 async def get_overview_metrics(db: AsyncSession) -> AdminOverviewResponse:
     # Get total organizations
@@ -195,3 +196,91 @@ async def get_analytics_timeseries(
         interval=interval,
         data=points
     )
+
+async def check_last_super_user(db: AsyncSession) -> int:
+    stmt = select(func.count()).select_from(User).where(
+        User.platform_role == "super_user",
+        User.is_active == True
+    )
+    res = await db.execute(stmt)
+    return res.scalar() or 0
+
+async def update_user(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    update_data: AdminUserUpdate,
+    current_user: User
+) -> User:
+    if current_user.platform_role != 'super_user':
+        raise HTTPException(status_code=403, detail="Operation requires platform System Owner privileges.")
+
+    # 1. Fetch target user
+    stmt = select(User).where(User.id == user_id)
+    res = await db.execute(stmt)
+    target_user = res.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    # 2. Check Self-Protection (can't modify self role or status)
+    if current_user.id == target_user.id:
+        if (update_data.platform_role is not None and update_data.platform_role != target_user.platform_role) or \
+           (update_data.is_active is not None and update_data.is_active != target_user.is_active):
+            raise HTTPException(status_code=409, detail="You cannot modify your own platform account's role or status.")
+
+    # 3. Check Last Super User
+    if target_user.platform_role == "super_user":
+        # If demoting or deactivating a super_user
+        if (update_data.platform_role and update_data.platform_role != "super_user") or \
+           (update_data.is_active is False and target_user.is_active is True):
+            count = await check_last_super_user(db)
+            if count <= 1:
+                raise HTTPException(status_code=409, detail="At least one active Super User must remain.")
+
+    # 4. Validate Role
+    if update_data.platform_role is not None:
+        if update_data.platform_role not in ["super_user", "admin_user", "normal_user"]:
+            raise HTTPException(status_code=422, detail="Invalid platform role.")
+        target_user.platform_role = update_data.platform_role
+
+    # 5. Apply other fields
+    if update_data.full_name is not None:
+        target_user.full_name = update_data.full_name
+    if update_data.is_active is not None:
+        target_user.is_active = update_data.is_active
+
+    await db.commit()
+    await db.refresh(target_user)
+    return target_user
+
+async def delete_user(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    current_user: User
+) -> User:
+    if current_user.platform_role != 'super_user':
+        raise HTTPException(status_code=403, detail="Operation requires platform System Owner privileges.")
+
+    # 1. Fetch target user
+    stmt = select(User).where(User.id == user_id)
+    res = await db.execute(stmt)
+    target_user = res.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    # 2. Check Self-Protection
+    if current_user.id == target_user.id:
+        raise HTTPException(status_code=409, detail="You cannot deactivate your own account from the Admin Console.")
+
+    # 3. Check Last Super User
+    if target_user.platform_role == "super_user" and target_user.is_active:
+        count = await check_last_super_user(db)
+        if count <= 1:
+            raise HTTPException(status_code=409, detail="At least one active Super User must remain.")
+
+    # 4. Safe Deactivation (Soft Delete)
+    target_user.is_active = False
+
+    await db.commit()
+    await db.refresh(target_user)
+    return target_user
+

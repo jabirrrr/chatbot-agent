@@ -12,8 +12,9 @@ from app.services.admin_health_service import get_admin_health_telemetry, _sanit
 router = APIRouter()
 
 
-from app.api.deps import require_system_owner
+from app.api.deps import require_system_owner, require_platform_admin
 from app.models.user import User
+import uuid
 
 @router.get("/health", response_model=AdminHealthResponse, tags=["Admin Health & Telemetry"])
 async def get_admin_system_health(
@@ -77,18 +78,17 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 
 from app.schemas.admin_overview import AdminOverviewResponse
-from app.schemas.admin_users import AdminUsersResponse
+from app.schemas.admin_users import AdminUsersResponse, AdminUserItem, AdminUserUpdate
 from app.schemas.admin_analytics import AdminAnalyticsResponse, AnalyticsInterval
-from app.services.admin_service import get_overview_metrics, get_users_paginated, get_analytics_timeseries
+from app.services.admin_service import get_overview_metrics, get_users_paginated, get_analytics_timeseries, update_user, delete_user
 
 @router.get("/overview", response_model=AdminOverviewResponse, tags=["Admin Overview"])
 async def get_admin_overview(
     db: AsyncSession = Depends(get_db),
-    admin_user: User = Depends(require_system_owner)
+    admin_user: User = Depends(require_platform_admin)
 ) -> AdminOverviewResponse:
     """
     Returns platform-wide metrics for the Admin Console overview dashboard.
-    Requires System Owner privileges.
     """
     return await get_overview_metrics(db)
 
@@ -98,13 +98,39 @@ async def get_admin_users(
     size: int = 20,
     search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    admin_user: User = Depends(require_system_owner)
+    admin_user: User = Depends(require_platform_admin)
 ) -> AdminUsersResponse:
     """
     Returns a paginated list of all users across the platform, with search capabilities.
-    Requires System Owner privileges.
     """
     return await get_users_paginated(db, page, size, search)
+
+@router.patch("/users/{user_id}", response_model=AdminUserItem, tags=["Admin Users"])
+async def patch_admin_user(
+    user_id: uuid.UUID,
+    update_data: AdminUserUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_system_owner)
+) -> AdminUserItem:
+    """
+    Updates a user's details, role, or status.
+    Requires System Owner privileges.
+    """
+    user = await update_user(db, user_id, update_data, admin_user)
+    return AdminUserItem.model_validate(user)
+
+@router.delete("/users/{user_id}", response_model=AdminUserItem, tags=["Admin Users"])
+async def delete_admin_user(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_system_owner)
+) -> AdminUserItem:
+    """
+    Safely deactivates a user.
+    Requires System Owner privileges.
+    """
+    user = await delete_user(db, user_id, admin_user)
+    return AdminUserItem.model_validate(user)
 
 @router.get("/analytics/timeseries", response_model=AdminAnalyticsResponse, tags=["Admin Analytics"])
 async def get_admin_analytics_timeseries(
@@ -112,11 +138,10 @@ async def get_admin_analytics_timeseries(
     end_date: Optional[datetime] = None,
     interval: AnalyticsInterval = AnalyticsInterval.DAY,
     db: AsyncSession = Depends(get_db),
-    admin_user: User = Depends(require_system_owner)
+    admin_user: User = Depends(require_platform_admin)
 ) -> AdminAnalyticsResponse:
     """
     Returns time-series analytics for new users, organizations, conversations, and AI cost.
-    Requires System Owner privileges.
     """
     # Default to last 30 days if not provided
     if not end_date:
@@ -138,11 +163,10 @@ from app.services.platform_setting_service import get_platform_settings, update_
 @router.get("/settings", response_model=PlatformSettingResponse, tags=["Admin Settings"])
 async def get_settings(
     db: AsyncSession = Depends(get_db),
-    admin_user: User = Depends(require_system_owner)
+    admin_user: User = Depends(require_platform_admin)
 ) -> PlatformSettingResponse:
     """
     Returns global platform settings.
-    Requires System Owner privileges.
     """
     return await get_platform_settings(db)
 
@@ -171,7 +195,7 @@ from app.services.platform_integration_service import (
 @router.get("/integrations", response_model=List[PlatformIntegrationResponse], tags=["Admin Integrations"])
 async def list_integrations(
     db: AsyncSession = Depends(get_db),
-    admin_user: User = Depends(require_system_owner)
+    admin_user: User = Depends(require_platform_admin)
 ):
     """
     Returns all global platform integrations.

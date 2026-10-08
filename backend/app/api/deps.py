@@ -221,3 +221,17 @@ async def require_system_owner(
             detail="Operation requires platform System Owner privileges."
         )
     return current_user
+
+async def require_platform_admin(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """
+    Role-Based Access Control (RBAC) for Platform Administrators.
+    Allows both super_user and admin_user roles to access the Admin Console (read-only).
+    """
+    if current_user.platform_role not in ['super_user', 'admin_user']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Operation requires platform Administrator privileges."
+        )
+    return current_user
