@@ -63,3 +63,21 @@ class ProviderEnum(str, Enum):
     stripe = "stripe"
     groq = "groq"
 ```
+
+## Symptom
+The login page returns `Failed to fetch` because the production backend endpoint `POST /api/v1/auth/login` fails with a `500 Internal Server Error`, triggering the CORS masking behavior.
+
+## Root Cause
+**Schema Drift in RBAC Implementation**: The database was migrated to use `platform_role` instead of `is_superuser`, but the SQLAlchemy `User` model, multiple Pydantic schemas, and API dependencies still expected and queried the `is_superuser` column. When the `/auth/login` endpoint queried the user, the database engine threw an `UndefinedColumnError` causing the auth flow to fail.
+
+## Diagnosis
+A local reproduction script was built to test `POST /auth/login` directly via SQLAlchemy session, bypassing the HTTP layer. This immediately surfaced the `psycopg2.errors.UndefinedColumn: column users.is_superuser does not exist`.
+
+## Solution
+Updated the codebase to align with the database migration by removing all instances of `is_superuser` and transitioning them to `platform_role`.
+
+1. Replaced `is_superuser` with `platform_role` in `User` model.
+2. Updated Pydantic schemas (`UserRead`, `AdminUserItem`).
+3. Re-wrote Role-Based Access Control logic in `app/api/deps.py`.
+4. Refactored test cases and bootstrap scripts.
+
