@@ -16,7 +16,7 @@ client = TestClient(app)
 def override_deps(monkeypatch):
     monkeypatch.setattr("app.core.vault.settings.VAULT_SECRET_KEY", "test-vault-secret-key-00000000000000000000")
     
-    mock_superuser = User(id=uuid4(), email="super@test.com", is_superuser=True, is_active=True)
+    mock_superuser = User(id=uuid4(), email="super@test.com", platform_role="super_user", is_active=True)
     mock_db_integrations = []
     
     class MockResult:

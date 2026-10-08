@@ -109,7 +109,7 @@ async def check_maintenance_mode(
     settings = await get_platform_settings(db)
     
     if settings.maintenance_mode:
-        if not user or not user.is_superuser:
+        if not user or user.platform_role != 'super_user':
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=settings.maintenance_message
@@ -215,7 +215,7 @@ async def require_system_owner(
     Role-Based Access Control (RBAC) for Platform System Owners.
     Bypasses tenant boundaries; strictly requires the is_superuser flag.
     """
-    if not current_user.is_superuser:
+    if current_user.platform_role != 'super_user':
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Operation requires platform System Owner privileges."

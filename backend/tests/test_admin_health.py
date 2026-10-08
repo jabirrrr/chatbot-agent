@@ -39,7 +39,7 @@ class TestAdminHealth:
             full_name="Regular Member",
             is_active=True,
             is_verified=True,
-            is_superuser=False
+            platform_role="normal_user"
         )
         mock_org = Organization(
             id=org_id,
@@ -97,7 +97,7 @@ class TestAdminHealth:
             full_name="Viewer Member",
             is_active=True,
             is_verified=True,
-            is_superuser=False
+            platform_role="normal_user"
         )
         mock_org = Organization(
             id=org_id,
@@ -159,7 +159,7 @@ class TestAdminHealth:
             full_name="Org Admin",
             is_active=True,
             is_verified=True,
-            is_superuser=False
+            platform_role="normal_user"
         )
         mock_org = Organization(
             id=org_id,
@@ -220,7 +220,7 @@ class TestAdminHealth:
             full_name="Tenant Owner",
             is_active=True,
             is_verified=True,
-            is_superuser=False
+            platform_role="normal_user"
         )
         mock_org = Organization(
             id=org_id,
@@ -281,7 +281,7 @@ class TestAdminHealth:
             full_name="Platform System Owner",
             is_active=True,
             is_verified=True,
-            is_superuser=True
+            platform_role="super_user"
         )
         mock_org = Organization(
             id=org_id,
@@ -396,7 +396,7 @@ class TestAdminHealth:
             full_name="Alpha Owner",
             is_active=True,
             is_verified=True,
-            is_superuser=True
+            platform_role="super_user"
         )
         mock_org_a = Organization(
             id=org_a_id,
@@ -503,7 +503,7 @@ class TestAdminHealth:
         """
         user_id = uuid4()
         org_id = uuid4()
-        mock_user = User(id=user_id, email="owner@chatly.ai", hashed_password="hash", full_name="Owner", is_active=True, is_superuser=True)
+        mock_user = User(id=user_id, email="owner@chatly.ai", hashed_password="hash", full_name="Owner", is_active=True, platform_role="super_user")
         mock_org = Organization(id=org_id, name="Chatly Org", slug="chatly-org")
         mock_owner_member = OrganizationMember(id=uuid4(), user_id=user_id, organization_id=org_id, role=MemberRole.OWNER)
 

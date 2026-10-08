@@ -16,7 +16,7 @@ def test_maintenance_mode_blocks_normal_user(monkeypatch):
     mock_user = User(
         id=user_id,
         email="normal@test.com",
-        is_superuser=False
+        platform_role="normal_user"
     )
     
     mock_settings = PlatformSetting(
@@ -57,7 +57,7 @@ def test_maintenance_mode_allows_superuser(monkeypatch):
     mock_user = User(
         id=user_id,
         email="super@test.com",
-        is_superuser=True
+        platform_role="super_user"
     )
     
     mock_settings = PlatformSetting(
@@ -128,7 +128,7 @@ def test_maintenance_mode_exemptions(monkeypatch):
 from app.api.deps import require_system_owner
 
 def test_negative_max_tenants_rejected(monkeypatch):
-    mock_superuser = User(id=uuid4(), email="super@test.com", is_superuser=True, is_active=True)
+    mock_superuser = User(id=uuid4(), email="super@test.com", platform_role="super_user", is_active=True)
     
     mock_settings = PlatformSetting(
         id=1,

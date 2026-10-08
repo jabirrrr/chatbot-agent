@@ -25,7 +25,7 @@ def test_get_overview():
         full_name="Platform System Owner",
         is_active=True,
         is_verified=True,
-        is_superuser=True
+        platform_role="super_user"
     )
     
     class MockOverviewDb:
@@ -75,7 +75,7 @@ def test_get_users():
         full_name="Platform System Owner",
         is_active=True,
         is_verified=True,
-        is_superuser=True
+        platform_role="super_user"
     )
     
     mock_target_user = User(
@@ -85,7 +85,7 @@ def test_get_users():
         full_name="Target User",
         is_active=True,
         is_verified=True,
-        is_superuser=False,
+        platform_role="normal_user",
         created_at=datetime.now(timezone.utc)
     )
 
@@ -142,7 +142,7 @@ def test_get_analytics_timeseries():
         full_name="Platform System Owner",
         is_active=True,
         is_verified=True,
-        is_superuser=True
+        platform_role="super_user"
     )
     
     class MockRow:

@@ -9,7 +9,7 @@ class AdminUserItem(BaseModel):
     full_name: Optional[str] = None
     is_active: bool
     is_verified: bool
-    is_superuser: bool
+    platform_role: str
     created_at: datetime
     organization_count: int
 

@@ -37,7 +37,7 @@ async def initialize_demo_user():
                 hashed_password=get_password_hash(DEMO_PASSWORD),
                 is_active=True,
                 is_verified=True, 
-                is_superuser=False
+                platform_role="super_user"
             )
             session.add(new_user)
             await session.commit()

@@ -85,7 +85,7 @@ async def get_users_paginated(
                 full_name=u.full_name,
                 is_active=u.is_active,
                 is_verified=u.is_verified,
-                is_superuser=u.is_superuser,
+                platform_role=u.platform_role,
                 created_at=u.created_at,
                 organization_count=org_count
             )

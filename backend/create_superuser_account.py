@@ -30,8 +30,8 @@ async def create_superuser(email: str, password: str, full_name: str, org_name: 
             print(f"User {email} already exists.")
         
         # Promote to superuser
-        if not user.is_superuser:
-            user.is_superuser = True
+        if user.platform_role != "super_user":
+            user.platform_role = "super_user"
             db.add(user)
             await db.commit()
             print(f"Successfully promoted {email} to System Owner (superuser)!")

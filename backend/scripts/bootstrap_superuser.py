@@ -15,11 +15,11 @@ async def make_superuser(email: str):
             print(f"Error: User with email '{email}' not found.")
             return
 
-        if user.is_superuser:
+        if user.platform_role == "super_user":
             print(f"User '{email}' is already a superuser.")
             return
 
-        user.is_superuser = True
+        user.platform_role = "super_user"
         db.add(user)
         await db.commit()
         print(f"Success! User '{email}' is now a System Owner (superuser).")
