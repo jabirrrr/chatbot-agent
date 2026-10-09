@@ -27,13 +27,7 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
-# 1. Security Headers Middleware
-app.add_middleware(SecurityHeadersMiddleware)
-
-# 2. Rate Limiting Middleware
-app.add_middleware(RateLimitMiddleware)
-
-# 3. Configure CORS
+# 1. Configure CORS for dashboard and internal endpoints
 if settings.BACKEND_CORS_ORIGINS or settings.CORS_ORIGIN_REGEX:
     app.add_middleware(
         CORSMiddleware,
@@ -44,6 +38,12 @@ if settings.BACKEND_CORS_ORIGINS or settings.CORS_ORIGIN_REGEX:
         allow_headers=["*"],
         expose_headers=["X-Organization-Id"]
     )
+
+# 2. Rate Limiting Middleware
+app.add_middleware(RateLimitMiddleware)
+
+# 3. Security Headers & Public Widget Cross-Origin Middleware (outermost, intercepts widget requests & preflights)
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.get("/health", tags=["Health"])

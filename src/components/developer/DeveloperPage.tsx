@@ -27,10 +27,20 @@ export default function DeveloperPage() {
   const [domains, setDomains] = useState(['northstarstudio.io', 'portal.northstarstudio.io']);
   const [newDomain, setNewDomain] = useState('');
 
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://chatly.ai';
+  const appUrl = typeof window !== 'undefined'
+    ? window.location.origin
+    : (process.env.NEXT_PUBLIC_APP_URL || 'https://chatbot-agent-lemon.vercel.app');
+  const apiEndpoint = (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.trim() !== '')
+    ? process.env.NEXT_PUBLIC_API_URL
+    : (typeof window !== 'undefined' && window.location.origin.includes('localhost'))
+    ? 'http://localhost:8000'
+    : 'https://helio-backend-s55x.onrender.com';
+
   const snippet = `<script
   src="${appUrl}/widget.js"
+  data-chatbot-id="${chatbot?.id || ''}"
   data-token="${botToken}"
+  data-api="${apiEndpoint}"
   async
 ></script>`;
 

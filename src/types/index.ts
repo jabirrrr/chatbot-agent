@@ -177,6 +177,7 @@ export interface ChatbotConfig {
   avatarUrl: string;
   position: 'bottom-right' | 'bottom-left';
   launcherStyle: 'icon' | 'text-icon' | 'pill';
+  bubbleStyle?: 'Modern' | 'Minimal' | 'Rounded' | 'Classic';
   suggestedQuestions: string[];
   leadFields: string[];
   fallbackBehavior: 'human_help' | 'capture_lead' | 'share_contact';

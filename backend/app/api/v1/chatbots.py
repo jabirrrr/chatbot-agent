@@ -1,7 +1,7 @@
 import uuid
 import json
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -145,6 +145,7 @@ async def regenerate_token(
     summary="Public endpoint for widget initialization"
 )
 async def get_public_widget_config(
+    request: Request,
     widget_token: str,
     db: AsyncSession = Depends(get_db)
 ):
@@ -154,7 +155,24 @@ async def get_public_widget_config(
     bot = await ChatbotService.get_by_widget_token(db, widget_token)
     if not bot:
         raise HTTPException(status_code=404, detail="Active chatbot not found for this widget token.")
-    return PublicWidgetConfig.model_validate(bot)
+    
+    from app.api.v1.widget import verify_domain_authorization
+    verify_domain_authorization(bot, request)
+
+    config_data = bot.config_json or {}
+    return PublicWidgetConfig(
+        name=bot.name,
+        welcome_message=bot.welcome_message,
+        theme_color=bot.theme_color,
+        position=bot.position,
+        lead_capture_enabled=bot.lead_capture_enabled,
+        appointment_booking_enabled=bot.appointment_booking_enabled,
+        is_active=bot.is_active,
+        avatar_url=config_data.get("avatarUrl") or config_data.get("avatar_url"),
+        tone=config_data.get("tone"),
+        suggested_questions=config_data.get("suggestedQuestions") or config_data.get("suggested_questions") or [],
+        bubble_style=config_data.get("bubbleStyle") or config_data.get("bubble_style") or "Modern"
+    )
 
 @router.post(
     "/preview",

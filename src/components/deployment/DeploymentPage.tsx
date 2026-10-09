@@ -81,13 +81,24 @@ export default function DeploymentPage() {
   const assistantName = chatbot?.name || 'AI Assistant';
   const targetDomain = chatbot?.domain || 'yourdomain.com';
   const botToken = chatbot?.widgetToken || chatbot?.id || 'wgt_default';
-  const themeColor = chatbot?.themeColor || '#2563eb';
+  const botId = chatbot?.id || '';
+
+  const frontendOrigin = typeof window !== 'undefined'
+    ? window.location.origin
+    : (process.env.NEXT_PUBLIC_APP_URL || 'https://chatbot-agent-lemon.vercel.app');
+
+  const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.trim() !== '')
+    ? process.env.NEXT_PUBLIC_API_URL
+    : (typeof window !== 'undefined' && window.location.origin.includes('localhost'))
+    ? 'http://localhost:8000'
+    : 'https://helio-backend-s55x.onrender.com';
 
   const embedScript = `<!-- ${assistantName} Embed Snippet -->
 <script
-  src="https://cdn.chatly.ai/widget.js"
+  src="${frontendOrigin}/widget.js"
+  data-chatbot-id="${botId}"
   data-token="${botToken}"
-  data-theme-color="${themeColor}"
+  data-api="${apiBaseUrl}"
   async
 ></script>`;
 

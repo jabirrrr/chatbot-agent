@@ -96,6 +96,12 @@ class ChatbotService:
             raise HTTPException(status_code=404, detail="Chatbot not found.")
 
         update_dict = data.model_dump(exclude_unset=True)
+        if "config_json" in update_dict and update_dict["config_json"] is not None:
+            merged_config = dict(chatbot.config_json or {})
+            merged_config.update(update_dict["config_json"])
+            chatbot.config_json = merged_config
+            del update_dict["config_json"]
+
         for field, value in update_dict.items():
             setattr(chatbot, field, value)
 

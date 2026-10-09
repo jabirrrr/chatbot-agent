@@ -15,7 +15,7 @@ import {
   CheckCircle2, 
   RotateCcw,
   Clock,
-  ChevronRight
+  Bot
 } from 'lucide-react';
 
 export default function CustomerChatWidget({ 
@@ -59,12 +59,27 @@ export default function CustomerChatWidget({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const getBubbleRadius = (isUser: boolean) => {
+    const style = chatbot.bubbleStyle || 'Modern';
+    switch (style) {
+      case 'Minimal':
+        return isUser ? 'rounded-md rounded-br-none' : 'rounded-md rounded-bl-none';
+      case 'Rounded':
+        return isUser ? 'rounded-2xl rounded-br-sm' : 'rounded-2xl rounded-bl-sm';
+      case 'Classic':
+        return isUser ? 'rounded-lg rounded-br-xs' : 'rounded-lg rounded-bl-xs';
+      case 'Modern':
+      default:
+        return isUser ? 'rounded-2xl rounded-br-xs' : 'rounded-2xl rounded-bl-xs';
+    }
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [widgetMessages, isTyping, showLeadForm, showCalendarBooking]);
 
   const handleSend = async () => {
-    if (!inputVal.trim()) return;
+    if (!inputVal.trim() || isTyping) return;
     const text = inputVal.trim();
     setInputVal('');
     setIsTyping(true);
@@ -73,6 +88,7 @@ export default function CustomerChatWidget({
   };
 
   const handleQuestionClick = async (q: string) => {
+    if (isTyping) return;
     setIsTyping(true);
     await addVisitorMessage(q);
     setIsTyping(false);
@@ -137,12 +153,19 @@ export default function CustomerChatWidget({
         style={{ backgroundColor: chatbot.themeColor }}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="relative shrink-0">
-            <img
-              src={chatbot.avatarUrl}
-              alt={chatbot.name}
-              className="w-9 h-9 rounded-full object-cover border-2 border-white/40 shadow-sm"
-            />
+          <div className="relative shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-white/40 shadow-sm bg-white/20 flex items-center justify-center">
+            {chatbot.avatarUrl ? (
+              <img
+                src={chatbot.avatarUrl}
+                alt={chatbot.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <Bot className="w-5 h-5 text-white" />
+            )}
             {!isWidgetOffline && !isWidgetError && (
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 absolute bottom-0 right-0 ring-2 ring-white animate-pulse" />
             )}
@@ -267,18 +290,28 @@ export default function CustomerChatWidget({
               className={`flex gap-2.5 ${isUser ? 'justify-end' : 'justify-start'}`}
             >
               {!isUser && (
-                <img
-                  src={chatbot.avatarUrl}
-                  alt="Avatar"
-                  className="w-7 h-7 rounded-full object-cover shrink-0 mt-1 border border-slate-200"
-                />
+                <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-1 border border-slate-200 bg-slate-100 flex items-center justify-center">
+                  {chatbot.avatarUrl ? (
+                    <img
+                      src={chatbot.avatarUrl}
+                      alt={chatbot.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <Bot className="w-4 h-4 text-slate-500" />
+                  )}
+                </div>
               )}
 
               <div
-                className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed shadow-sm ${
+                style={isUser ? { backgroundColor: chatbot.themeColor || '#2563eb' } : undefined}
+                className={`max-w-[82%] px-3.5 py-2.5 text-xs leading-relaxed shadow-sm ${getBubbleRadius(isUser)} ${
                   isUser
-                    ? 'bg-blue-600 text-white rounded-br-xs'
-                    : 'bg-white text-slate-800 border border-slate-200 rounded-bl-xs'
+                    ? 'text-white'
+                    : 'bg-white text-slate-800 border border-slate-200'
                 }`}
               >
                 <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -297,12 +330,21 @@ export default function CustomerChatWidget({
         {/* Typing State */}
         {isTyping && (
           <div className="flex gap-2.5 items-center">
-            <img
-              src={chatbot.avatarUrl}
-              alt="Avatar"
-              className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200"
-            />
-            <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-xs px-3.5 py-2.5 shadow-sm">
+            <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-slate-200 bg-slate-100 flex items-center justify-center">
+              {chatbot.avatarUrl ? (
+                <img
+                  src={chatbot.avatarUrl}
+                  alt={chatbot.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <Bot className="w-4 h-4 text-slate-500" />
+              )}
+            </div>
+            <div className={`bg-white border border-slate-200 px-3.5 py-2.5 shadow-sm ${getBubbleRadius(false)}`}>
               <div className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -452,16 +494,21 @@ export default function CustomerChatWidget({
       <div className="p-3 bg-white border-t border-slate-100 flex items-center gap-2 shrink-0">
         <input
           type="text"
-          disabled={isWidgetOffline || isWidgetError}
-          placeholder={isWidgetOffline ? 'Chatbot is currently offline...' : 'Ask a question...'}
+          disabled={isWidgetOffline || isWidgetError || isTyping}
+          placeholder={isWidgetOffline ? 'Chatbot is currently offline...' : isTyping ? 'Assistant is typing...' : 'Ask a question...'}
           value={inputVal}
           onChange={e => setInputVal(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSend()}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
           className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all disabled:opacity-50"
         />
         <button
           onClick={handleSend}
-          disabled={!inputVal.trim() || isWidgetOffline || isWidgetError}
+          disabled={!inputVal.trim() || isWidgetOffline || isWidgetError || isTyping}
           style={{ backgroundColor: chatbot.themeColor || '#4f46e5' }}
           className="p-2 rounded-xl hover:opacity-90 disabled:opacity-40 text-white transition-opacity shrink-0 shadow-2xs"
           aria-label="Send message"

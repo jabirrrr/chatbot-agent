@@ -455,20 +455,26 @@ export default function ChatbotsPage() {
               <p className="text-xs text-slate-500 leading-relaxed">
                 Paste this script inside the &lt;head&gt; tag of your website to activate Chatly.
               </p>
-              <div className="bg-slate-950 p-3.5 rounded-xl font-mono text-[11px] text-slate-200 overflow-x-auto relative">
-                <code>{`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://chatly.ai'}/widget.js" data-token="${chatbot.widgetToken}" data-api="${API_BASE}" async></script>`}</code>
-                <button
-                  onClick={() => {
-                    const url = typeof window !== 'undefined' ? window.location.origin : 'https://chatly.ai';
-                    navigator.clipboard?.writeText(`<script src="${url}/widget.js" data-token="${chatbot.widgetToken}" data-api="${API_BASE}" async></script>`);
-                    setCopiedSnippet(true);
-                    setTimeout(() => setCopiedSnippet(false), 2000);
-                  }}
-                  className="absolute right-2 top-2 p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs"
-                >
-                  {copiedSnippet ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                </button>
-              </div>
+              {(() => {
+                const url = typeof window !== 'undefined' ? window.location.origin : 'https://chatbot-agent-lemon.vercel.app';
+                const apiEndpoint = API_BASE || (typeof window !== 'undefined' && window.location.origin.includes('localhost') ? 'http://localhost:8000' : 'https://helio-backend-s55x.onrender.com');
+                const snippet = `<script src="${url}/widget.js" data-chatbot-id="${chatbot.id}" data-token="${chatbot.widgetToken}" data-api="${apiEndpoint}" async></script>`;
+                return (
+                  <div className="bg-slate-950 p-3.5 rounded-xl font-mono text-[11px] text-slate-200 overflow-x-auto relative">
+                    <code>{snippet}</code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard?.writeText(snippet);
+                        setCopiedSnippet(true);
+                        setTimeout(() => setCopiedSnippet(false), 2000);
+                      }}
+                      className="absolute right-2 top-2 p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs"
+                    >
+                      {copiedSnippet ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                );
+              })()}
 
               <div className="pt-4 border-t border-slate-100 space-y-3">
                 <label className="text-xs font-semibold text-slate-900 block">Authorized Domain</label>

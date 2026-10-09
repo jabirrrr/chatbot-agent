@@ -75,6 +75,8 @@ class PublicWidgetConfig(BaseModel):
     is_active: bool
     avatar_url: Optional[str] = None
     tone: Optional[str] = None
+    suggested_questions: Optional[List[str]] = []
+    bubble_style: Optional[str] = "Modern"
 
     model_config = ConfigDict(from_attributes=True)
 

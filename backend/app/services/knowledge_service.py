@@ -12,7 +12,6 @@ from app.services.chunking_service import ChunkingService
 from app.services.embedding_service import EmbeddingService
 from app.adapters.storage import storage_adapter
 import httpx
-from bs4 import BeautifulSoup
 
 
 class KnowledgeService:

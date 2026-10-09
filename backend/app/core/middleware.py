@@ -14,11 +14,26 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        # 1. Content-Security-Policy (CSP) & CORS for public widget endpoints
+        # Allows widget embedding and cross-origin public API calls across customer websites
+        is_widget = request.url.path.startswith("/api/v1/widget") or request.url.path.startswith("/widget")
+        
+        # Handle OPTIONS preflights for public widget endpoints
+        if is_widget and request.method == "OPTIONS":
+            origin = request.headers.get("origin") or "*"
+            return Response(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept",
+                    "Access-Control-Max-Age": "86400",
+                    "Vary": "Origin"
+                }
+            )
+
         response = await call_next(request)
 
-        # 1. Content-Security-Policy (CSP)
-        # Allows widget embedding while restricting scripts and frames for dashboard
-        is_widget = request.url.path.startswith("/api/v1/widget") or request.url.path.startswith("/widget")
         if is_widget:
             csp = (
                 "default-src 'self'; "
@@ -29,6 +44,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "frame-ancestors *;"
             )
             response.headers["X-Frame-Options"] = "ALLOWALL"
+            origin = request.headers.get("origin") or "*"
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
+            response.headers["Vary"] = "Origin"
         else:
             csp = (
                 "default-src 'self'; "

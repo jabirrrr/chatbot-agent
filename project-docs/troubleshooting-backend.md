@@ -81,3 +81,37 @@ Updated the codebase to align with the database migration by removing all instan
 3. Re-wrote Role-Based Access Control logic in `app/api/deps.py`.
 4. Refactored test cases and bootstrap scripts.
 
+## Symptom
+External websites embedding the Helio chatbot widget via `<script src=".../widget.js">` encounter browser CORS blocks when initializing chat sessions: `Access to fetch at 'https://.../api/v1/widget/session' from origin 'https://customer-site.com' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status (status code 400)`. Additionally, saving appearance customizations from the dashboard was erasing unrelated chatbot configurations (e.g. integration settings, calendar IDs, lead capture settings).
+
+## Root Cause
+1. **Middleware Ordering in Starlette/FastAPI**: Starlette executes middlewares in reverse order of registration (`app.add_middleware`). Because `CORSMiddleware` was added after `SecurityHeadersMiddleware`, `CORSMiddleware` intercepted incoming requests first. When an external customer origin sent an `OPTIONS` preflight, `CORSMiddleware` rejected it with `400 Bad Request` because the customer domain was not explicitly listed in `settings.BACKEND_CORS_ORIGINS`.
+2. **Shallow Replacement in `ChatbotService.update`**: Updating a chatbot's `config_json` replaced the entire dictionary attribute instead of performing a deep merge with existing stored keys.
+
+## Diagnosis
+Inspecting the FastAPI middleware stack in `backend/app/main.py` confirmed that `CORSMiddleware` was outermost and threw 400 on unregistered preflight origins. Unit testing `tests/test_domain_auth.py` reproduced the HTTP 400 preflight response. In addition, reviewing `ChatbotService.update()` in `backend/app/services/chatbot_service.py` revealed `setattr(chatbot, k, v)` unconditionally overwritten `config_json`.
+
+## Solution
+1. In `backend/app/main.py`, reordered middlewares so `SecurityHeadersMiddleware` wraps `CORSMiddleware` as the outermost handler, directly intercepting public widget routes (`/api/v1/widget/*`) and returning `200 OK` with appropriate CORS preflight headers (`Access-Control-Allow-Origin: <origin>`, `Access-Control-Allow-Methods: GET, POST, OPTIONS`, `Vary: Origin`), while delegating domain restriction enforcement to the endpoint logic.
+2. In `backend/app/services/chatbot_service.py`, updated `ChatbotService.update()` to merge incoming `config_json` updates into existing stored settings before persisting.
+
+```python
+# backend/app/main.py
+# 1. Internal CORS
+app.add_middleware(CORSMiddleware, allow_origins=settings.BACKEND_CORS_ORIGINS, ...)
+
+# 2. Rate Limiter
+app.add_middleware(RateLimitMiddleware)
+
+# 3. Security Headers & Widget CORS (outermost)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# backend/app/services/chatbot_service.py
+if "config_json" in update_dict and update_dict["config_json"] is not None:
+    merged_config = dict(chatbot.config_json or {})
+    merged_config.update(update_dict["config_json"])
+    chatbot.config_json = merged_config
+    del update_dict["config_json"]
+```
+
+
