@@ -213,7 +213,7 @@ async def require_system_owner(
 ) -> User:
     """
     Role-Based Access Control (RBAC) for Platform System Owners.
-    Bypasses tenant boundaries; strictly requires the is_superuser flag.
+    Bypasses tenant boundaries; strictly requires the platform_role == 'super_user'.
     """
     if current_user.platform_role != 'super_user':
         raise HTTPException(

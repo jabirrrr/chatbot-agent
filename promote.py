@@ -10,7 +10,7 @@ async def promote_user(email: str):
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     
     async with async_session() as session:
-        result = await session.execute(text("UPDATE users SET is_superuser = true WHERE email = :email RETURNING id"), {"email": email})
+        result = await session.execute(text("UPDATE users SET platform_role = 'super_user' WHERE email = :email RETURNING id"), {"email": email})
         user_id = result.scalar()
         await session.commit()
         

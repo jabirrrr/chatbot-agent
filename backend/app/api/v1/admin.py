@@ -80,7 +80,14 @@ from datetime import datetime, timezone, timedelta
 from app.schemas.admin_overview import AdminOverviewResponse
 from app.schemas.admin_users import AdminUsersResponse, AdminUserItem, AdminUserUpdate
 from app.schemas.admin_analytics import AdminAnalyticsResponse, AnalyticsInterval
-from app.services.admin_service import get_overview_metrics, get_users_paginated, get_analytics_timeseries, update_user, delete_user
+from app.services.admin_service import (
+    get_overview_metrics,
+    get_users_paginated,
+    get_analytics_timeseries,
+    update_user,
+    delete_user,
+    build_admin_user_item
+)
 
 @router.get("/overview", response_model=AdminOverviewResponse, tags=["Admin Overview"])
 async def get_admin_overview(
@@ -117,7 +124,7 @@ async def patch_admin_user(
     Requires System Owner privileges.
     """
     user = await update_user(db, user_id, update_data, admin_user)
-    return AdminUserItem.model_validate(user)
+    return await build_admin_user_item(db, user)
 
 @router.delete("/users/{user_id}", response_model=AdminUserItem, tags=["Admin Users"])
 async def delete_admin_user(
@@ -130,7 +137,7 @@ async def delete_admin_user(
     Requires System Owner privileges.
     """
     user = await delete_user(db, user_id, admin_user)
-    return AdminUserItem.model_validate(user)
+    return await build_admin_user_item(db, user)
 
 @router.get("/analytics/timeseries", response_model=AdminAnalyticsResponse, tags=["Admin Analytics"])
 async def get_admin_analytics_timeseries(

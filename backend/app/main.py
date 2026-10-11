@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
+import re
 
 from app.core.config import settings
 from app.core.middleware import SecurityHeadersMiddleware
@@ -101,9 +102,26 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 async def global_exception_handler(request: Request, exc: Exception):
     capture_exception(exc, tags={"method": request.method, "path": str(request.url.path)})
     logger.error(f"Unhandled exception on {request.method} {request.url}: {exc}", exc_info=True)
+
+    headers = {}
+    origin = request.headers.get("origin")
+    if origin:
+        is_allowed = False
+        if settings.BACKEND_CORS_ORIGINS and origin in settings.BACKEND_CORS_ORIGINS:
+            is_allowed = True
+        elif settings.CORS_ORIGIN_REGEX and re.match(settings.CORS_ORIGIN_REGEX, origin):
+            is_allowed = True
+
+        if is_allowed:
+            headers["Access-Control-Allow-Origin"] = origin
+            headers["Access-Control-Allow-Credentials"] = "true"
+            headers["Access-Control-Expose-Headers"] = "X-Organization-Id"
+            headers["Vary"] = "Origin"
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "An unexpected internal server error occurred."}
+        content={"detail": "An unexpected internal server error occurred."},
+        headers=headers
     )
 
 

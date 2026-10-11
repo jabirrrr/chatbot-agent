@@ -114,4 +114,53 @@ if "config_json" in update_dict and update_dict["config_json"] is not None:
     del update_dict["config_json"]
 ```
 
+## Symptom
+The production Admin Users page (`/admin/users`) displayed a `Failed to fetch` error popup when a System Owner (`super_user`) attempted to deactivate a user (`DELETE /api/v1/admin/users/{user_id}`). In addition, editing user attributes via `PATCH /api/v1/admin/users/{user_id}` failed similarly.
+
+## Root Cause
+1. **Schema Mismatch in Response Serialization**: The `DELETE /api/v1/admin/users/{user_id}` and `PATCH /api/v1/admin/users/{user_id}` endpoints successfully executed the soft deactivation (`is_active = False`) and database commit. However, they returned `AdminUserItem.model_validate(user)` on the SQLAlchemy `User` instance. Because `AdminUserItem` defines `organization_count: int` as a required field without a default and the `User` model has no `organization_count` column, Pydantic V2 raised `pydantic.ValidationError: organization_count: Field required`.
+2. **Missing CORS Headers on Global 500 Responses**: The unhandled validation exception was caught by `global_exception_handler` in `app/main.py`, which returned `JSONResponse(status_code=500)` without `Access-Control-Allow-Origin` headers. Because the request originated cross-origin from the Vercel frontend (`https://chatbot-agent-lemon.vercel.app`), the browser blocked the response due to missing CORS headers, transforming the 500 status into a browser-level `TypeError: Failed to fetch`.
+3. **Stale Script Reference**: The root `promote.py` script contained a stale query referencing `is_superuser = true` instead of `platform_role = 'super_user'`, which crashed against the current PostgreSQL database schema.
+
+## Diagnosis
+1. Tested the production API endpoint directly via Python `urllib` with authentication and the frontend Origin header. The request returned `HTTP 500 Internal Server Error` with `{"detail": "An unexpected internal server error occurred."}` and zero CORS headers.
+2. Verified the database state and discovered the target user was already marked `is_active = False` in the database, confirming the database commit had succeeded before the endpoint crashed during response serialization.
+3. Created a reproduction script testing `AdminUserItem.model_validate(user)` which directly isolated `ValidationError: organization_count: Field required`.
+
+## Solution
+1. **Shared Response Construction Helper**: Added `build_admin_user_item(db: AsyncSession, user: User) -> AdminUserItem` in `backend/app/services/admin_service.py` that computes the actual `organization_count` from `OrganizationMember` and constructs a valid `AdminUserItem`.
+2. **Updated API Endpoints**: Updated `delete_admin_user` and `patch_admin_user` in `backend/app/api/v1/admin.py` to return `await build_admin_user_item(db, user)`.
+3. **Preserved Trusted-Origin CORS on 500 Responses**: Enhanced `global_exception_handler` in `backend/app/main.py` to attach CORS headers dynamically whenever the request Origin matches `BACKEND_CORS_ORIGINS` or `CORS_ORIGIN_REGEX`.
+4. **Frontend Safeguards**: In `src/app/admin/users/page.tsx`, tracked `currentUserId` to disable self-deactivation directly in the UI with a descriptive tooltip, and safely handled error body extraction in both `handleConfirmDeactivate` and `handleSaveEdit`.
+5. **Fixed Stale Schema Reference**: Updated `promote.py` to use `platform_role = 'super_user'` and updated docstring in `backend/app/api/deps.py`.
+
+```python
+# backend/app/services/admin_service.py
+async def build_admin_user_item(db: AsyncSession, user: User) -> AdminUserItem:
+    org_count_stmt = select(func.count()).select_from(OrganizationMember).where(OrganizationMember.user_id == user.id)
+    org_count_res = await db.execute(org_count_stmt)
+    org_count = org_count_res.scalar() or 0
+
+    return AdminUserItem(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        is_active=user.is_active,
+        is_verified=user.is_verified,
+        platform_role=user.platform_role,
+        created_at=user.created_at,
+        organization_count=org_count
+    )
+
+# backend/app/api/v1/admin.py
+@router.delete("/users/{user_id}", response_model=AdminUserItem, tags=["Admin Users"])
+async def delete_admin_user(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_system_owner)
+) -> AdminUserItem:
+    user = await delete_user(db, user_id, admin_user)
+    return await build_admin_user_item(db, user)
+```
+
 

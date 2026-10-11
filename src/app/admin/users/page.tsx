@@ -30,6 +30,7 @@ export default function UsersPage() {
   const [authError, setAuthError] = useState(false);
   
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [page, setPage] = useState(1);
   const [size] = useState(20);
@@ -68,12 +69,13 @@ export default function UsersPage() {
       const token = typeof window !== 'undefined' ? localStorage.getItem('helio_auth_token') : null;
       
       // Fetch current user if not fetched
-      if (!currentUserRole && token) {
+      if ((!currentUserRole || !currentUserId) && token) {
         const meRes = await fetch(`${API_BASE}/api/v1/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (meRes.ok) {
           const meData = await meRes.json();
+          setCurrentUserId(meData.id || null);
           setCurrentUserRole(meData.platform_role || 'normal_user');
         }
       }
@@ -161,8 +163,15 @@ export default function UsersPage() {
         })
       });
       if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || 'Failed to update user.');
+        let errMsg = 'Failed to update user.';
+        try {
+          const d = await res.json();
+          errMsg = d.detail || errMsg;
+        } catch {
+          const text = await res.text().catch(() => '');
+          if (text) errMsg = text;
+        }
+        throw new Error(errMsg);
       }
       const updatedUser = await res.json();
       
@@ -194,8 +203,15 @@ export default function UsersPage() {
         }
       });
       if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || 'Failed to deactivate user.');
+        let errMsg = 'Failed to deactivate user.';
+        try {
+          const d = await res.json();
+          errMsg = d.detail || errMsg;
+        } catch {
+          const text = await res.text().catch(() => '');
+          if (text) errMsg = text;
+        }
+        throw new Error(errMsg);
       }
       const updatedUser = await res.json();
       
@@ -372,7 +388,15 @@ export default function UsersPage() {
                                   >
                                     <Edit2 className="w-4 h-4" /> Edit User
                                   </button>
-                                  {user.is_active ? (
+                                  {user.id === currentUserId ? (
+                                    <button
+                                      disabled
+                                      className="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-400 cursor-not-allowed"
+                                      title="You cannot deactivate your own account"
+                                    >
+                                      <Trash2 className="w-4 h-4" /> Deactivate (Current User)
+                                    </button>
+                                  ) : user.is_active ? (
                                     <button
                                       onClick={() => handleDeleteClick(user)}
                                       className="flex w-full items-center gap-2 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50"

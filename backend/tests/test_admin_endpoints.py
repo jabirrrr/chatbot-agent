@@ -196,3 +196,297 @@ def test_get_analytics_timeseries():
     finally:
         app.dependency_overrides.pop(get_db, None)
         app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_delete_user_success():
+    super_user_id = uuid4()
+    mock_super_user = User(
+        id=super_user_id,
+        email="owner@chatly.ai",
+        hashed_password="hash",
+        full_name="Platform System Owner",
+        is_active=True,
+        is_verified=True,
+        platform_role="super_user"
+    )
+    
+    target_user_id = uuid4()
+    mock_target_user = User(
+        id=target_user_id,
+        email="normal@chatly.ai",
+        hashed_password="hash",
+        full_name="Normal User",
+        is_active=True,
+        is_verified=True,
+        platform_role="normal_user",
+        created_at=datetime.now(timezone.utc)
+    )
+
+    class MockDeleteDb:
+        async def execute(self, stmt):
+            stmt_str = str(stmt).lower()
+            class MockResult:
+                def scalar_one_or_none(self):
+                    if "users" in stmt_str:
+                        return mock_target_user
+                    return None
+                def scalar(self):
+                    if "organization_members" in stmt_str:
+                        return 2
+                    return 0
+            return MockResult()
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, obj):
+            pass
+
+    async def override_db():
+        yield MockDeleteDb()
+
+    async def override_user():
+        return mock_super_user
+
+    app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_current_user] = override_user
+    try:
+        res = client.delete(f"/api/v1/admin/users/{target_user_id}")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["id"] == str(target_user_id)
+        assert data["email"] == "normal@chatly.ai"
+        assert data["is_active"] is False
+        assert data["organization_count"] == 2
+        assert mock_target_user.is_active is False
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_delete_user_self_protection():
+    super_user_id = uuid4()
+    mock_super_user = User(
+        id=super_user_id,
+        email="owner@chatly.ai",
+        hashed_password="hash",
+        full_name="Platform System Owner",
+        is_active=True,
+        is_verified=True,
+        platform_role="super_user"
+    )
+
+    class MockDb:
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return mock_super_user
+            return MockResult()
+
+    async def override_db():
+        yield MockDb()
+
+    async def override_user():
+        return mock_super_user
+
+    app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_current_user] = override_user
+    try:
+        res = client.delete(f"/api/v1/admin/users/{super_user_id}")
+        assert res.status_code == 409
+        data = res.json()
+        assert "cannot deactivate your own account" in data["detail"].lower()
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_delete_user_last_super_user():
+    super_user_id = uuid4()
+    mock_super_user = User(
+        id=super_user_id,
+        email="owner@chatly.ai",
+        hashed_password="hash",
+        full_name="Platform System Owner",
+        is_active=True,
+        is_verified=True,
+        platform_role="super_user"
+    )
+
+    target_super_id = uuid4()
+    mock_target_super = User(
+        id=target_super_id,
+        email="other_super@chatly.ai",
+        hashed_password="hash",
+        full_name="Other Super User",
+        is_active=True,
+        is_verified=True,
+        platform_role="super_user"
+    )
+
+    class MockDb:
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return mock_target_super
+                def scalar(self):
+                    # check_last_super_user count = 1
+                    return 1
+            return MockResult()
+
+    async def override_db():
+        yield MockDb()
+
+    async def override_user():
+        return mock_super_user
+
+    app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_current_user] = override_user
+    try:
+        res = client.delete(f"/api/v1/admin/users/{target_super_id}")
+        assert res.status_code == 409
+        data = res.json()
+        assert "at least one active super user must remain" in data["detail"].lower()
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_delete_user_forbidden_for_non_super_user():
+    admin_user_id = uuid4()
+    mock_admin_user = User(
+        id=admin_user_id,
+        email="admin@chatly.ai",
+        hashed_password="hash",
+        full_name="Platform Admin",
+        is_active=True,
+        is_verified=True,
+        platform_role="admin_user"
+    )
+
+    target_user_id = uuid4()
+
+    async def override_user():
+        return mock_admin_user
+
+    app.dependency_overrides[get_current_user] = override_user
+    try:
+        res = client.delete(f"/api/v1/admin/users/{target_user_id}")
+        assert res.status_code == 403
+        data = res.json()
+        assert "operation requires platform system owner privileges" in data["detail"].lower()
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_patch_user_success():
+    super_user_id = uuid4()
+    mock_super_user = User(
+        id=super_user_id,
+        email="owner@chatly.ai",
+        hashed_password="hash",
+        full_name="Platform System Owner",
+        is_active=True,
+        is_verified=True,
+        platform_role="super_user"
+    )
+
+    target_user_id = uuid4()
+    mock_target_user = User(
+        id=target_user_id,
+        email="target@chatly.ai",
+        hashed_password="hash",
+        full_name="Old Name",
+        is_active=False,
+        is_verified=True,
+        platform_role="normal_user",
+        created_at=datetime.now(timezone.utc)
+    )
+
+    class MockPatchDb:
+        async def execute(self, stmt):
+            stmt_str = str(stmt).lower()
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return mock_target_user
+                def scalar(self):
+                    if "organization_members" in stmt_str:
+                        return 3
+                    return 0
+            return MockResult()
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, obj):
+            pass
+
+    async def override_db():
+        yield MockPatchDb()
+
+    async def override_user():
+        return mock_super_user
+
+    app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_current_user] = override_user
+    try:
+        res = client.patch(
+            f"/api/v1/admin/users/{target_user_id}",
+            json={"full_name": "New Name", "is_active": True, "platform_role": "admin_user"}
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["id"] == str(target_user_id)
+        assert data["full_name"] == "New Name"
+        assert data["is_active"] is True
+        assert data["platform_role"] == "admin_user"
+        assert data["organization_count"] == 3
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_patch_user_forbidden_for_non_super_user():
+    admin_user_id = uuid4()
+    mock_admin_user = User(
+        id=admin_user_id,
+        email="admin@chatly.ai",
+        hashed_password="hash",
+        full_name="Platform Admin",
+        is_active=True,
+        is_verified=True,
+        platform_role="admin_user"
+    )
+
+    target_user_id = uuid4()
+
+    async def override_user():
+        return mock_admin_user
+
+    app.dependency_overrides[get_current_user] = override_user
+    try:
+        res = client.patch(
+            f"/api/v1/admin/users/{target_user_id}",
+            json={"full_name": "Hacked Name"}
+        )
+        assert res.status_code == 403
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_global_exception_handler_trusted_origin_cors():
+    from fastapi import APIRouter
+    
+    test_router = APIRouter()
+    @test_router.get("/test-unhandled-crash")
+    async def crash_endpoint():
+        raise RuntimeError("Intentional test crash")
+
+    app.include_router(test_router)
+
+    error_client = TestClient(app, raise_server_exceptions=False)
+    res = error_client.get("/test-unhandled-crash", headers={"Origin": "https://chatbot-agent-lemon.vercel.app"})
+    assert res.status_code == 500
+    assert res.headers.get("access-control-allow-origin") == "https://chatbot-agent-lemon.vercel.app"
+    assert res.headers.get("access-control-allow-credentials") == "true"
+    assert res.json() == {"detail": "An unexpected internal server error occurred."}

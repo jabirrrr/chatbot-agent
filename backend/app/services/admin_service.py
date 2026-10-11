@@ -40,6 +40,27 @@ async def get_overview_metrics(db: AsyncSession) -> AdminOverviewResponse:
         total_ai_cost_usd=Decimal(str(total_cost))
     )
 
+async def build_admin_user_item(db: AsyncSession, user: User) -> AdminUserItem:
+    """
+    Constructs an AdminUserItem response model with the actual calculated
+    organization count for the user.
+    """
+    org_count_stmt = select(func.count()).select_from(OrganizationMember).where(OrganizationMember.user_id == user.id)
+    org_count_res = await db.execute(org_count_stmt)
+    org_count = org_count_res.scalar() or 0
+
+    return AdminUserItem(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        is_active=user.is_active,
+        is_verified=user.is_verified,
+        platform_role=user.platform_role,
+        created_at=user.created_at,
+        organization_count=org_count
+    )
+
+
 async def get_users_paginated(
     db: AsyncSession,
     page: int = 1,
@@ -75,22 +96,7 @@ async def get_users_paginated(
     # Get organization count for each user
     items = []
     for u in users:
-        org_count_stmt = select(func.count()).select_from(OrganizationMember).where(OrganizationMember.user_id == u.id)
-        org_count_res = await db.execute(org_count_stmt)
-        org_count = org_count_res.scalar() or 0
-
-        items.append(
-            AdminUserItem(
-                id=u.id,
-                email=u.email,
-                full_name=u.full_name,
-                is_active=u.is_active,
-                is_verified=u.is_verified,
-                platform_role=u.platform_role,
-                created_at=u.created_at,
-                organization_count=org_count
-            )
-        )
+        items.append(await build_admin_user_item(db, u))
 
     pages = math.ceil(total / size) if total > 0 else 1
 
