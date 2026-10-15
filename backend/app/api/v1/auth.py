@@ -25,6 +25,7 @@ from app.schemas.user import UserRead
 from app.schemas.organization import OrgRead
 from app.services.auth_service import AuthService
 from app.api.deps import get_current_user
+from app.core.log_event_bus import log_bus
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -44,6 +45,14 @@ async def register(
     Automatically provisions their initial Organization workspace and sets their role to OWNER.
     """
     user, org, access_token, refresh_token = await AuthService.register(db, req)
+
+    log_bus.emit(
+        source="AUTH",
+        level="INFO",
+        message=f"User registered: {user.email}",
+        user_id=str(user.id),
+        metadata={"action": "register", "user_id": str(user.id), "email": user.email}
+    )
 
     return TokenResponse(
         access_token=access_token,
@@ -70,11 +79,25 @@ async def login(
     """
     user = await AuthService.authenticate(db, req.email, req.password)
     if not user:
+        log_bus.emit(
+            source="AUTH",
+            level="WARNING",
+            message=f"Failed login attempt for {req.email}",
+            metadata={"action": "login_failed", "email": req.email}
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
             headers={"WWW-Authenticate": "Bearer"}
         )
+
+    log_bus.emit(
+        source="AUTH",
+        level="INFO",
+        message=f"User logged in: {user.email}",
+        user_id=str(user.id),
+        metadata={"action": "login_success", "user_id": str(user.id), "email": user.email}
+    )
 
     # Fetch user's organizations
     stmt = (
@@ -158,6 +181,14 @@ async def google_login(
         )
         refresh_token = create_refresh_token(subject=user.id)
 
+    log_bus.emit(
+        source="AUTH",
+        level="INFO",
+        message=f"User Google SSO login: {user.email}",
+        user_id=str(user.id),
+        metadata={"action": "google_login", "user_id": str(user.id), "email": user.email}
+    )
+
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -182,6 +213,14 @@ async def refresh_tokens(
     """
     access_token, new_refresh_token, user, orgs = await AuthService.refresh_tokens(
         db, req.refresh_token
+    )
+
+    log_bus.emit(
+        source="AUTH",
+        level="INFO",
+        message=f"Token refreshed for user {user.id}",
+        user_id=str(user.id),
+        metadata={"action": "token_refresh", "user_id": str(user.id)}
     )
 
     return TokenResponse(

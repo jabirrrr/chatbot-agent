@@ -123,6 +123,62 @@ const res = await fetch(`${API_BASE}/api/v1/knowledge/sources/url?chatbot_id=${a
     'Content-Type': 'application/json',
     ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
   },
-
-},
+});
 ```
+
+---
+
+## 6. Live Log Viewer: ESLint / React Compiler "Cannot access variable before it is declared" in Mutually Recursive SSE Callbacks
+**Symptom**: 
+Running `eslint` or Next.js production build fails on `src/app/admin/logs/page.tsx` with:
+`Error: Cannot access variable before it is declared. scheduleReconnect is accessed before it is declared.`
+
+**Root Cause**: 
+In the SSE live logs implementation, `connectSSE` and `scheduleReconnect` were mutually dependent in React callbacks:
+- `connectSSE` called `scheduleReconnect` on network drop, proxy closure, or rate limiting.
+- `scheduleReconnect` invoked `connectSSE` after exponential backoff.
+Because `const connectSSE = useCallback(...)` was declared before `const scheduleReconnect = useCallback(...)`, calling `scheduleReconnect()` inside `connectSSE` triggered a JavaScript Temporal Dead Zone (TDZ) and ESLint `react-hooks/immutability` rule violation.
+
+**Diagnosis**: 
+ESLint identified an unhoisted variable access inside the callback closure.
+
+**Solution**: 
+Decoupled invocation from declaration order using mutable reference bridges (`scheduleReconnectRef` and `connectSSERef`) and ordered `scheduleReconnect` before `connectSSE`:
+
+**Snippet:**
+```tsx
+// src/app/admin/logs/page.tsx
+const scheduleReconnectRef = useRef<() => void>(() => {});
+const connectSSERef = useRef<() => void>(() => {});
+
+// 1. Declare scheduleReconnect with stable ref bridge
+const scheduleReconnect = useCallback(() => {
+  if (isPausedRef.current || authError) return;
+  setStreamStatus('reconnecting');
+  const backoffMs = Math.min(1000 * Math.pow(2, reconnectAttemptRef.current), 30000);
+  reconnectAttemptRef.current += 1;
+
+  if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+  reconnectTimeoutRef.current = setTimeout(() => {
+    connectSSERef.current();
+  }, backoffMs);
+}, [authError]);
+
+useEffect(() => {
+  scheduleReconnectRef.current = scheduleReconnect;
+}, [scheduleReconnect]);
+
+// 2. Declare connectSSE and call scheduleReconnectRef.current()
+const connectSSE = useCallback(() => {
+  // ...
+  fetch(streamUrl, { ... })
+    .catch((err) => {
+      scheduleReconnectRef.current();
+    });
+}, []);
+
+useEffect(() => {
+  connectSSERef.current = connectSSE;
+}, [connectSSE]);
+```
+

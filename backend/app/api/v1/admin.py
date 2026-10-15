@@ -1,4 +1,9 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request, Query
+from fastapi.responses import StreamingResponse
+import asyncio
+import json
+from app.core.log_event_bus import log_bus
+from app.schemas.system_log import SystemLogHistoryResponse, SystemLogEntry
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -242,3 +247,73 @@ async def remove_integration(
     Deletes a global platform integration.
     """
     await delete_integration_by_provider(db, provider.value)
+
+
+@router.get("/logs/history", response_model=SystemLogHistoryResponse, tags=["Admin System Logs"])
+async def get_system_log_history(
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of historical logs to return"),
+    level: Optional[str] = Query(None, description="Filter by log level (INFO, WARNING, ERROR, CRITICAL)"),
+    source: Optional[str] = Query(None, description="Filter by log source (API, AUTH, DATABASE, WORKER, SYSTEM)"),
+    search: Optional[str] = Query(None, description="Search term across message, path, or user_id"),
+    admin_user: User = Depends(require_system_owner)
+) -> SystemLogHistoryResponse:
+    """
+    Returns recent sanitized log events from the in-memory ring buffer.
+    Strictly protected: requires Platform System Owner (super_user).
+    """
+    return log_bus.get_history(limit=limit, level=level, source=source, search=search)
+
+
+@router.get("/logs/stream", tags=["Admin System Logs"])
+async def stream_system_logs(
+    request: Request,
+    admin_user: User = Depends(require_system_owner)
+):
+    """
+    Server-Sent Events (SSE) live system log stream.
+    Strictly protected: requires Platform System Owner (super_user).
+    Emits real-time backend events, periodic heartbeats, and respects concurrency limits (max 10).
+    """
+    # subscribe() enforces MAX_SUBSCRIBERS (raises HTTP 429 if full)
+    client_queue = log_bus.subscribe()
+
+    async def event_generator():
+        try:
+            # 1. Yield initial connection metadata
+            connected_payload = json.dumps({
+                "status": "connected",
+                "redis_connected": log_bus.redis_connected,
+                "is_process_local_only": not log_bus.redis_connected,
+                "instance_id": log_bus.instance_id,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            yield f"event: connected\ndata: {connected_payload}\n\n"
+
+            # 2. Main event loop with heartbeat fallback
+            while True:
+                if await request.is_disconnected():
+                    break
+
+                try:
+                    # Wait up to 15 seconds for an event
+                    entry: SystemLogEntry = await asyncio.wait_for(client_queue.get(), timeout=15.0)
+                    yield f"event: log\ndata: {entry.model_dump_json()}\n\n"
+                except asyncio.TimeoutError:
+                    # Heartbeat comment to keep connections alive through proxies and detect disconnects
+                    heartbeat_time = datetime.now(timezone.utc).isoformat()
+                    yield f": heartbeat {heartbeat_time}\n\n"
+        except asyncio.CancelledError:
+            pass
+        finally:
+            log_bus.unsubscribe(client_queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+

@@ -14,6 +14,7 @@ from app.models.organization_member import OrganizationMember
 from app.schemas.admin_overview import AdminOverviewResponse
 from app.schemas.admin_users import AdminUsersResponse, AdminUserItem, AdminUserUpdate
 from app.schemas.admin_analytics import AdminAnalyticsResponse, AnalyticsInterval, AnalyticsTimeseriesPoint
+from app.core.log_event_bus import log_bus
 import uuid
 
 async def get_overview_metrics(db: AsyncSession) -> AdminOverviewResponse:
@@ -256,6 +257,29 @@ async def update_user(
 
     await db.commit()
     await db.refresh(target_user)
+
+    # Emit audit event ONLY after successful DB commit
+    changes = {}
+    if update_data.platform_role is not None:
+        changes["platform_role"] = target_user.platform_role
+    if update_data.full_name is not None:
+        changes["full_name"] = target_user.full_name
+    if update_data.is_active is not None:
+        changes["is_active"] = target_user.is_active
+
+    log_bus.emit(
+        source="AUTH",
+        level="WARNING",
+        message=f"Admin {current_user.email} updated user {target_user.email}",
+        user_id=str(current_user.id),
+        metadata={
+            "action": "update_user",
+            "target_user_id": str(target_user.id),
+            "target_email": target_user.email,
+            "changes": changes
+        }
+    )
+
     return target_user
 
 async def delete_user(
@@ -288,5 +312,19 @@ async def delete_user(
 
     await db.commit()
     await db.refresh(target_user)
+
+    # Emit audit event ONLY after successful DB commit
+    log_bus.emit(
+        source="AUTH",
+        level="WARNING",
+        message=f"Admin {current_user.email} deactivated user {target_user.email}",
+        user_id=str(current_user.id),
+        metadata={
+            "action": "deactivate_user",
+            "target_user_id": str(target_user.id),
+            "target_email": target_user.email
+        }
+    )
+
     return target_user
 

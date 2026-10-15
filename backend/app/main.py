@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from contextlib import asynccontextmanager
 import logging
 import re
 
@@ -8,6 +9,7 @@ from app.core.config import settings
 from app.core.middleware import SecurityHeadersMiddleware
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.sentry import init_sentry, capture_exception
+from app.core.log_event_bus import log_bus
 from app.api.v1.router import api_router
 
 logging.basicConfig(
@@ -19,14 +21,36 @@ logger = logging.getLogger("helio-api")
 # Initialize Sentry error monitoring
 init_sentry()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await log_bus.initialize()
+    log_bus.emit(
+        source="SYSTEM",
+        level="INFO",
+        message=f"{settings.APP_NAME} backend started on {settings.ENVIRONMENT}",
+        metadata={"environment": settings.ENVIRONMENT, "component": "api"}
+    )
+    yield
+    log_bus.emit(
+        source="SYSTEM",
+        level="WARNING",
+        message=f"{settings.APP_NAME} backend shutting down",
+        metadata={"environment": settings.ENVIRONMENT, "component": "api"}
+    )
+    await log_bus.shutdown()
+
+
 app = FastAPI(
     title=settings.APP_NAME,
     description="Multi-tenant backend platform for autonomous AI chatbots and SMB intelligence.",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
+    lifespan=lifespan
 )
+
 
 # 1. Configure CORS for dashboard and internal endpoints
 if settings.BACKEND_CORS_ORIGINS or settings.CORS_ORIGIN_REGEX:
@@ -102,6 +126,19 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 async def global_exception_handler(request: Request, exc: Exception):
     capture_exception(exc, tags={"method": request.method, "path": str(request.url.path)})
     logger.error(f"Unhandled exception on {request.method} {request.url}: {exc}", exc_info=True)
+
+    log_bus.emit(
+        source="API",
+        level="ERROR",
+        message=f"Unhandled exception on {request.method} {request.url.path}: {str(exc)}",
+        request_path=str(request.url.path),
+        status_code=500,
+        metadata={
+            "method": request.method,
+            "error_type": type(exc).__name__,
+            "path": str(request.url.path)
+        }
+    )
 
     headers = {}
     origin = request.headers.get("origin")

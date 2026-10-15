@@ -659,3 +659,25 @@ export async function fetchChatPreview(message: string, history: any[], botConfi
     throw new Error(err?.message || 'Connection failed');
   }
 }
+
+export interface SystemLogEntry {
+  id: string;
+  timestamp: string;
+  level: 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
+  source: 'API' | 'AUTH' | 'DATABASE' | 'WORKER' | 'SYSTEM';
+  message: string;
+  user_id?: string | null;
+  request_path?: string | null;
+  status_code?: number | null;
+  metadata?: Record<string, any>;
+  instance_id?: string | null;
+}
+
+export interface SystemLogHistoryResponse {
+  logs: SystemLogEntry[];
+  total_available: number;
+  redis_connected: boolean;
+  is_process_local_only: boolean;
+  storage_notice: string;
+}
+

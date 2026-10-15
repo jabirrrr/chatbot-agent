@@ -10,6 +10,7 @@ import {
   Users, 
   BarChart3, 
   Cable,
+  ScrollText,
   ArrowLeft
 } from 'lucide-react';
 
@@ -20,6 +21,7 @@ export default function AdminSidebar() {
     { name: 'Overview', href: '/admin', icon: LayoutDashboard },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'System Health', href: '/admin/health', icon: Activity },
+    { name: 'System Logs', href: '/admin/logs', icon: ScrollText },
     { name: 'API Integrations', href: '/admin/api-settings', icon: Cable },
     { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
     { name: 'Settings', href: '/admin/settings', icon: Settings },

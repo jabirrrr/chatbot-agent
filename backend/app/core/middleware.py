@@ -34,6 +34,26 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
 
+        # Emit 4xx and 5xx API events to live system logs
+        if response.status_code >= 400 and not request.url.path.startswith("/api/v1/admin/logs/stream"):
+            try:
+                from app.core.log_event_bus import log_bus
+                level = "ERROR" if response.status_code >= 500 else "WARNING"
+                log_bus.emit(
+                    source="API",
+                    level=level,
+                    message=f"HTTP {response.status_code} {request.method} {request.url.path}",
+                    request_path=str(request.url.path),
+                    status_code=response.status_code,
+                    metadata={
+                        "method": request.method,
+                        "status_code": response.status_code,
+                        "path": str(request.url.path)
+                    }
+                )
+            except Exception:
+                pass
+
         if is_widget:
             csp = (
                 "default-src 'self'; "
