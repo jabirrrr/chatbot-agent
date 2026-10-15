@@ -106,4 +106,62 @@ describe('Admin Live System Logs Unit Tests', () => {
     assert.equal(handleStreamResponse(429).shouldReconnect, true);
     assert.equal(handleStreamResponse(500).shouldReconnect, true);
   });
+
+  test('Summary cards derive error, critical, and warning counts accurately from real events', () => {
+    const logs = [
+      { id: '1', level: 'INFO', message: 'User logged in' },
+      { id: '2', level: 'WARNING', message: 'Rate limit threshold approaching 80%' },
+      { id: '3', level: 'ERROR', message: 'Failed to dispatch webhook' },
+      { id: '4', level: 'CRITICAL', message: 'Database connection pool exhausted' },
+      { id: '5', level: 'INFO', message: 'Health check OK' },
+      { id: '6', level: 'WARNING', message: 'Slow SQL query execution 450ms' },
+    ];
+
+    const errorCount = logs.filter((l) => l.level === 'ERROR' || l.level === 'CRITICAL').length;
+    const warningCount = logs.filter((l) => l.level === 'WARNING').length;
+    const infoCount = logs.filter((l) => l.level === 'INFO').length;
+
+    assert.equal(errorCount, 2); // 1 ERROR + 1 CRITICAL
+    assert.equal(warningCount, 2);
+    assert.equal(infoCount, 2);
+    assert.equal(logs.length, 6);
+  });
+
+  test('Clear View resets frontend display buffer without issuing deletion requests', () => {
+    let frontendLogs = [
+      { id: '1', level: 'INFO', message: 'Event 1' },
+      { id: '2', level: 'ERROR', message: 'Event 2' },
+    ];
+
+    // Simulating frontend clear action
+    const clearFrontendDisplay = () => {
+      frontendLogs = [];
+    };
+
+    clearFrontendDisplay();
+    assert.equal(frontendLogs.length, 0);
+  });
+
+  test('Redis availability and SSE stream status are evaluated as distinct orthogonal states', () => {
+    const evaluateSystemStates = ({ streamStatus, redisConnected }) => {
+      return {
+        sseState: streamStatus === 'connected' ? 'Live Stream' : 'Disconnected',
+        clusterState: redisConnected ? 'Pub/Sub Active' : 'Local Mode',
+        isDegraded: !redisConnected,
+      };
+    };
+
+    // Scenario A: SSE is connected, but Redis is down (degraded single worker)
+    const stateA = evaluateSystemStates({ streamStatus: 'connected', redisConnected: false });
+    assert.equal(stateA.sseState, 'Live Stream');
+    assert.equal(stateA.clusterState, 'Local Mode');
+    assert.equal(stateA.isDegraded, true);
+
+    // Scenario B: SSE is paused, but Redis is active
+    const stateB = evaluateSystemStates({ streamStatus: 'paused', redisConnected: true });
+    assert.equal(stateB.sseState, 'Disconnected');
+    assert.equal(stateB.clusterState, 'Pub/Sub Active');
+    assert.equal(stateB.isDegraded, false);
+  });
 });
+

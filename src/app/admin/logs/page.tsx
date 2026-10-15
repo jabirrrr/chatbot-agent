@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   Pause, 
   Play, 
@@ -9,16 +9,24 @@ import {
   RefreshCw, 
   AlertTriangle, 
   AlertCircle, 
+  CheckCircle2,
   ShieldLock, 
   Layers, 
   ArrowDownCircle, 
   ChevronRight, 
   ChevronDown, 
-  Terminal, 
   Database, 
   Lock, 
   Cpu, 
-  Globe 
+  Globe,
+  Server,
+  Activity,
+  Radio,
+  Clock,
+  Copy,
+  Check,
+  X,
+  FileText
 } from 'lucide-react';
 import { API_BASE, SystemLogEntry, SystemLogHistoryResponse } from '@/lib/api';
 
@@ -36,6 +44,7 @@ export default function AdminLogsPage() {
   const [redisConnected, setRedisConnected] = useState<boolean>(false);
   const [storageNotice, setStorageNotice] = useState<string>('');
   const [lastHeartbeat, setLastHeartbeat] = useState<Date | null>(null);
+  const [lastEventTime, setLastEventTime] = useState<Date | null>(null);
   const [totalBuffered, setTotalBuffered] = useState<number>(0);
 
   // Filters
@@ -44,6 +53,7 @@ export default function AdminLogsPage() {
   const [selectedSource, setSelectedSource] = useState<string>('ALL');
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+  const [copiedLogId, setCopiedLogId] = useState<string | null>(null);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   const reconnectAttemptRef = useRef<number>(0);
@@ -57,7 +67,7 @@ export default function AdminLogsPage() {
     isPausedRef.current = isPaused;
   }, [isPaused]);
 
-  // Auto-scroll to bottom if enabled
+  // Auto-scroll to bottom of log list if enabled
   useEffect(() => {
     if (autoScroll && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -107,6 +117,10 @@ export default function AdminLogsPage() {
         setRedisConnected(data.redis_connected);
         setStorageNotice(data.storage_notice);
         setTotalBuffered(data.total_available);
+        if (timelineLogs.length > 0) {
+          const newest = timelineLogs[timelineLogs.length - 1];
+          setLastEventTime(new Date(newest.timestamp));
+        }
       } else {
         setError(`Failed to retrieve initial log history (HTTP ${res.status}).`);
       }
@@ -261,7 +275,9 @@ export default function AdminLogsPage() {
             } else if (eventType === 'log' && eventData) {
               try {
                 const entry: SystemLogEntry = JSON.parse(eventData);
+                const eventDate = new Date(entry.timestamp);
                 setLastHeartbeat(new Date());
+                setLastEventTime(eventDate);
                 
                 if (!isPausedRef.current) {
                   setLogs((prev) => {
@@ -321,278 +337,544 @@ export default function AdminLogsPage() {
     }
   };
 
+  // Clear frontend display only - does not delete backend logs
   const clearLogs = () => {
     setLogs([]);
   };
 
-  // Filter logs locally
-  const filteredLogs = logs.filter((log) => {
-    if (selectedLevel !== 'ALL' && log.level !== selectedLevel) return false;
-    if (selectedSource !== 'ALL' && log.source !== selectedSource) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const inMsg = log.message.toLowerCase().includes(q);
-      const inPath = log.request_path ? log.request_path.toLowerCase().includes(q) : false;
-      const inUser = log.user_id ? log.user_id.toLowerCase().includes(q) : false;
-      if (!inMsg && !inPath && !inUser) return false;
-    }
-    return true;
-  });
+  // Filter logs locally based on search, level, and source
+  const filteredLogs = useMemo(() => {
+    return logs.filter((log) => {
+      if (selectedLevel !== 'ALL' && log.level !== selectedLevel) return false;
+      if (selectedSource !== 'ALL' && log.source !== selectedSource) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const inMsg = log.message.toLowerCase().includes(q);
+        const inPath = log.request_path ? log.request_path.toLowerCase().includes(q) : false;
+        const inUser = log.user_id ? log.user_id.toLowerCase().includes(q) : false;
+        if (!inMsg && !inPath && !inUser) return false;
+      }
+      return true;
+    });
+  }, [logs, selectedLevel, selectedSource, searchQuery]);
 
-  // Helpers for badge styles
-  const getLevelBadgeClass = (level: string) => {
-    switch (level) {
-      case 'CRITICAL':
-        return 'bg-red-500/15 text-red-400 border border-red-500/30';
-      case 'ERROR':
-        return 'bg-rose-500/15 text-rose-400 border border-rose-500/30';
-      case 'WARNING':
-        return 'bg-amber-500/15 text-amber-400 border border-amber-500/30';
-      case 'INFO':
-      default:
-        return 'bg-blue-500/15 text-blue-400 border border-blue-500/30';
+  // Derived real-data metrics for summary cards
+  const errorCount = useMemo(() => {
+    return logs.filter((l) => l.level === 'ERROR' || l.level === 'CRITICAL').length;
+  }, [logs]);
+
+  const warningCount = useMemo(() => {
+    return logs.filter((l) => l.level === 'WARNING').length;
+  }, [logs]);
+
+  // Handle Copy JSON
+  const handleCopyJson = (logId: string, metadata: any) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(JSON.stringify(metadata, null, 2));
+      setCopiedLogId(logId);
+      setTimeout(() => {
+        setCopiedLogId(null);
+      }, 2000);
     }
   };
 
-  const getSourceIcon = (source: string) => {
+  // Style helpers for severity badges
+  const getLevelBadge = (level: string) => {
+    switch (level) {
+      case 'CRITICAL':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+            CRITICAL
+          </span>
+        );
+      case 'ERROR':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            ERROR
+          </span>
+        );
+      case 'WARNING':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            WARNING
+          </span>
+        );
+      case 'INFO':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+            INFO
+          </span>
+        );
+    }
+  };
+
+  // Style helpers for sources
+  const getSourceBadge = (source: string) => {
     switch (source) {
       case 'API':
-        return <Globe className="w-3.5 h-3.5 text-purple-400" />;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200/70">
+            <Globe className="w-3 h-3 text-purple-600" />
+            API
+          </span>
+        );
       case 'AUTH':
-        return <Lock className="w-3.5 h-3.5 text-emerald-400" />;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+            <Lock className="w-3 h-3 text-emerald-600" />
+            AUTH
+          </span>
+        );
       case 'DATABASE':
-        return <Database className="w-3.5 h-3.5 text-cyan-400" />;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-cyan-50 text-cyan-700 border border-cyan-200/70">
+            <Database className="w-3 h-3 text-cyan-600" />
+            DATABASE
+          </span>
+        );
       case 'WORKER':
-        return <Cpu className="w-3.5 h-3.5 text-orange-400" />;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-orange-50 text-orange-700 border border-orange-200/70">
+            <Cpu className="w-3 h-3 text-orange-600" />
+            WORKER
+          </span>
+        );
       case 'SYSTEM':
       default:
-        return <Terminal className="w-3.5 h-3.5 text-slate-400" />;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200/80">
+            <Server className="w-3 h-3 text-slate-500" />
+            SYSTEM
+          </span>
+        );
+    }
+  };
+
+  // Stream status badge
+  const renderStreamStatusBadge = () => {
+    switch (streamStatus) {
+      case 'connected':
+        return (
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Live Stream</span>
+          </div>
+        );
+      case 'reconnecting':
+        return (
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+            <span>Reconnecting...</span>
+          </div>
+        );
+      case 'paused':
+        return (
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
+            <span>Stream Paused</span>
+          </div>
+        );
+      case 'connecting':
+        return (
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+            <RefreshCw className="w-3 h-3 animate-spin text-slate-500" />
+            <span>Connecting...</span>
+          </div>
+        );
+      case 'disconnected':
+      default:
+        return (
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+            <span className="w-2 h-2 rounded-full bg-rose-500" />
+            <span>Disconnected</span>
+          </div>
+        );
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* 1. Header & Live Indicator */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* 1. Header & Live Status */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Live System Logs</h1>
-            
-            {/* Live stream status pill */}
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border ${
-              streamStatus === 'connected'
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                : streamStatus === 'reconnecting'
-                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                : streamStatus === 'paused'
-                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-            }`}>
-              <span className={`w-2 h-2 rounded-full ${
-                streamStatus === 'connected' ? 'bg-emerald-400 animate-pulse' :
-                streamStatus === 'reconnecting' ? 'bg-amber-400 animate-ping' :
-                streamStatus === 'paused' ? 'bg-blue-400' : 'bg-rose-400'
-              }`} />
-              {streamStatus === 'connected' ? 'Live Stream' :
-               streamStatus === 'reconnecting' ? 'Reconnecting...' :
-               streamStatus === 'paused' ? 'Paused' : 'Disconnected'}
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">System Logs</h1>
+            {renderStreamStatusBadge()}
           </div>
-          <p className="text-sm text-slate-400 mt-1">
-            Real-time event stream from backend services with strict data sanitization and Super User RBAC.
+          <p className="text-sm text-slate-500 mt-1">
+            Monitor platform activity, errors, and system events in real time.
           </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              <span>Last event:</span>
+              <span className="font-mono text-slate-700">
+                {lastEventTime ? lastEventTime.toLocaleTimeString() : 'None received'}
+              </span>
+            </div>
+            {lastHeartbeat && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-300">•</span>
+                <span>Heartbeat:</span>
+                <span className="font-mono text-slate-700">
+                  {lastHeartbeat.toLocaleTimeString()}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Global actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-center">
           <button
+            type="button"
             onClick={togglePause}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
               isPaused 
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 shadow-sm' 
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-sm'
             }`}
           >
             {isPaused ? <Play className="w-3.5 h-3.5 fill-current" /> : <Pause className="w-3.5 h-3.5" />}
-            {isPaused ? 'Resume Stream' : 'Pause'}
+            <span>{isPaused ? 'Resume Stream' : 'Pause'}</span>
           </button>
 
           <button
+            type="button"
             onClick={clearLogs}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
-            title="Clear current log view"
+            title="Clear logs from the browser display only. Backend history and streaming are not affected."
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm transition-all"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            Clear
+            <Trash2 className="w-3.5 h-3.5 text-slate-400" />
+            <span>Clear View</span>
           </button>
 
           <button
+            type="button"
             onClick={() => { loadInitialHistory(); connectSSE(); }}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 transition-all"
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all disabled:opacity-50"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Architecture & Degraded State Banner */}
-      <div className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs ${
-        redisConnected 
-          ? 'bg-emerald-950/20 border-emerald-900/40 text-emerald-300'
-          : 'bg-amber-950/30 border-amber-800/40 text-amber-300'
-      }`}>
-        <div className="flex items-start md:items-center gap-3">
-          {redisConnected ? (
-            <Layers className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5 md:mt-0" />
-          ) : (
-            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5 md:mt-0" />
-          )}
-          <div>
-            <div className="font-semibold flex items-center gap-2">
-              {redisConnected ? 'Multi-Instance Streaming Active' : 'Degraded Mode: Process-Local Logs Only'}
-              <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                redisConnected ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
-              }`}>
-                {redisConnected ? 'Redis Pub/Sub Sync' : 'Single Worker Scope'}
+      {/* 2. Summary Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Buffered Events */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <Activity className="w-6 h-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Buffered Events
+            </p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold text-slate-900 font-mono">
+                {logs.length}
+              </span>
+              <span className="text-xs text-slate-400">
+                / {MAX_UI_LOGS} max
               </span>
             </div>
-            <p className="mt-0.5 text-slate-400">
-              {storageNotice || (redisConnected 
-                ? 'Logs are synchronized across backend replicas via Redis Pub/Sub. Recent 500 events kept in-memory.'
-                : 'Redis Pub/Sub is unavailable. Live events and history reflect only this backend process and are not shared across serverless/scaled replicas.')
-              }
+            <p className="text-[11px] text-slate-500 mt-1 truncate">
+              {totalBuffered > logs.length ? `${totalBuffered} available on server` : 'In-memory ring buffer'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-slate-400 shrink-0">
-          <div>
-            Events: <span className="text-white font-mono font-medium">{filteredLogs.length}</span> / {totalBuffered}
+        {/* Card 2: Errors & Critical */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+            errorCount > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-400'
+          }`}>
+            <AlertCircle className="w-6 h-6" />
           </div>
-          {lastHeartbeat && (
-            <div>
-              Heartbeat: <span className="text-slate-300 font-mono">{lastHeartbeat.toLocaleTimeString()}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Errors & Critical
+            </p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className={`text-2xl font-bold font-mono ${
+                errorCount > 0 ? 'text-rose-600' : 'text-slate-900'
+              }`}>
+                {errorCount}
+              </span>
+              {logs.length > 0 && (
+                <span className="text-xs text-slate-400">
+                  ({Math.round((errorCount / logs.length) * 100)}%)
+                </span>
+              )}
             </div>
-          )}
+            <p className="text-[11px] text-slate-500 mt-1 truncate">
+              {errorCount > 0 ? 'Requires administrative attention' : 'No recent errors in buffer'}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Warnings */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+            warningCount > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-400'
+          }`}>
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Warnings
+            </p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className={`text-2xl font-bold font-mono ${
+                warningCount > 0 ? 'text-amber-600' : 'text-slate-900'
+              }`}>
+                {warningCount}
+              </span>
+              {logs.length > 0 && (
+                <span className="text-xs text-slate-400">
+                  ({Math.round((warningCount / logs.length) * 100)}%)
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1 truncate">
+              {warningCount > 0 ? 'Non-critical system warnings' : 'Zero warnings in buffer'}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Redis Availability (Separated from SSE Stream Status) */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+            redisConnected ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+          }`}>
+            {redisConnected ? <Layers className="w-6 h-6" /> : <Radio className="w-6 h-6" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Redis Availability
+            </p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className={`text-base font-bold ${
+                redisConnected ? 'text-emerald-700' : 'text-amber-700'
+              }`}>
+                {redisConnected ? 'Pub/Sub Active' : 'Local Mode'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1 truncate">
+              {redisConnected ? 'Multi-instance synchronized' : 'Process-local buffer only'}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* 3. Authentication & Error Banners */}
+      {/* 3. System Availability Banner */}
+      {!redisConnected ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 text-amber-900">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <p className="font-bold text-amber-950">
+              Local logging mode — events may be limited to this backend instance.
+            </p>
+            <p className="text-xs text-amber-800 mt-0.5">
+              {storageNotice || 'Redis Pub/Sub is unavailable. Live events and history reflect only this backend process and are not shared across serverless/scaled replicas.'}
+            </p>
+          </div>
+          <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-200/60 text-amber-900">
+            Degraded Mode
+          </span>
+        </div>
+      ) : (
+        <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-emerald-900">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-medium">
+              Distributed logging active — events synchronized across backend replicas via Redis Pub/Sub.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto text-emerald-700 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span>Multi-Instance Replication</span>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Auth & Error Alerts */}
       {authError && (
-        <div className="p-4 bg-rose-950/30 border border-rose-800/50 rounded-2xl flex items-center gap-3 text-rose-300 text-sm">
-          <ShieldLock className="w-5 h-5 text-rose-400 shrink-0" />
-          <div>
-            <span className="font-bold">Super User Authorization Required: </span>
-            {error || 'You do not have permission to view real-time administrative logs.'}
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 text-rose-900 text-sm">
+          <ShieldLock className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-bold text-rose-950">Super User Authorization Required</p>
+            <p className="text-xs text-rose-800 mt-0.5">
+              {error || 'You do not have permission to view real-time administrative logs.'}
+            </p>
           </div>
         </div>
       )}
 
       {error && !authError && (
-        <div className="p-4 bg-amber-950/30 border border-amber-800/50 rounded-2xl flex items-center gap-3 text-amber-300 text-sm">
-          <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
-          <span>{error}</span>
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 text-amber-900 text-sm">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-bold text-amber-950">Connection Notice</p>
+            <p className="text-xs text-amber-800 mt-0.5">{error}</p>
+          </div>
         </div>
       )}
 
-      {/* 4. Filter Toolbar */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search messages, paths, users..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
-          />
-        </div>
-
-        {/* Level and Source Dropdowns */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Level Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Level:</span>
-            <select
-              value={selectedLevel}
-              onChange={(e) => setSelectedLevel(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-            >
-              <option value="ALL">All Levels</option>
-              <option value="INFO">INFO</option>
-              <option value="WARNING">WARNING</option>
-              <option value="ERROR">ERROR</option>
-              <option value="CRITICAL">CRITICAL</option>
-            </select>
+      {/* 5. Filter & Search Toolbar */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search messages, request paths, user IDs..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          {/* Source Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Source:</span>
-            <select
-              value={selectedSource}
-              onChange={(e) => setSelectedSource(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-            >
-              <option value="ALL">All Sources</option>
-              <option value="API">API</option>
-              <option value="AUTH">AUTH</option>
-              <option value="DATABASE">DATABASE</option>
-              <option value="WORKER">WORKER</option>
-              <option value="SYSTEM">SYSTEM</option>
-            </select>
-          </div>
+          {/* Filter Dropdowns & Controls */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Level Filter */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-500 font-medium">Severity:</span>
+              <select
+                value={selectedLevel}
+                onChange={(e) => setSelectedLevel(e.target.value)}
+                aria-label="Filter by severity level"
+                className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+              >
+                <option value="ALL">All Severities</option>
+                <option value="INFO">INFO</option>
+                <option value="WARNING">WARNING</option>
+                <option value="ERROR">ERROR</option>
+                <option value="CRITICAL">CRITICAL</option>
+              </select>
+            </div>
 
-          {/* Auto Scroll Checkbox */}
-          <button
-            onClick={() => setAutoScroll(!autoScroll)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
-              autoScroll 
-                ? 'bg-blue-600/10 text-blue-400 border-blue-500/30' 
-                : 'bg-slate-950 text-slate-400 border-slate-800'
-            }`}
-          >
-            <ArrowDownCircle className="w-3.5 h-3.5" />
-            Auto-Scroll
-          </button>
+            {/* Source Filter */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-500 font-medium">Source:</span>
+              <select
+                value={selectedSource}
+                onChange={(e) => setSelectedSource(e.target.value)}
+                aria-label="Filter by source component"
+                className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+              >
+                <option value="ALL">All Sources</option>
+                <option value="API">API</option>
+                <option value="AUTH">AUTH</option>
+                <option value="DATABASE">DATABASE</option>
+                <option value="WORKER">WORKER</option>
+                <option value="SYSTEM">SYSTEM</option>
+              </select>
+            </div>
+
+            {/* Auto-Scroll Toggle */}
+            <button
+              type="button"
+              onClick={() => setAutoScroll(!autoScroll)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                autoScroll 
+                  ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              <ArrowDownCircle className={`w-3.5 h-3.5 ${autoScroll ? 'text-blue-600' : 'text-slate-400'}`} />
+              <span>Auto-Scroll</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 5. Live Log Feed Terminal */}
-      <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[600px]">
-        {/* Terminal Header */}
-        <div className="h-10 bg-slate-900/80 border-b border-slate-800/80 px-4 flex items-center justify-between shrink-0">
+      {/* 6. Log Activity Feed (Responsive: Desktop Table + Mobile Cards) */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[650px]">
+        {/* Feed Header */}
+        <div className="bg-slate-50/90 border-b border-slate-200 px-5 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-rose-500/70" />
-            <div className="w-3 h-3 rounded-full bg-amber-500/70" />
-            <div className="w-3 h-3 rounded-full bg-emerald-500/70" />
-            <span className="text-xs text-slate-400 ml-2 font-mono flex items-center gap-1">
-              <Terminal className="w-3.5 h-3.5 text-slate-500" />
-              system-activity-stream.log
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              Live Activity Stream
+            </h2>
+            <span className="text-slate-300">•</span>
+            <span className="text-xs text-slate-500 font-medium">
+              Showing <span className="font-mono font-bold text-slate-800">{filteredLogs.length}</span> of {logs.length} buffered
             </span>
           </div>
 
-          <span className="text-[11px] text-slate-500 font-mono">
-            Buffered: {filteredLogs.length} events
-          </span>
+          <div className="text-xs text-slate-400 flex items-center gap-2">
+            {autoScroll ? (
+              <span className="inline-flex items-center gap-1 text-blue-600 font-medium text-[11px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                Live scroll active
+              </span>
+            ) : (
+              <span className="text-slate-400 text-[11px]">Scroll paused</span>
+            )}
+          </div>
         </div>
 
-        {/* Scrollable Event Log Body */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-1 font-mono text-xs custom-scrollbar">
+        {/* Scrollable Feed Container */}
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
           {loading && logs.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-3">
-              <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-              <p>Initializing authenticated live log stream...</p>
+            /* Loading Skeleton */
+            <div className="p-6 space-y-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="animate-pulse flex items-center gap-4">
+                  <div className="w-16 h-4 bg-slate-200 rounded" />
+                  <div className="w-14 h-5 bg-slate-200 rounded-full" />
+                  <div className="w-16 h-5 bg-slate-200 rounded" />
+                  <div className="flex-1 h-4 bg-slate-200 rounded" />
+                </div>
+              ))}
             </div>
           ) : filteredLogs.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-2">
-              <Terminal className="w-8 h-8 text-slate-600" />
-              <p className="text-slate-400 font-medium">No log events matching filters</p>
-              <p className="text-[11px] text-slate-600">Events from API, Auth, Database, and Worker activity will stream here in real-time.</p>
+            /* Empty State */
+            <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                <FileText className="w-6 h-6" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-800">No log events found</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                {logs.length === 0
+                  ? 'Waiting for system events to stream from backend services...'
+                  : 'No logs match your current search query or severity filters.'}
+              </p>
+              {(selectedLevel !== 'ALL' || selectedSource !== 'ALL' || searchQuery) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedLevel('ALL');
+                    setSelectedSource('ALL');
+                    setSearchQuery('');
+                  }}
+                  className="mt-3 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors"
+                >
+                  Reset all filters
+                </button>
+              )}
             </div>
           ) : (
+            /* Log Rows */
             filteredLogs.map((entry) => {
               const isExpanded = expandedLogId === entry.id;
               const hasMetadata = entry.metadata && Object.keys(entry.metadata).length > 0;
@@ -606,62 +888,153 @@ export default function AdminLogsPage() {
               return (
                 <div 
                   key={entry.id} 
-                  className={`group rounded-lg transition-colors border ${
-                    isExpanded ? 'bg-slate-900 border-slate-700' : 'hover:bg-slate-900/60 border-transparent'
+                  className={`transition-colors ${
+                    isExpanded ? 'bg-slate-50/80' : 'hover:bg-slate-50/50'
                   }`}
                 >
+                  {/* --- Desktop View (Table-like row) --- */}
                   <div 
                     onClick={() => hasMetadata && setExpandedLogId(isExpanded ? null : entry.id)}
-                    className="flex items-start gap-2.5 px-2.5 py-1.5 cursor-pointer select-text"
+                    className={`hidden md:flex items-start gap-3 px-5 py-3 ${hasMetadata ? 'cursor-pointer' : ''}`}
                   >
                     {/* Timestamp */}
-                    <span className="text-slate-500 shrink-0 text-[11px] pt-0.5">
+                    <span className="font-mono text-xs text-slate-500 w-16 shrink-0 pt-0.5">
                       {timeString}
                     </span>
 
-                    {/* Level Badge */}
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase shrink-0 ${getLevelBadgeClass(entry.level)}`}>
-                      {entry.level}
-                    </span>
+                    {/* Severity Badge */}
+                    <div className="w-24 shrink-0">
+                      {getLevelBadge(entry.level)}
+                    </div>
 
-                    {/* Source Tag */}
-                    <span className="text-[10px] font-semibold text-slate-400 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0">
-                      {getSourceIcon(entry.source)}
-                      {entry.source}
-                    </span>
+                    {/* Source Badge */}
+                    <div className="w-24 shrink-0">
+                      {getSourceBadge(entry.source)}
+                    </div>
 
                     {/* Status Code (if present) */}
                     {entry.status_code && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
-                        entry.status_code >= 500 ? 'bg-rose-500/20 text-rose-300' :
-                        entry.status_code >= 400 ? 'bg-amber-500/20 text-amber-300' :
-                        'bg-emerald-500/20 text-emerald-300'
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold shrink-0 border ${
+                        entry.status_code >= 500 ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                        entry.status_code >= 400 ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        'bg-emerald-50 text-emerald-700 border-emerald-200'
                       }`}>
-                        {entry.status_code}
+                        HTTP {entry.status_code}
+                      </span>
+                    )}
+
+                    {/* Context Chips (Path / User) */}
+                    {entry.request_path && (
+                      <span className="font-mono text-xs text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded shrink-0 max-w-[200px] truncate" title={entry.request_path}>
+                        {entry.request_path}
+                      </span>
+                    )}
+
+                    {entry.user_id && (
+                      <span className="font-mono text-xs text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded shrink-0 max-w-[130px] truncate" title={entry.user_id}>
+                        usr:{entry.user_id}
                       </span>
                     )}
 
                     {/* Message */}
-                    <span className="text-slate-200 flex-1 break-all">
+                    <span className="text-sm text-slate-800 flex-1 leading-relaxed break-words font-sans">
                       {entry.message}
                     </span>
 
-                    {/* Expand icon for metadata */}
+                    {/* Metadata expand button */}
                     {hasMetadata && (
-                      <span className="text-slate-500 group-hover:text-slate-300 shrink-0">
+                      <div className="shrink-0 pt-0.5 text-slate-400 hover:text-slate-600 flex items-center gap-1 text-xs">
+                        <span>{isExpanded ? 'Less' : 'Details'}</span>
                         {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                      </span>
+                      </div>
                     )}
                   </div>
 
-                  {/* Expanded Metadata Viewer */}
-                  {isExpanded && hasMetadata && (
-                    <div className="px-4 pb-3 pt-1 border-t border-slate-800/60 bg-slate-950/60 rounded-b-lg text-[11px]">
-                      <div className="flex items-center justify-between text-slate-400 mb-2">
-                        <span className="font-semibold text-slate-300">Sanitized Metadata</span>
-                        <span className="text-[10px] text-slate-500">Instance ID: {entry.instance_id || 'local'}</span>
+                  {/* --- Mobile View (Stacked card row) --- */}
+                  <div 
+                    onClick={() => hasMetadata && setExpandedLogId(isExpanded ? null : entry.id)}
+                    className={`md:hidden p-4 space-y-2 ${hasMetadata ? 'cursor-pointer' : ''}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {getLevelBadge(entry.level)}
+                        {getSourceBadge(entry.source)}
                       </div>
-                      <pre className="p-3 bg-slate-950 border border-slate-800 rounded-lg text-emerald-400 overflow-x-auto text-[11px] leading-relaxed">
+                      <span className="font-mono text-xs text-slate-500">
+                        {timeString}
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-slate-900 leading-snug break-words">
+                      {entry.message}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                      {entry.status_code && (
+                        <span className={`px-1.5 py-0.5 rounded font-mono font-bold border text-[11px] ${
+                          entry.status_code >= 500 ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                          entry.status_code >= 400 ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}>
+                          HTTP {entry.status_code}
+                        </span>
+                      )}
+
+                      {entry.request_path && (
+                        <span className="font-mono text-xs text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded truncate max-w-[200px]">
+                          {entry.request_path}
+                        </span>
+                      )}
+
+                      {entry.user_id && (
+                        <span className="font-mono text-xs text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded truncate max-w-[130px]">
+                          usr:{entry.user_id}
+                        </span>
+                      )}
+
+                      {hasMetadata && (
+                        <span className="text-blue-600 font-semibold text-[11px] ml-auto flex items-center gap-0.5">
+                          {isExpanded ? 'Hide' : 'Details'}
+                          {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expanded Metadata Panel */}
+                  {isExpanded && hasMetadata && (
+                    <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 text-xs space-y-2.5">
+                      <div className="flex items-center justify-between text-slate-500">
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-slate-700">Sanitized Event Metadata</span>
+                          <span className="font-mono text-[11px] bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded">
+                            Instance: {entry.instance_id || 'local'}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyJson(entry.id, entry.metadata);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded-lg border border-slate-200 font-medium transition-colors"
+                        >
+                          {copiedLogId === entry.id ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span className="text-emerald-700">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3 text-slate-500" />
+                              <span>Copy JSON</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      <pre className="p-3 bg-slate-900 text-slate-100 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed select-all">
                         {JSON.stringify(entry.metadata, null, 2)}
                       </pre>
                     </div>
